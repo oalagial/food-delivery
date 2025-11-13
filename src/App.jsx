@@ -1,19 +1,17 @@
 import { useState } from 'react'
-import './App.css'
 
 function DeliveryPointCard({ point, onSelect }) {
   return (
-    <div className="delivery-card">
-      <img
-        className="delivery-image"
-        src={point.image}
-        alt={point.name}
-      />
-      <div className="delivery-info">
-        <div className="delivery-name">{point.name}</div>
+    <div className="flex items-center gap-4 p-4 rounded-lg border border-orange-200 bg-white">
+      <img className="w-18 h-18 rounded-md object-cover" src={point.image} alt={point.name} />
+      <div className="flex-1 text-left">
+        <div className="font-semibold text-lg">{point.name}</div>
       </div>
-      <div className="delivery-action">
-        <button className="select-button" onClick={() => onSelect(point)}>
+      <div className="text-right">
+        <button
+          onClick={() => onSelect(point)}
+          className="px-4 py-2 bg-orange-500 text-white rounded-md font-semibold hover:bg-orange-600"
+        >
           Choose
         </button>
       </div>
@@ -109,13 +107,12 @@ function App() {
   }
 
   return (
-    <main className="home-root">
-      <header className="brand">
-        {/* if you have a logo image, swap it here */}
-        <h1 className="title">Choose your delivery point and start ordering!</h1>
+    <main className="max-w-3xl mx-auto p-6 text-center">
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold">Choose your delivery point and start ordering!</h1>
       </header>
 
-      <section className="delivery-list">
+      <section className="flex flex-col gap-4">
         {points.map((p) => (
           <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
         ))}
@@ -129,53 +126,47 @@ function StorePage({ point, menu, categories, activeCategory, setActiveCategory,
   const currentCategory = activeCategory || categories[0]
 
   return (
-    <div className="store-root">
-      <div className="store-header">
-        <button className="back-button" onClick={onBack}>&larr;</button>
-        <div className="store-title">{point.name}</div>
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center bg-blue-500 text-white p-3">
+        <button onClick={onBack} className="mr-4 text-2xl">←</button>
+        <div className="ml-auto font-bold">{point.name}</div>
       </div>
 
-      <div className="store-banner">Free Delivery Over € 10.00<br />Choose the Delivery Time at Checkout</div>
+      <div className="bg-sky-200 text-sky-900 p-3 text-center">Free Delivery Over € 10.00<br />Choose the Delivery Time at Checkout</div>
 
-      <div className="store-tabs">
-        <button className="tab active">Food</button>
-        <button className="tab">Drinks</button>
+      <div className="flex gap-3 p-3">
+        <button className="px-3 py-1 rounded-full border-b-2 border-orange-500 font-semibold">Food</button>
+        <button className="px-3 py-1 rounded-full text-slate-600">Drinks</button>
       </div>
 
-      <div className="category-scroll">
+      <div className="flex gap-3 overflow-x-auto p-3">
         {categories.map((c) => (
           <button
             key={c}
-            className={`category-pill ${c === currentCategory ? 'active' : ''}`}
             onClick={() => setActiveCategory(c)}
+            className={`px-4 py-1 rounded-full ${c === currentCategory ? 'bg-blue-400 text-white' : 'bg-white border'}`}
           >
-            {c.toUpperCase()}
+            {c}
           </button>
         ))}
       </div>
 
-      <div className="category-section">
-        <h3 className="category-heading">{currentCategory.toUpperCase()}</h3>
+      <h3 className="bg-blue-500 text-white p-3 mt-4">{currentCategory.toUpperCase()}</h3>
 
-        <div className="products-list">
-          {menu[currentCategory].map((item) => (
-            <div className="product-row" key={item.id}>
-              <div className="product-info">
-                <div className="product-badges">
-                  {/* sample badges */}
-                  <span className="badge">New</span>
-                </div>
-                <div className="product-name">{item.name}</div>
-                <div className="product-price">{item.price}</div>
-                <div className="product-desc">{item.desc}</div>
-              </div>
-              <div className="product-action">
-                <img src={item.image} alt={item.name} className="product-image" />
-                <button className="add-button">+</button>
-              </div>
+      <div className="p-3 space-y-4">
+        {menu[currentCategory].map((item) => (
+          <div key={item.id} className="flex justify-between items-start gap-4 border-b pb-3">
+            <div className="flex-1 text-left">
+              <div className="text-lg font-bold">{item.name}</div>
+              <div className="text-sm font-semibold mt-1">{item.price}</div>
+              <div className="text-sm text-slate-600 mt-1">{item.desc}</div>
             </div>
-          ))}
-        </div>
+            <div className="flex flex-col items-center gap-2">
+              <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-md" />
+              <button className="w-9 h-9 rounded-full bg-orange-500 text-white font-bold">+</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
