@@ -8,13 +8,13 @@ export default function App() {
   const [points] = useState([
     {
       id: 'aldo',
-      name: 'ALDO',
+      name: 'ALDO TEST',
       image:
         'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&auto=format&fit=crop&crop=faces',
     },
     {
       id: 'marina',
-      name: 'Marina Point',
+      name: 'POINT TEST',
       image:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400&auto=format&fit=crop',
     },
