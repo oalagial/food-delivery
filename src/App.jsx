@@ -521,12 +521,18 @@ function AppContent() {
 
   return (
     <>
-      <main className="min-h-screen flex items-center justify-center p-6 lg:p-12">
+      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-6 lg:p-12">
         <div className="max-w-3xl lg:max-w-5xl w-full">
-          <header className="mb-6">
-            <h1 className="text-2xl lg:text-4xl font-semibold">Choose your delivery point and start ordering!</h1>
+          <header className="mb-8 lg:mb-12 text-center">
+            <div className="inline-block mb-4 lg:mb-6">
+              <span className="text-6xl lg:text-8xl">🍽️</span>
+            </div>
+            <h1 className="text-3xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3 lg:mb-4">
+              Choose Your Delivery Point
+            </h1>
+            <p className="text-lg lg:text-xl text-slate-600 font-medium">Start ordering delicious food now! 🚀</p>
           </header>
-          <section className="flex flex-col gap-4">
+          <section className="flex flex-col gap-5 lg:gap-6">
             {points.map((p) => (
               <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
             ))}
