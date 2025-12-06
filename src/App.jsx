@@ -486,7 +486,7 @@ function AppContent() {
           <span className="text-4xl">🛒</span>
           <span className="sr-only">Cart</span>
           {cart.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold">
+            <span className="absolute -top-4 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-orange-500">
               <span className="font-bold text-lg">{cartCount()}</span>
             </span>
           )}
@@ -547,7 +547,7 @@ function AppContent() {
         </div>
       </main>
 
-      <button
+      {/* <button
         onClick={() => setCartOpen(true)}
         aria-label="Open cart"
         className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
@@ -560,7 +560,7 @@ function AppContent() {
             {cartCount()}
           </span>
         )}
-      </button>
+      </button> */}
 
       <CartPanel open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} updateQty={updateCartItem} removeItem={removeCartItem} total={cartTotal()} lastAddedKey={lastAddedKey} />
     </>

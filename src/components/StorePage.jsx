@@ -104,7 +104,7 @@ export default function StorePage({ point, menu, categories, activeCategory, set
                 <div>
                   <button
                     onClick={() => setSelectedProductDetail(item)}
-                    className="w-8 h-8 lg:w-12 lg:h-12 rounded-full bg-gray-500 text-white font-bold text-lg lg:text-2xl"
+                    className="pb-1 w-10 h-10 lg:w-14 lg:h-14 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white font-bold text-2xl lg:text-3xl shadow-lg hover:shadow-xl hover:from-orange-600 hover:to-amber-700 transform hover:scale-110 transition-all duration-300 active:scale-95 flex items-center justify-center"
                   >
                     +
                   </button>
