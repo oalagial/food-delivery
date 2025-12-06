@@ -30,58 +30,81 @@ export default function StorePage({ point, menu, categories, activeCategory, set
   return (
     <div className="w-full h-screen bg-slate-50">
       <div className="mx-auto flex flex-col h-full">
-        <div className="flex items-center bg-blue-500 text-white p-3 lg:p-4 sticky top-0 z-20">
-          <button onClick={onBack} className="mr-4 text-2xl lg:text-3xl">←</button>
-          <div className="ml-auto font-bold lg:text-2xl">{point.name}</div>
+        <div className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 lg:p-5 sticky top-0 z-20 shadow-lg">
+          <button onClick={onBack} className="mr-4 text-3xl lg:text-4xl hover:scale-110 transition-transform">←</button>
+          <div className="ml-auto font-bold text-xl lg:text-3xl tracking-wide">🏪 {point.name}</div>
         </div>
 
         <div className="flex-1 overflow-auto">
-          <div className="bg-sky-200 text-sky-900 p-3 text-center lg:p-4 lg:text-lg">Free Delivery Over € 10.00<br />Choose the Delivery Time at Checkout</div>
+          <div className="bg-gradient-to-r from-sky-400 text-white p-5 text-center lg:p-6 text-lg lg:text-xl font-bold shadow-md">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <span className="text-2xl">🚚</span>
+              <span>Free Delivery Over € 10.00</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-base lg:text-lg font-semibold">
+              <span className="text-xl">⏰</span>
+              <span>Choose the Delivery Time at Checkout</span>
+            </div>
+          </div>
 
-          <div className="flex gap-3 p-3 lg:p-4">
+          <div className="flex gap-4 p-4 lg:p-6">
             <button
               onClick={() => handleTabChange('Food')}
-              className={`px-3 py-1 lg:px-4 lg:py-2 rounded-full ${tab === 'Food' ? 'border-b-2 border-gray-500 font-semibold' : 'text-slate-600'}`}
+              className={`px-8 py-3 lg:px-12 lg:py-4 rounded-full text-lg lg:text-2xl font-bold transition-all duration-300 ${
+                tab === 'Food' 
+                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg transform scale-105' 
+                  : 'bg-white text-slate-600 border-2 border-slate-200 hover:border-orange-300 hover:shadow-md'
+              }`}
             >
-              Food
+              🍔 Food
             </button>
             <button
               onClick={() => handleTabChange('Drinks')}
-              className={`px-3 py-1 lg:px-4 lg:py-2 rounded-full ${tab === 'Drinks' ? 'border-b-2 border-gray-500 font-semibold' : 'text-slate-600'}`}
+              className={`px-8 py-3 lg:px-12 lg:py-4 rounded-full text-lg lg:text-2xl font-bold transition-all duration-300 ${
+                tab === 'Drinks' 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105' 
+                  : 'bg-white text-slate-600 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md'
+              }`}
             >
-              Drinks
+              🍹 Drinks
             </button>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto p-3 lg:p-4">
+          <div className="flex gap-3 overflow-x-auto p-4 lg:p-5">
             {displayedCategories.map((c) => (
               <button
                 key={c}
                 onClick={() => handleCategoryClick(c)}
-                className={`px-4 py-1 lg:px-6 lg:py-2 rounded-full ${c === currentCategory ? 'bg-blue-400 text-white' : 'bg-white border'}`}
+                className={`px-6 py-2 lg:px-8 lg:py-3 rounded-full text-base lg:text-xl font-semibold transition-all duration-300 whitespace-nowrap ${
+                  c === currentCategory 
+                    ? 'bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md transform scale-105' 
+                    : 'bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-sm'
+                }`}
               >
                 {c}
               </button>
             ))}
           </div>
 
-          <h3 className="bg-blue-500 text-white p-3 mt-4 lg:p-4 lg:text-xl">{currentCategory?.toUpperCase()}</h3>
+          <div className="px-4 lg:px-7 py-3">
+            <div className="h-1 bg-gradient-to-r from-white via-blue-500 to-transparent rounded-full"></div>
+          </div>
 
-          <div className={`p-3 lg:p-6 space-y-4 pb-8 transition-all duration-200 ${animatingCategory ? 'opacity-50 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+          <div className={`p-4 lg:p-7 space-y-5 pb-10 transition-all duration-200 ${animatingCategory ? 'opacity-50 translate-y-2' : 'opacity-100 translate-y-0'}`}>
             {menu[currentCategory].map((item) => (
               <div key={item.id} className="flex items-start items-center gap-4 lg:gap-6 border-b pb-3 lg:pb-4">
                 <div className="flex flex-col items-center gap-2">
                   <img src={item.image} alt={item.name} className="w-20 h-20 lg:w-50 lg:h-50 object-cover rounded-md" />
                 </div>
                 <div className="text-left">
-                  <div className="text-lg lg:text-xl font-bold">{item.name}</div>
-                  <div className="text-sm lg:text-base font-semibold mt-1">{item.price}</div>
-                  <div className="text-sm lg:text-base text-slate-600 mt-1">{item.desc}</div>
+                  <div className="text-xl lg:text-2xl font-bold">{item.name}</div>
+                  <div className="text-base lg:text-lg font-semibold mt-2">{item.price}</div>
+                  <div className="text-base lg:text-lg text-slate-600 mt-2 leading-relaxed">{item.desc}</div>
                 </div>
                 <div>
                   <button
                     onClick={() => setSelectedProductDetail(item)}
-                    className="w-6 h-6 lg:w-10 lg:h-10 rounded-full bg-gray-500 text-white font-bold lg:text-xl"
+                    className="w-8 h-8 lg:w-12 lg:h-12 rounded-full bg-gray-500 text-white font-bold text-lg lg:text-2xl"
                   >
                     +
                   </button>

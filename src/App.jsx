@@ -3,8 +3,11 @@ import DeliveryPointCard from './components/DeliveryPointCard'
 import StorePage from './components/StorePage'
 import CartPanel from './components/CartPanel'
 import CheckoutPage from './components/CheckoutPage'
+import AlertDialog from './components/AlertDialog'
+import { AlertProvider, useAlert } from './context/AlertContext'
 
-export default function App() {
+function AppContent() {
+  const { alert, closeAlert, showAlert } = useAlert()
   const [points] = useState([
     {
       id: 'aldo',
@@ -476,15 +479,15 @@ export default function App() {
         <button
           onClick={() => setCartOpen(true)}
           aria-label="Open cart"
-          className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
+          className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
             cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
           }`}
         >
-          🛒
+          <span className="text-4xl">🛒</span>
           <span className="sr-only">Cart</span>
           {cart.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-white text-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold">
-              {cartCount()}
+            <span className="absolute -top-1 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold">
+              <span className="font-bold text-lg">{cartCount()}</span>
             </span>
           )}
         </button>
@@ -538,7 +541,7 @@ export default function App() {
           cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
         }`}
       >
-        🛒
+        <span className="text-2xl pt-2">🛒</span>
         {cart.length > 0 && (
           <span className="absolute -top-1 -right-1 bg-white text-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold">
             {cartCount()}
@@ -547,6 +550,32 @@ export default function App() {
       </button>
 
       <CartPanel open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} updateQty={updateCartItem} removeItem={removeCartItem} total={cartTotal()} lastAddedKey={lastAddedKey} />
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <AlertProvider>
+      <AppWithAlert />
+    </AlertProvider>
+  )
+}
+
+function AppWithAlert() {
+  const { alert, closeAlert } = useAlert()
+  
+  return (
+    <>
+      <AlertDialog
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        autoCloseDuration={alert.duration}
+      />
+      <AppContent />
     </>
   )
 }
