@@ -32,7 +32,7 @@ export default function StorePage({ point, menu, categories, activeCategory, set
       <div className="mx-auto flex flex-col h-full">
         <div className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 lg:p-5 sticky top-0 z-20 shadow-lg">
           <button onClick={onBack} className="mr-4 text-4xl hover:scale-110 transition-transform">←</button>
-          <div className="ml-auto font-bold text-xl lg:text-3xl tracking-wide">🏪 {point.name}</div>
+          <div className="ml-auto font-bold text-xl lg:text-3xl tracking-wide">🚚 {point.name}</div>
         </div>
 
         <div className="flex-1 overflow-auto">
