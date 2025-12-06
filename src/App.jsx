@@ -521,16 +521,23 @@ function AppContent() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-6 lg:p-12">
-        <div className="max-w-3xl lg:max-w-5xl w-full">
+      <main className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex items-center justify-center p-6 lg:p-12 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-yellow-200/30 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-200/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="max-w-3xl lg:max-w-5xl w-full relative z-10">
           <header className="mb-8 lg:mb-12 text-center">
-            <div className="inline-block mb-4 lg:mb-6">
-              <span className="text-6xl lg:text-8xl">🍽️</span>
+            <div className="inline-block mb-4 lg:mb-6 animate-bounce">
+              <span className="text-6xl lg:text-8xl drop-shadow-lg">🍽️</span>
             </div>
-            <h1 className="text-3xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3 lg:mb-4">
+            <h1 className="text-3xl lg:text-5xl font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent mb-3 lg:mb-4 drop-shadow-sm">
               Choose Your Delivery Point
             </h1>
-            <p className="text-lg lg:text-xl text-slate-600 font-medium">Start ordering delicious food now! 🚀</p>
+            <p className="text-lg lg:text-xl text-amber-900/80 font-semibold">Start ordering delicious food now! 🚀</p>
           </header>
           <section className="flex flex-col gap-5 lg:gap-6">
             {points.map((p) => (
