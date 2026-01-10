@@ -123,6 +123,53 @@ function AppContent() {
   }
 
   const sampleMenu = {
+     'Special Offers': [
+      {
+        id: 'lunch_combo',
+        name: 'Lunch Combo',
+        price: '€ 14.50',
+        desc: '1 Salad (choice), 1 Aperol Spritz (small), 1 Water',
+        image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=200&auto=format&fit=crop',
+        optionGroups: [
+          {
+            id: 'salad',
+            title: 'Salad Choice',
+            required: true,
+            choices: [
+              { id: 'mediterranean', label: 'Mediterranean', price: 0 },
+              { id: 'caesar', label: 'Caesar', price: 0 },
+            ],
+          },
+          {
+            id: 'drink_choice',
+            title: 'Small Drink',
+            required: true,
+            choices: [
+              { id: 'aperol', label: 'Aperol Spritz (small)', price: 0 },
+              { id: 'water', label: 'Water (still)', price: 0 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'sunday_menu',
+        name: 'Sunday Menu',
+        price: '€ 10.00',
+        desc: 'Caprese sandwich + Cunzato sandwich + 1L house wine (choose type)',
+        image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=200&auto=format&fit=crop',
+        optionGroups: [
+          {
+            id: 'wine',
+            title: 'House Wine',
+            required: true,
+            choices: [
+              { id: 'white', label: 'White (Grillo)', price: 0 },
+              { id: 'red', label: 'Red (Nero d’Avola)', price: 0 },
+            ],
+          },
+        ],
+      },
+    ],
     Burgers: [
       {
         id: 'classic_burger',
@@ -289,53 +336,6 @@ function AppContent() {
             choices: [
               { id: 'yes', label: 'Add Chicken (+€2.00)', price: 2.0 },
               { id: 'no', label: 'No', price: 0 },
-            ],
-          },
-        ],
-      },
-    ],
-    'Special Offers': [
-      {
-        id: 'lunch_combo',
-        name: 'Lunch Combo',
-        price: '€ 14.50',
-        desc: '1 Salad (choice), 1 Aperol Spritz (small), 1 Water',
-        image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=200&auto=format&fit=crop',
-        optionGroups: [
-          {
-            id: 'salad',
-            title: 'Salad Choice',
-            required: true,
-            choices: [
-              { id: 'mediterranean', label: 'Mediterranean', price: 0 },
-              { id: 'caesar', label: 'Caesar', price: 0 },
-            ],
-          },
-          {
-            id: 'drink_choice',
-            title: 'Small Drink',
-            required: true,
-            choices: [
-              { id: 'aperol', label: 'Aperol Spritz (small)', price: 0 },
-              { id: 'water', label: 'Water (still)', price: 0 },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'sunday_menu',
-        name: 'Sunday Menu',
-        price: '€ 10.00',
-        desc: 'Caprese sandwich + Cunzato sandwich + 1L house wine (choose type)',
-        image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=200&auto=format&fit=crop',
-        optionGroups: [
-          {
-            id: 'wine',
-            title: 'House Wine',
-            required: true,
-            choices: [
-              { id: 'white', label: 'White (Grillo)', price: 0 },
-              { id: 'red', label: 'Red (Nero d’Avola)', price: 0 },
             ],
           },
         ],
