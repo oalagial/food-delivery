@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
+import { orderService } from '../services'
 
 export default function CheckoutPage({ point, cart, total, onClose, updateQty, removeItem, onConfirm }) {
   const [promo, setPromo] = useState('')
@@ -12,17 +13,30 @@ export default function CheckoutPage({ point, cart, total, onClose, updateQty, r
     if (!agree) return
     setIsSubmitting(true)
     try {
-      // Simulate order submission (replace with real API call)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Prepare order data
+      const orderData = {
+        restaurantId: point?.id,
+        items: cart.map((item) => ({
+          productId: item.id,
+          quantity: item.qty,
+          price: item.price,
+          options: item.options || {},
+        })),
+        totalAmount: total,
+        promoCode: promo || null,
+      }
+
+      // Submit order to backend
+      const response = await orderService.create(orderData)
       
       // Show success alert
-      showAlert('success', 'Order Confirmed!', 'Your order has been successfully placed. You will receive a call from the rider shortly.', 10000)
+      showAlert('success', 'Order Confirmed!', `Your order #${response.id} has been successfully placed. You will receive a call from the rider shortly.`, 10000)
       
-        onClose()
-        onConfirm && onConfirm()
+      onClose()
+      onConfirm && onConfirm()
     } catch (error) {
       // Show error alert
-      showAlert('error', 'Order Failed', error.message || 'Something went wrong. Please try again.', 10000)
+      showAlert('error', 'Order Failed', error.response?.data?.message || error.message || 'Something went wrong. Please try again.', 10000)
       setIsSubmitting(false)
     }
   }
