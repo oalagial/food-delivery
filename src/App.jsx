@@ -140,6 +140,7 @@ function AppContent() {
       const response = await fetch(`${API_BASE}/public/restaurants?id=${restaurantId}`)
       if (!response.ok) throw new Error('Failed to fetch menu')
       const menuData = await response.json()
+      // Expecting menuData to have .data[0].menu
       setFetchedMenu(menuData)
     } catch (err) {
       setFetchedMenu({ error: err.message })
@@ -521,29 +522,32 @@ function AppContent() {
       // Show StorePage for the selected restaurant
       return (
         <>
-          {/* Print fetched menu at the top of the screen */}
-          <div className="w-full bg-yellow-100 py-2 px-4 text-center text-sm font-mono border-b border-yellow-300">
-            {menuLoading ? (
-              <span>Loading menu...</span>
-            ) : fetchedMenu ? (
-              fetchedMenu.error ? (
-                <span className="text-red-500">Error: {fetchedMenu.error}</span>
-              ) : (
-                <pre className="whitespace-pre-wrap text-left">{JSON.stringify(fetchedMenu, null, 2)}</pre>
-              )
-            ) : (
-              <span>No menu loaded.</span>
-            )}
-          </div>
-          <StorePage
-            point={selectedRestaurant}
-            menu={sampleMenu}
-            categories={categories}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            onBack={() => { setSelectedRestaurant(null); setRestaurants([]); setFetchedMenu(null); }}
-            addToCart={addToCart}
-          />
+         
+          {/* Optionally, pass the fetched menu to StorePage or render the menu here */}
+          {/* Example: Pass the first menu object to StorePage if needed */}
+          {/* Transform menu sections to category-based object for StorePage */}
+          {(() => {
+            const menuObj = fetchedMenu?.data?.[0]?.menu?.[0]
+            let menuByCategory = {}
+            let categoriesArr = []
+            if (menuObj && Array.isArray(menuObj.sections)) {
+              categoriesArr = menuObj.sections.map(s => s.name)
+              menuObj.sections.forEach(section => {
+                menuByCategory[section.name] = section.products || []
+              })
+            }
+            return (
+              <StorePage
+                point={selectedRestaurant}
+                menu={menuByCategory}
+                categories={categoriesArr}
+                activeCategory={activeCategory}
+                setActiveCategory={setActiveCategory}
+                onBack={() => { setSelectedRestaurant(null); setRestaurants([]); setFetchedMenu(null); }}
+                addToCart={addToCart}
+              />
+            )
+          })()}
 
           <button
             onClick={() => setCartOpen(true)}
