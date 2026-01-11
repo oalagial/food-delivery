@@ -1,10 +1,13 @@
-import apiClient from './api'
 
-export const deliveryLocationService = {
+import apiClient from './api'
+const API_BASE = import.meta.env.VITE_API_BASE
+
   // Get all delivery locations
   getAll: async () => {
-    const response = await apiClient.get('/public/delivery-locations')
-    return response.data
+    // Use fetch directly to ensure .env is respected in all environments
+    const response = await fetch(`${API_BASE}/public/delivery-locations`)
+    if (!response.ok) throw new Error('Failed to fetch delivery locations')
+    return await response.json()
   },
 
   // Get single delivery location
