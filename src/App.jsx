@@ -519,6 +519,7 @@ function AppContent() {
 
   if (selectedPoint) {
     if (selectedRestaurant) {
+      // 
       // Show StorePage for the selected restaurant
       return (
         <>
