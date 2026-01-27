@@ -21,7 +21,7 @@ export const orderService = {
 
   // Create order
   create: async (data) => {
-    const response = await apiClient.post('/orders/create', data)
+    const response = await apiClient.post('public/orders/create', data)
     return response.data
   },
 
