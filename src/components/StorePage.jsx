@@ -125,7 +125,7 @@ export default function StorePage({ point, menu, categories, offers = [], active
                     <img 
                       src={offer.image} 
                       alt={offer.name} 
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg" 
+                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg" 
                     />
                   </div>
                 )}
@@ -181,34 +181,34 @@ export default function StorePage({ point, menu, categories, offers = [], active
               const isInactive = original.isAvailable === false || original.isActive === false
 
               return (
-                <div 
-                  key={item.id}
+              <div 
+                key={item.id}
                   className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 ${
                     isInactive ? 'opacity-60' : ''
                   }`}
-                >
+              >
                   <div className="flex-shrink-0">
                     <img 
                       src={item.image} 
                       alt={item.name} 
-                      className={`w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg ${
+                      className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg ${
                         isInactive ? 'grayscale' : ''
                       }`} 
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 leading-tight break-words mb-1">
-                          {item.name}
-                        </h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-slate-900 leading-tight break-words mb-1">
+                        {item.name}
+                      </h3>
                         {isInactive && (
                           <span className="inline-block text-[10px] font-semibold text-red-500 uppercase tracking-wide">
                             Μη διαθέσιμο
                           </span>
                         )}
-                      </div>
-                      <button
+                    </div>
+                    <button
                         type="button"
                         disabled={isInactive}
                         onClick={() => {
@@ -222,24 +222,24 @@ export default function StorePage({ point, menu, categories, offers = [], active
                             : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
                         }`}
                         aria-label={isInactive ? 'Product not available' : 'Add to cart'}
-                      >
-                        +
-                      </button>
-                    </div>
+                    >
+                      +
+                    </button>
+                  </div>
                     <div className={`text-sm font-semibold mb-1 ${
                       isInactive ? 'text-slate-500' : 'text-orange-600'
                     }`}>
-                      {item.price}
-                    </div>
-                    {item.desc && (
+                    {item.price}
+                  </div>
+                  {item.desc && (
                       <p className={`text-xs line-clamp-2 leading-snug ${
                         isInactive ? 'text-slate-500' : 'text-slate-600'
                       }`}>
-                        {item.desc}
-                      </p>
-                    )}
-                  </div>
+                      {item.desc}
+                    </p>
+                  )}
                 </div>
+              </div>
               )
             })}
           </div>

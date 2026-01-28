@@ -204,9 +204,6 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
                                 {product.description}
                               </div>
                             )}
-                            <div className="text-xs text-slate-500 mt-0.5">
-                              € {parseFloat(product.price || 0).toFixed(2)}
-                            </div>
                           </div>
                         </div>
                       )
