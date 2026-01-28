@@ -13,6 +13,16 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [notes, setNotes] = useState('')
   const { showAlert } = useAlert()
 
+  // Calculate delivery costs based on selected delivery location
+  const itemsTotal = total || 0
+  // Use same fields as in StorePage header (restaurant delivery settings)
+  const rawDeliveryFee = parseFloat(restaurant?.deliveryFee ?? 0) || 0
+  const minOrderForFree = parseFloat(restaurant?.minOrder ?? 0) || 0
+  const shouldChargeDelivery =
+    rawDeliveryFee > 0 && (minOrderForFree === 0 || itemsTotal < minOrderForFree)
+  const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
+  const finalTotal = itemsTotal + deliveryCost
+
   const handleContinue = async () => {
     if (!agree) return
     
@@ -207,7 +217,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             <div className="border-t border-slate-200 pt-4 sm:pt-5">
               <div className="mb-3 text-xs sm:text-sm text-slate-600 flex justify-between">
                 <span>Delivery costs:</span>
-                <span>€ 0.00</span>
+                <span>{formatPrice(deliveryCost)}</span>
               </div>
 
               <div className="mb-3 sm:mb-4">
@@ -227,7 +237,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
               <div className="bg-sky-100 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4 flex items-center justify-between">
                 <div className="text-base sm:text-lg font-semibold text-slate-900">Total:</div>
-                <div className="text-lg sm:text-xl font-bold text-slate-900">{formatPrice(total)}</div>
+                <div className="text-lg sm:text-xl font-bold text-slate-900">{formatPrice(finalTotal)}</div>
               </div>
 
               <label className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">

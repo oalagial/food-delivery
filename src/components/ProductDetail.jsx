@@ -53,7 +53,10 @@ export default function ProductDetail({ product, onClose, onAdd }) {
   }, [onClose])
 
   const isValid = otherOptionGroups.every((g) => !g.required || Boolean(selectedOptions[g.id]))
-  const base = parsePrice(product.price)
+  // Use priceAfterDiscount if available, otherwise use original price
+  const base = product.priceAfterDiscountNum !== null && product.priceAfterDiscountNum !== undefined 
+    ? product.priceAfterDiscountNum 
+    : parsePrice(product.price)
   
   const extrasTotal = Object.entries(selectedExtras).reduce((sum, [extraId, count]) => {
     if (count > 0 && extrasGroup) {
@@ -140,6 +143,24 @@ export default function ProductDetail({ product, onClose, onAdd }) {
             <h2 id={`dialog-${product.id}-title`} className="text-xl font-bold mb-2 text-slate-900">
               {product.name}
             </h2>
+            
+            {/* Price Display */}
+            <div className="mb-3">
+              {product.priceAfterDiscount ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold line-through text-slate-400">
+                    {product.originalPrice}
+                  </span>
+                  <span className="text-xl font-bold text-orange-600">
+                    {product.priceAfterDiscount}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xl font-bold text-orange-600">
+                  {product.price}
+                </div>
+              )}
+            </div>
             
             {product.desc && (
               <p className="text-sm text-slate-600 mb-4 leading-relaxed">

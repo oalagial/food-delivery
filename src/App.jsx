@@ -636,8 +636,15 @@ function AppContent() {
                       return !product.deletedAt
                     })
                     .map(product => {
-                      // Use priceAfterDiscount if available, otherwise use price
-                      const priceValue = product.priceAfterDiscount || product.price
+                      // Calculate prices
+                      const originalPriceNum = parseFloat(product.price) || 0
+                      const originalPriceFormatted = `€ ${originalPriceNum.toFixed(2)}`
+                      const hasPriceAfterDiscount = product.priceAfterDiscount && parseFloat(product.priceAfterDiscount) > 0
+                      const priceAfterDiscountNum = hasPriceAfterDiscount ? parseFloat(product.priceAfterDiscount) : originalPriceNum
+                      const priceAfterDiscountFormatted = `€ ${priceAfterDiscountNum.toFixed(2)}`
+                      
+                      // Use priceAfterDiscount if available, otherwise use price for display
+                      const priceValue = hasPriceAfterDiscount ? product.priceAfterDiscount : product.price
                       const priceNum = parseFloat(priceValue) || 0
                       const formattedPrice = `€ ${priceNum.toFixed(2)}`
                       
@@ -691,6 +698,10 @@ function AppContent() {
                         name: product.name,
                         desc: product.description || '',
                         price: formattedPrice,
+                        originalPrice: originalPriceFormatted,
+                        originalPriceNum: originalPriceNum,
+                        priceAfterDiscount: hasPriceAfterDiscount ? priceAfterDiscountFormatted : null,
+                        priceAfterDiscountNum: hasPriceAfterDiscount ? priceAfterDiscountNum : null,
                         image: imageUrl || 'https://via.placeholder.com/200',
                         optionGroups,
                         hasDiscount: hasActiveDiscount,

@@ -57,12 +57,22 @@ export default function StorePage({ point, menu, categories, offers = [], active
         <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
           <div className="flex items-center gap-1">
             <span className="text-sm">💰</span>
-            <span className="font-semibold">€ {parseFloat(point?.deliveryFee || 0).toFixed(2)}</span>
+            <span className="font-semibold">
+              Delivery fee:{' '}
+              <span className="underline decoration-white/60">
+                € {parseFloat(point?.deliveryFee || 0).toFixed(2)}
+              </span>
+            </span>
           </div>
           <div className="h-3 w-px bg-white/50"></div>
           <div className="flex items-center gap-1">
             <span className="text-sm">📦</span>
-            <span className="font-semibold">€ {parseFloat(point?.minOrder || 0).toFixed(2)}</span>
+            <span className="font-semibold">
+              Free delivery from:{' '}
+              <span className="underline decoration-white/60">
+                € {parseFloat(point?.minOrder || 0).toFixed(2)}
+              </span>
+            </span>
           </div>
         </div>
       </div>
@@ -226,11 +236,18 @@ export default function StorePage({ point, menu, categories, offers = [], active
                       +
                     </button>
                   </div>
-                    <div className={`text-sm font-semibold mb-1 ${
+                    <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${
                       isInactive ? 'text-slate-500' : 'text-orange-600'
                     }`}>
-                    {item.price}
-                  </div>
+                      {item.priceAfterDiscount ? (
+                        <>
+                          <span className="line-through text-slate-400">{item.originalPrice}</span>
+                          <span>{item.priceAfterDiscount}</span>
+                        </>
+                      ) : (
+                        <span>{item.price}</span>
+                      )}
+                    </div>
                   {item.desc && (
                       <p className={`text-xs line-clamp-2 leading-snug ${
                         isInactive ? 'text-slate-500' : 'text-slate-600'
