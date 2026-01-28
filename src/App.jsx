@@ -5,26 +5,42 @@ import CartPanel from './components/CartPanel'
 import CheckoutPage from './components/CheckoutPage'
 import AlertDialog from './components/AlertDialog'
 import { AlertProvider, useAlert } from './context/AlertContext'
+import { restaurantService, orderService, deliveryLocationService } from './services'
+import { initializeAuth } from './services/authInit'
 
 function AppContent() {
   const { alert, closeAlert, showAlert } = useAlert()
-  const [points] = useState([
-    {
-      id: 'aldo',
-      name: 'ALDO TEST',
-      image:
-        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&auto=format&fit=crop&crop=faces',
-    },
-    {
-      id: 'marina',
-      name: 'POINT TEST',
-      image:
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400&auto=format&fit=crop',
-    },
-  ])
+  const [points, setPoints] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [authInitialized, setAuthInitialized] = useState(false)
 
   const [selectedPoint, setSelectedPoint] = useState(null)
+  const [restaurants, setRestaurants] = useState([])
+  const [restaurantLoading, setRestaurantLoading] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
+
+  // Initialize auth and fetch delivery locations on mount
+  useEffect(() => {
+    const initAndFetch = async () => {
+      try {
+        setLoading(true)
+        // Initialize authentication
+        const authResult = await initializeAuth()
+        setAuthInitialized(authResult.authenticated)
+        // Fetch delivery locations
+        const data = await deliveryLocationService.getAll()
+        // If paginated, use data.data, else use data
+        setPoints(Array.isArray(data) ? data : data.data || [])
+      } catch (error) {
+        console.error('Failed to fetch delivery locations:', error)
+        const errorMessage = error.response?.data?.message || 'Failed to load delivery locations. Please check your connection and try again.'
+        showAlert('error', 'Loading Error', errorMessage, 5000)
+      } finally {
+        setLoading(false)
+      }
+    }
+    initAndFetch()
+  }, [showAlert])
 
   // cart persisted in localStorage
   const [cart, setCart] = useState(() => {
@@ -50,7 +66,20 @@ function AppContent() {
   const bumpTimerRef = useRef(null)
 
   function addToCart(item) {
-    const key = `${item.id}::${JSON.stringify(item.options || {})}`
+    // For offers, include selectedGroups in the key
+    // For products, include extraIds in the key so products with different extras are separate items
+    let key
+    if (item.isOffer) {
+      const sortedGroups = (item.selectedGroups || []).slice().sort((a, b) => {
+        if (a.groupId !== b.groupId) return a.groupId - b.groupId
+        return a.selectedItemId - b.selectedItemId
+      })
+      key = `${item.id}::${JSON.stringify(sortedGroups)}`
+    } else {
+      const sortedExtraIds = (item.extraIds || []).slice().sort((a, b) => a - b)
+      key = `${item.id}::${JSON.stringify(item.options || {})}::${JSON.stringify(sortedExtraIds)}`
+    }
+    
     setCart((prev) => {
       const idx = prev.findIndex((ci) => ci.key === key)
       if (idx !== -1) {
@@ -66,6 +95,11 @@ function AppContent() {
         price: item.price,
         qty: item.qty,
         options: item.options || {},
+        extraIds: item.extraIds || [],
+        extraNames: item.extraNames || [], // Store extra names for display
+        isOffer: item.isOffer || false,
+        offerId: item.offerId,
+        selectedGroups: item.selectedGroups || [],
         total: item.price * item.qty,
       }
       return [...prev, cartItem]
@@ -113,13 +147,56 @@ function AppContent() {
     }
   }, [])
 
+  const [fetchedMenu, setFetchedMenu] = useState(null)
+  const [menuLoading, setMenuLoading] = useState(false)
+
+  async function fetchRestaurantMenu(restaurantId) {
+    setMenuLoading(true)
+    setFetchedMenu(null)
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE
+      const response = await fetch(`${API_BASE}/public/restaurants?id=${restaurantId}`)
+      if (!response.ok) throw new Error('Failed to fetch menu')
+      const menuData = await response.json()
+    console.log('menuData', menuData)
+      // Expecting menuData to have .data[0].menu
+      setFetchedMenu(menuData)
+    } catch (err) {
+      setFetchedMenu({ error: err.message })
+    } finally {
+      setMenuLoading(false)
+    }
+  }
+
   function handleSelect(point) {
     setSelectedPoint(point)
     setActiveCategory(null)
+    // deliveredBy is now an array of restaurants
+    if (Array.isArray(point.deliveredBy)) {
+      if (point.deliveredBy.length === 1) {
+        // Only one restaurant, go directly to StorePage
+        setRestaurants([])
+        setSelectedRestaurant(point.deliveredBy[0])
+        fetchRestaurantMenu(point.deliveredBy[0].id)
+      } else {
+        // Multiple restaurants, show selection
+        setRestaurants(point.deliveredBy)
+        setSelectedRestaurant(null)
+      }
+    } else {
+      // Fallback: no deliveredBy or not array
+      setRestaurants([])
+      setSelectedRestaurant(null)
+    }
   }
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null)
 
   function handleBack() {
     setSelectedPoint(null)
+    setRestaurants([])
+    setSelectedRestaurant(null)
+    setFetchedMenu(null)
+    setActiveCategory(null)
   }
 
   const sampleMenu = {
@@ -464,103 +541,320 @@ function AppContent() {
   }
 
   if (selectedPoint) {
-    return (
-      <>
-        <StorePage
-          point={selectedPoint}
-          menu={sampleMenu}
-          categories={categories}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-          onBack={handleBack}
-          addToCart={addToCart}
-        />
-
-        <button
-          onClick={() => setCartOpen(true)}
-          aria-label="Open cart"
-          className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
-            cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
-          }`}
-        >
-          <span className="text-4xl">🛒</span>
-          <span className="sr-only">Cart</span>
-          {cart.length > 0 && (
-            <span className="absolute -top-4 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-orange-500">
-              <span className="font-bold text-lg">{cartCount()}</span>
-            </span>
+    if (selectedRestaurant) {
+      // 
+      // Show StorePage for the selected restaurant
+      return (
+        <>
+          {menuLoading ? (
+            <div className="w-full h-screen bg-slate-50 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin mb-4">
+                  <span className="text-5xl">⏳</span>
+                </div>
+                <p className="text-lg font-semibold text-slate-700">Loading menu...</p>
+              </div>
+            </div>
+          ) : fetchedMenu?.error ? (
+            <div className="w-full h-screen bg-slate-50 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-lg font-semibold text-red-600 mb-4">Error loading menu</p>
+                <p className="text-base text-slate-600 mb-4">{fetchedMenu.error}</p>
+                <button
+                  onClick={() => {
+                    // If there are multiple restaurants, go back to restaurant selection
+                    // Otherwise, go back to location selection
+                    if (restaurants.length > 0) {
+                      setSelectedRestaurant(null)
+                      setFetchedMenu(null)
+                    } else {
+                      // Go back to location selection
+                      setSelectedPoint(null)
+                      setRestaurants([])
+                      setSelectedRestaurant(null)
+                      setFetchedMenu(null)
+                      setActiveCategory(null)
+                    }
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Transform menu sections to category-based object for StorePage */
+            (() => {
+              const API_BASE = import.meta.env.VITE_API_BASE
+              const menuObj = fetchedMenu?.data?.[0]?.menu
+              let menuByCategory = {}
+              let categoriesArr = []
+              let offers = []
+              
+              // Extract and transform offers
+              if (menuObj && Array.isArray(menuObj.offers)) {
+                offers = menuObj.offers
+                  .filter(offer => offer.isActive && !offer.deletedAt)
+                  .map(offer => {
+                    // Transform offer groups and products
+                    const transformedGroups = (offer.groups || []).map(group => ({
+                      id: group.id,
+                      name: group.name,
+                      minItems: group.minItems || 1,
+                      maxItems: group.maxItems || 1,
+                      offerGroupProducts: (group.offerGroupProducts || []).map(ogp => ({
+                        id: ogp.id,
+                        product: ogp.product,
+                      })),
+                    }))
+                    
+                    // Construct image URL
+                    let imageUrl = offer.image
+                    if (imageUrl && !imageUrl.startsWith('http')) {
+                      imageUrl = `${API_BASE}/images/${imageUrl}`
+                    }
+                    
+                    return {
+                      id: offer.id,
+                      name: offer.name,
+                      description: offer.description || '',
+                      price: offer.price || '0',
+                      image: imageUrl || null,
+                      groups: transformedGroups,
+                    }
+                  })
+              }
+              
+              if (menuObj && Array.isArray(menuObj.sections)) {
+                categoriesArr = menuObj.sections.map(s => s.name)
+                
+                menuObj.sections.forEach(section => {
+                  // Transform products from API format to component format
+                  const transformedProducts = (section.products || [])
+                    .filter(product => {
+                      // Filter out only deleted products; keep inactive/unavailable so they show as closed
+                      return !product.deletedAt
+                    })
+                    .map(product => {
+                      // Use priceAfterDiscount if available, otherwise use price
+                      const priceValue = product.priceAfterDiscount || product.price
+                      const priceNum = parseFloat(priceValue) || 0
+                      const formattedPrice = `€ ${priceNum.toFixed(2)}`
+                      
+                      // Construct image URL if it's just a filename
+                      let imageUrl = product.image
+                      if (imageUrl && !imageUrl.startsWith('http')) {
+                        // If it's a filename, construct full URL
+                        imageUrl = `${API_BASE}/images/${imageUrl}`
+                      }
+                      
+                      // Transform extras to optionGroups format
+                      const optionGroups = []
+                      if (product.extras && product.extras.length > 0) {
+                        // Filter out deleted extras
+                        const activeExtras = product.extras.filter(extra => !extra.deletedAt && extra.isActive !== false)
+                        if (activeExtras.length > 0) {
+                          optionGroups.push({
+                            id: 'extras',
+                            title: 'Extras',
+                            required: false,
+                            choices: activeExtras.map(extra => ({
+                              id: `extra_${extra.id}`,
+                              label: extra.name,
+                              price: parseFloat(extra.price) || 0,
+                            })),
+                          })
+                        }
+                      }
+                      
+                      // Check if product has active discount
+                      const hasActiveDiscount = product.discount && product.discount.length > 0 && 
+                        product.discount.some(d => {
+                          if (!d.isActive || d.deletedAt) return false
+                          const now = new Date()
+                          const startsAt = d.startsAt ? new Date(d.startsAt) : null
+                          const endsAt = d.endsAt ? new Date(d.endsAt) : null
+                          if (startsAt && now < startsAt) return false
+                          if (endsAt && now > endsAt) return false
+                          return true
+                        })
+                      
+                      // Check if product is new (created within last 30 days)
+                      const isNew = product.createdAt ? (() => {
+                        const createdAt = new Date(product.createdAt)
+                        const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+                        return daysSinceCreation <= 30
+                      })() : false
+                      
+                      return {
+                        id: product.id,
+                        name: product.name,
+                        desc: product.description || '',
+                        price: formattedPrice,
+                        image: imageUrl || 'https://via.placeholder.com/200',
+                        optionGroups,
+                        hasDiscount: hasActiveDiscount,
+                        isNew,
+                        // Keep original data for reference
+                        _original: product,
+                      }
+                    })
+                  
+                  menuByCategory[section.name] = transformedProducts
+                })
+              }
+              
+              return (
+                <StorePage
+                  point={selectedRestaurant}
+                  menu={menuByCategory}
+                  categories={categoriesArr}
+                  offers={offers}
+                  activeCategory={activeCategory}
+                  setActiveCategory={setActiveCategory}
+                  onBack={() => {
+                    // If there are multiple restaurants, go back to restaurant selection
+                    // Otherwise, go back to location selection
+                    if (restaurants.length > 0) {
+                      setSelectedRestaurant(null)
+                      setFetchedMenu(null)
+                    } else {
+                      // Go back to location selection
+                      setSelectedPoint(null)
+                      setRestaurants([])
+                      setSelectedRestaurant(null)
+                      setFetchedMenu(null)
+                      setActiveCategory(null)
+                    }
+                  }}
+                  addToCart={addToCart}
+                />
+              )
+            })()
           )}
-        </button>
 
-        <CartPanel
-          open={cartOpen}
-          onClose={() => setCartOpen(false)}
-          cart={cart}
-          updateQty={updateCartItem}
-          removeItem={removeCartItem}
-          total={cartTotal()}
-          lastAddedKey={lastAddedKey}
-          onCheckout={handleCheckout} // <-- use handler that opens CheckoutPage
-        />
+          <button
+            onClick={() => setCartOpen(true)}
+            aria-label="Open cart"
+            className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
+              cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
+            }`}
+          >
+            <span className="text-4xl">🛒</span>
+            <span className="sr-only">Cart</span>
+            {cart.length > 0 && (
+              <span className="absolute -top-4 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-orange-500">
+                <span className="font-bold text-lg">{cartCount()}</span>
+              </span>
+            )}
+          </button>
 
-        {/* render checkout page as a full page/modal when checkoutOpen */}
-        {checkoutOpen && (
-          <CheckoutPage
-            point={selectedPoint}
+          <CartPanel
+            open={cartOpen}
+            onClose={() => setCartOpen(false)}
             cart={cart}
-            total={cartTotal()}
-            onClose={() => setCheckoutOpen(false)}
             updateQty={updateCartItem}
             removeItem={removeCartItem}
-            onConfirm={handleConfirmOrder}
+            total={cartTotal()}
+            lastAddedKey={lastAddedKey}
+            onCheckout={handleCheckout}
           />
-        )}
+
+          {checkoutOpen && (
+            <CheckoutPage
+              restaurant={selectedRestaurant}
+              deliveryLocation={selectedPoint}
+              cart={cart}
+              total={cartTotal()}
+              onClose={() => setCheckoutOpen(false)}
+              updateQty={updateCartItem}
+              removeItem={removeCartItem}
+              onConfirm={handleConfirmOrder}
+            />
+          )}
+        </>
+      )
+    }
+    // Show restaurant selection if multiple
+    return (
+      <>
+        <div className="w-full min-h-screen bg-white flex flex-col">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setSelectedPoint(null)
+                  setRestaurants([])
+                  setSelectedRestaurant(null)
+                  setFetchedMenu(null)
+                  setActiveCategory(null)
+                }}
+                className="text-2xl leading-none active:opacity-70 transition-opacity"
+                aria-label="Go back"
+              >
+                ←
+              </button>
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-center">Choose a Restaurant</h2>
+                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">Available for your selected delivery location</p>
+              </div>
+              <div className="w-8"></div>
+            </div>
+          </div>
+          <div className="flex-1 p-4 sm:p-6">
+            {restaurants.length > 0 ? (
+              <section className="flex flex-col gap-3 sm:gap-4 max-w-2xl mx-auto">
+                {restaurants.map((r) => (
+                  <DeliveryPointCard key={r.id} point={r} onSelect={() => { setSelectedRestaurant(r); fetchRestaurantMenu(r.id); }} />
+                ))}
+              </section>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-sm sm:text-base text-slate-600">No restaurants available for this location.</p>
+              </div>
+            )}
+          </div>
+        </div>
       </>
     )
   }
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex items-center justify-center p-6 lg:p-12 relative overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-yellow-200/30 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-200/20 rounded-full blur-3xl"></div>
-        </div>
+      <main className="w-full min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <div className="w-full max-w-2xl">
+            <header className="mb-6 sm:mb-8 text-center">
+              <div className="inline-block mb-3 sm:mb-4">
+                <span className="text-5xl sm:text-6xl lg:text-7xl">🍽️</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">
+                Choose Your Delivery Location
+              </h1>
+              <p className="text-sm sm:text-base text-slate-600">Start ordering delicious food now! 🚀</p>
+            </header>
 
-        <div className="max-w-3xl lg:max-w-5xl w-full relative z-10">
-          <header className="mb-8 lg:mb-12 text-center">
-            <div className="inline-block mb-4 lg:mb-6 animate-bounce">
-              <span className="text-6xl lg:text-8xl drop-shadow-lg">🍽️</span>
-            </div>
-            <h1 className="text-3xl lg:text-5xl font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent mb-3 lg:mb-4 drop-shadow-sm">
-              Choose Your Delivery Point
-            </h1>
-            <p className="text-lg lg:text-xl text-amber-900/80 font-semibold">Start ordering delicious food now! 🚀</p>
-          </header>
-          <section className="flex flex-col gap-5 lg:gap-6">
-            {points.map((p) => (
-              <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
-            ))}
-          </section>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin mb-3">
+                  <span className="text-4xl">⏳</span>
+                </div>
+                <span className="text-sm sm:text-base text-slate-600 font-medium">Loading delivery locations...</span>
+              </div>
+            ) : points.length > 0 ? (
+              <section className="flex flex-col gap-3 sm:gap-4">
+                {points.map((p) => (
+                  <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
+                ))}
+              </section>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-sm sm:text-base text-slate-600">No delivery locations available. Please try again later.</p>
+              </div>
+            )}
+          </div>
         </div>
       </main>
-
-      {/* <button
-        onClick={() => setCartOpen(true)}
-        aria-label="Open cart"
-        className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
-          cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
-        }`}
-      >
-        <span className="text-2xl pt-2">🛒</span>
-        {cart.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-white text-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold">
-            {cartCount()}
-          </span>
-        )}
-      </button> */}
 
       <CartPanel open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} updateQty={updateCartItem} removeItem={removeCartItem} total={cartTotal()} lastAddedKey={lastAddedKey} />
     </>

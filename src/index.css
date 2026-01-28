@@ -14,3 +14,12 @@ body {
 code {
   @apply bg-slate-100 px-1 rounded text-sm;
 }
+
+/* Hide scrollbar for mobile categories */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

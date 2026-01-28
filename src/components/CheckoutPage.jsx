@@ -1,28 +1,72 @@
 import { useState } from 'react'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
+import { orderService } from '../services'
 
-export default function CheckoutPage({ point, cart, total, onClose, updateQty, removeItem, onConfirm }) {
+export default function CheckoutPage({ restaurant, deliveryLocation, cart, total, onClose, updateQty, removeItem, onConfirm }) {
   const [promo, setPromo] = useState('')
   const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [notes, setNotes] = useState('')
   const { showAlert } = useAlert()
 
   const handleContinue = async () => {
     if (!agree) return
+    
+    // Validate customer information
+    if (!customerName.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your name.', 5000)
+      return
+    }
+    if (!customerPhone.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your phone number.', 5000)
+      return
+    }
+    if (!customerEmail.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your email address.', 5000)
+      return
+    }
+    
     setIsSubmitting(true)
     try {
-      // Simulate order submission (replace with real API call)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Prepare order data according to API specification
+      const orderData = {
+        restaurantId: restaurant?.id,
+        deliveryLocationId: deliveryLocation?.id,
+        paymentMethod: 'CASH',
+        paymentStatus: 'UNPAID',
+        customer: {
+          name: customerName.trim(),
+          phone: customerPhone.trim(),
+          email: customerEmail.trim(),
+        },
+        notes: notes.trim() || null,
+        products: cart.filter(item => !item.isOffer).map((item) => ({
+          productId: item.id,
+          quantity: item.qty,
+          extraIds: item.extraIds || [],
+        })),
+        offers: cart.filter(item => item.isOffer).map((item) => ({
+          offerId: item.offerId,
+          quantity: item.qty,
+          selectedGroups: item.selectedGroups || [],
+        })),
+      }
+
+      // Submit order to backend
+      const response = await orderService.create(orderData)
       
       // Show success alert
-      showAlert('success', 'Order Confirmed!', 'Your order has been successfully placed. You will receive a call from the rider shortly.', 10000)
+      showAlert('success', 'Order Confirmed!', `Your order #${response.id || response.data?.id || 'has been'} has been successfully placed. You will receive a call from the rider shortly.`, 10000)
       
-        onClose()
-        onConfirm && onConfirm()
+      onClose()
+      onConfirm && onConfirm()
     } catch (error) {
       // Show error alert
-      showAlert('error', 'Order Failed', error.message || 'Something went wrong. Please try again.', 10000)
+      showAlert('error', 'Order Failed', error.response?.data?.message || error.message || 'Something went wrong. Please try again.', 10000)
       setIsSubmitting(false)
     }
   }
@@ -37,8 +81,60 @@ export default function CheckoutPage({ point, cart, total, onClose, updateQty, r
 
         <div className="p-6">
           <div className="text-center mb-6">
-            <div className="text-xl lg:text-2xl font-bold text-orange-500">{point?.name || 'Location'}</div>
-            <button className="text-base lg:text-lg text-slate-500 mt-1">↔ Change location</button>
+            <div className="text-xl lg:text-2xl font-bold text-orange-500">{restaurant?.name || 'Restaurant'}</div>
+            <div className="text-base lg:text-lg text-slate-600 mt-1">Delivery to: {deliveryLocation?.name || 'Location'}</div>
+          </div>
+
+          {/* Customer Information Form */}
+          <div className="mb-6 border-b pb-6">
+            <div className="text-lg lg:text-xl font-semibold mb-4">Customer Information</div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-base lg:text-lg font-medium mb-2">Name *</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full border px-3 py-2 rounded text-base lg:text-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-base lg:text-lg font-medium mb-2">Phone *</label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Enter your phone number"
+                  className="w-full border px-3 py-2 rounded text-base lg:text-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-base lg:text-lg font-medium mb-2">Email *</label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full border px-3 py-2 rounded text-base lg:text-lg"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Notes */}
+          <div className="mb-6 border-b pb-6">
+            <div className="text-lg lg:text-xl font-semibold mb-4">Delivery Notes (Optional)</div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g., Leave at the door, Ring the bell, etc."
+              className="w-full border px-3 py-2 rounded text-base lg:text-lg"
+              rows="3"
+            />
           </div>
 
           <div className="space-y-4">
@@ -49,8 +145,13 @@ export default function CheckoutPage({ point, cart, total, onClose, updateQty, r
                 <div key={it.key} className="flex items-center justify-between gap-4 pb-3 border-b">
                   <div className="flex-1">
                     <div className="text-lg lg:text-xl font-semibold">{it.name} <span className="text-base lg:text-lg text-slate-500">({formatPrice(it.price)})</span></div>
+                    {(it.extraNames && it.extraNames.length > 0) && (
+                      <div className="text-sm lg:text-base text-orange-600 mt-1">
+                        Extras: {it.extraNames.join(', ')}
+                      </div>
+                    )}
                     {it.options && Object.keys(it.options).length > 0 && (
-                      <div className="text-base lg:text-lg text-slate-600">{Object.values(it.options).join(', ')}</div>
+                      <div className="text-sm lg:text-base text-slate-500 mt-1">{Object.values(it.options).filter(v => v).join(', ')}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -83,7 +184,7 @@ export default function CheckoutPage({ point, cart, total, onClose, updateQty, r
 
             <label className="flex items-start gap-2 text-base lg:text-lg">
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="w-5 h-5 mt-1" />
-              <div>Check this box to confirm that the selected delivery location is <span className="font-semibold">{point?.name || ''}</span></div>
+              <div>Check this box to confirm that the selected delivery location is <span className="font-semibold">{deliveryLocation?.name || ''}</span></div>
             </label>
 
             <div className="mt-4">
