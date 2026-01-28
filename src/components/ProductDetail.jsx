@@ -98,7 +98,7 @@ export default function ProductDetail({ product, onClose, onAdd }) {
         }}
       />
       <div
-        className={`relative bg-white w-full max-w-lg max-h-[100vh] sm:max-h-[90vh] h-full sm:h-auto rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
+        className={`relative bg-white w-full max-w-lg max-h-[80vh] sm:max-h-[90vh] h-auto rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
