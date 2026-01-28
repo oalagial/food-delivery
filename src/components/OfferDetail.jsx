@@ -84,14 +84,14 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
         }}
       />
       <div
-        className={`relative bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[90vh] transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
+        className={`relative bg-white w-full max-w-lg h-[95vh] sm:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`offer-${offer.id}-title`}
       >
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-10">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-10">
           <button 
             onClick={onClose} 
             className="w-8 h-8 flex items-center justify-center text-2xl text-slate-600 active:bg-slate-100 rounded-full transition-colors"
@@ -105,8 +105,8 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
           <div className="w-8"></div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
           <div className="p-4">
             {offer.image && (
               <img 
@@ -221,8 +221,8 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
           </div>
         </div>
 
-        {/* Sticky Footer Button */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-3">
+        {/* Footer Button - Fixed */}
+        <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
           <button
             disabled={!isValid}
             onClick={() => {
