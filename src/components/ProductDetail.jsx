@@ -89,7 +89,7 @@ export default function ProductDetail({ product, onClose, onAdd }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => {
@@ -98,14 +98,14 @@ export default function ProductDetail({ product, onClose, onAdd }) {
         }}
       />
       <div
-        className={`relative bg-white w-full max-w-lg h-[95vh] sm:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
+        className={`relative bg-white w-full max-w-lg max-h-[100vh] sm:max-h-[90vh] h-full sm:h-auto rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`dialog-${product.id}-title`}
       >
         {/* Header - Fixed */}
-        <div className="flex-shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-10">
+        <div className="flex-shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 relative">
           <button 
             onClick={onClose} 
             className="w-8 h-8 flex items-center justify-center text-2xl text-slate-600 active:bg-slate-100 rounded-full transition-colors"
