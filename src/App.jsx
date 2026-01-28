@@ -11,7 +11,7 @@ function AppContent() {
   const [points] = useState([
     {
       id: 'aldo',
-      name: 'ALDO TEST',
+      name: 'DEMO TEST',
       image:
         'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&auto=format&fit=crop&crop=faces',
     },
