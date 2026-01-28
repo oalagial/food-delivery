@@ -4,7 +4,10 @@ import { parsePrice, formatPrice } from '../utils/price'
 export default function ProductDetail({ product, onClose, onAdd }) {
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
+  const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
   const optionGroups = product.optionGroups || []
+  const extrasGroup = optionGroups.find(g => g.id === 'extras')
+  const otherOptionGroups = optionGroups.filter(g => g.id !== 'extras')
   const modalRef = useRef(null)
   const [mounted, setMounted] = useState(false)
 
@@ -34,30 +37,6 @@ export default function ProductDetail({ product, onClose, onAdd }) {
         setMounted(false)
         setTimeout(() => onClose(), 180)
       }
-
-      if (e.key === 'Tab') {
-        const el = modalRef.current
-        if (!el) return
-        const focusable = Array.from(
-          el.querySelectorAll(
-            'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        )
-        if (focusable.length === 0) {
-          e.preventDefault()
-          return
-        }
-        const first = focusable[0]
-        const last = focusable[focusable.length - 1]
-        if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        }
-      }
     }
 
     document.addEventListener('keydown', onKey)
@@ -73,113 +52,265 @@ export default function ProductDetail({ product, onClose, onAdd }) {
     }
   }, [onClose])
 
-  const isValid = optionGroups.every((g) => !g.required || Boolean(selectedOptions[g.id]))
+  const isValid = otherOptionGroups.every((g) => !g.required || Boolean(selectedOptions[g.id]))
   const base = parsePrice(product.price)
-  const optionExtras = optionGroups.reduce((s, g) => {
+  
+  const extrasTotal = Object.entries(selectedExtras).reduce((sum, [extraId, count]) => {
+    if (count > 0 && extrasGroup) {
+      const extraIdNum = parseInt(extraId)
+      const choice = extrasGroup.choices.find(c => {
+        const id = parseInt(c.id.replace('extra_', ''))
+        return id === extraIdNum
+      })
+      return sum + (choice?.price || 0) * count
+    }
+    return sum
+  }, 0)
+  
+  const otherOptionsTotal = otherOptionGroups.reduce((s, g) => {
     const choiceId = selectedOptions[g.id]
     if (!choiceId) return s
     const choice = g.choices.find((c) => c.id === choiceId)
     return s + (choice?.price || 0)
   }, 0)
-  const total = (base + optionExtras) * qty
+  
+  const total = (base + otherOptionsTotal + extrasTotal) * qty
+  
+  const handleExtraChange = (extraId, delta) => {
+    setSelectedExtras(prev => {
+      const current = prev[extraId] || 0
+      const newValue = Math.max(0, Math.min(1, current + delta))
+      if (newValue === 0) {
+        const { [extraId]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [extraId]: newValue }
+    })
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 lg:p-8">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div
-        className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => {
           setMounted(false)
           setTimeout(() => onClose(), 180)
         }}
       />
       <div
-        className={`relative bg-white w-full max-w-3xl rounded-lg shadow-lg overflow-auto max-h-[90vh] transform transition-all duration-200 ${mounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95'}`}
+        className={`relative bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[90vh] transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`dialog-${product.id}-title`}
       >
-        <div className="p-4 lg:p-6">
-          <div className="flex items-start gap-4">
-            <button onClick={onClose} className="text-2xl p-1 border rounded-full">×</button>
-            <div className="flex-1">
-              <img src={product.image} alt={product.name} className="w-full h-64 lg:h-80 object-cover rounded-md mb-6" />
-              <div className="flex items-center gap-2 mb-4">
-                <span className="bg-sky-100 text-sky-800 px-3 py-2 rounded-full text-base font-medium">New</span>
-                <span className="bg-amber-100 text-amber-800 px-3 py-2 rounded-full text-base font-medium">Offer</span>
-              </div>
-              <h2 id={`dialog-${product.id}-title`} className="text-2xl lg:text-3xl font-bold mb-3">{product.name}</h2>
-              <div className="text-base lg:text-lg text-slate-700 mb-6 leading-relaxed">{product.desc}</div>
-
-              <div className="flex items-center gap-4 my-6">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 text-lg font-semibold">−</button>
-                <div className="text-2xl font-semibold w-8 text-center">{qty}</div>
-                <button onClick={() => setQty((q) => q + 1)} className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 text-lg font-semibold">+</button>
-              </div>
-
-              <div className="mb-6">
-                <div className="font-semibold text-lg mb-3">Allergens:</div>
-                <ul className="list-disc pl-5 text-base text-slate-700 space-y-1">
-                  <li>Milk and dairy</li>
-                  <li>Fish and derivatives (Mediterranean)</li>
-                </ul>
-              </div>
-
-              {optionGroups.map((g) => (
-                <div className="mb-6" key={g.id}>
-                  <div className="font-semibold text-lg mb-3">
-                    {g.title}
-                    {g.required && <span className="text-red-500"> *</span>}
-                  </div>
-                  <div className="space-y-3 text-base">
-                    {g.choices.map((choice) => (
-                      <label className="block flex items-center cursor-pointer" key={choice.id}>
-                        <input
-                          type="radio"
-                          name={`opt_${g.id}`}
-                          className="w-5 h-5"
-                          onChange={() => setSelectedOptions((p) => ({ ...p, [g.id]: choice.id }))}
-                        />
-                        <span className="ml-3">
-                          {choice.label}
-                          {choice.price ? ` (+${formatPrice(choice.price)})` : ''}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                    {g.required && !selectedOptions[g.id] && (
-                      <div className="text-base text-red-500 mt-3 font-medium">Please choose a {g.title.toLowerCase()} option.</div>
-                    )}
-                </div>
-              ))}
-
-              <div className="sticky bottom-0 left-0 right-0 py-6 bg-white border-t">
-                <button
-                  disabled={!isValid}
-                  onClick={() => {
-                    if (!isValid) return
-                    const options = {}
-                    optionGroups.forEach((g) => {
-                      const choiceId = selectedOptions[g.id]
-                      const choice = g.choices.find((c) => c.id === choiceId)
-                      options[g.id] = choice ? choice.label : null
-                    })
-
-                    const item = {
-                      id: product.id,
-                      name: product.name,
-                      price: base + optionExtras,
-                      qty,
-                      options,
-                    }
-                    onAdd(item)
-                  }}
-                  className={`w-full py-4 rounded-lg font-semibold text-lg lg:text-xl ${isValid ? 'bg-orange-500 text-white hover:bg-orange-600 transition-colors' : 'bg-orange-200 text-white/60 cursor-not-allowed'}`}>
-                  Add to cart ( + {formatPrice(total)} )
-                </button>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-10">
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 flex items-center justify-center text-2xl text-slate-600 active:bg-slate-100 rounded-full transition-colors"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <div className="flex items-center gap-2">
+            {product.isNew && (
+              <span className="bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+                New
+              </span>
+            )}
+            {product.hasDiscount && (
+              <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+                Offer
+              </span>
+            )}
           </div>
+          <div className="w-8"></div>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
+          <div className="p-4">
+            <img 
+              src={product.image} 
+              alt={product.name} 
+              className="w-full h-48 sm:h-64 object-cover rounded-lg mb-4" 
+            />
+            
+            <h2 id={`dialog-${product.id}-title`} className="text-xl font-bold mb-2 text-slate-900">
+              {product.name}
+            </h2>
+            
+            {product.desc && (
+              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                {product.desc}
+              </p>
+            )}
+
+            {/* Quantity Selector */}
+            <div className="flex items-center justify-center gap-4 my-4 py-3 border-y border-slate-200">
+              <button 
+                onClick={() => setQty((q) => Math.max(1, q - 1))} 
+                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
+              >
+                −
+              </button>
+              <div className="text-xl font-bold w-12 text-center">{qty}</div>
+              <button 
+                onClick={() => setQty((q) => q + 1)} 
+                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Allergens */}
+            <div className="mb-4">
+              <div className="font-semibold text-sm mb-2 text-slate-900">Allergens:</div>
+              <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
+                <li>Milk and dairy</li>
+                <li>Fish and derivatives (Mediterranean)</li>
+              </ul>
+            </div>
+
+            {/* Extras */}
+            {extrasGroup && extrasGroup.choices.length > 0 && (
+              <div className="mb-4">
+                <div className="font-semibold text-sm mb-2 text-slate-900">Extras</div>
+                <div className="space-y-2">
+                  {extrasGroup.choices.map((choice) => {
+                    const extraId = parseInt(choice.id.replace('extra_', ''))
+                    const count = selectedExtras[extraId] || 0
+                    return (
+                      <div key={choice.id} className="flex items-center justify-between p-2.5 border border-slate-200 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm text-slate-900">{choice.label}</span>
+                          {choice.price > 0 && (
+                            <span className="ml-2 text-xs text-slate-600">+{formatPrice(choice.price)}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleExtraChange(extraId, -1)}
+                            disabled={count === 0}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                              count === 0
+                                ? 'bg-slate-100 text-slate-400'
+                                : 'bg-orange-100 text-orange-600 active:bg-orange-200'
+                            }`}
+                          >
+                            −
+                          </button>
+                          <span className="w-6 text-center text-sm font-semibold">{count}</span>
+                          <button
+                            onClick={() => handleExtraChange(extraId, 1)}
+                            disabled={count >= 1}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                              count >= 1
+                                ? 'bg-slate-100 text-slate-400'
+                                : 'bg-orange-100 text-orange-600 active:bg-orange-200'
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Other option groups */}
+            {otherOptionGroups.map((g) => (
+              <div className="mb-4" key={g.id}>
+                <div className="font-semibold text-sm mb-2 text-slate-900">
+                  {g.title}
+                  {g.required && <span className="text-red-500 ml-1">*</span>}
+                </div>
+                <div className="space-y-2">
+                  {g.choices.map((choice) => (
+                    <label 
+                      className="flex items-center p-2.5 border border-slate-200 rounded-lg cursor-pointer active:bg-slate-50 transition-colors" 
+                      key={choice.id}
+                    >
+                      <input
+                        type="radio"
+                        name={`opt_${g.id}`}
+                        className="w-4 h-4 flex-shrink-0"
+                        checked={selectedOptions[g.id] === choice.id}
+                        onChange={() => setSelectedOptions((p) => ({ ...p, [g.id]: choice.id }))}
+                      />
+                      <span className="ml-3 text-sm text-slate-900">
+                        {choice.label}
+                        {choice.price ? ` (+${formatPrice(choice.price)})` : ''}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {g.required && !selectedOptions[g.id] && (
+                  <div className="text-xs text-red-500 mt-2 font-medium">
+                    Please choose a {g.title.toLowerCase()} option.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Sticky Footer Button */}
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-3">
+          <button
+            disabled={!isValid}
+            onClick={() => {
+              if (!isValid) return
+              const options = {}
+              const extraIds = []
+              
+              otherOptionGroups.forEach((g) => {
+                const choiceId = selectedOptions[g.id]
+                const choice = g.choices.find((c) => c.id === choiceId)
+                if (choice) {
+                  options[g.id] = choice.label
+                }
+              })
+              
+              const extraNames = []
+              Object.entries(selectedExtras).forEach(([extraId, count]) => {
+                if (count > 0) {
+                  const extraIdNum = parseInt(extraId)
+                  extraIds.push(extraIdNum)
+                  if (extrasGroup) {
+                    const choice = extrasGroup.choices.find(c => {
+                      const id = parseInt(c.id.replace('extra_', ''))
+                      return id === extraIdNum
+                    })
+                    if (choice) {
+                      extraNames.push(choice.label)
+                    }
+                  }
+                }
+              })
+
+              const item = {
+                id: product.id,
+                name: product.name,
+                price: base + otherOptionsTotal + extrasTotal,
+                qty,
+                options,
+                extraIds,
+                extraNames,
+              }
+              onAdd(item)
+            }}
+            className={`w-full py-3.5 rounded-lg font-semibold text-base transition-all ${
+              isValid 
+                ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            Add to cart (+ {formatPrice(total)})
+          </button>
         </div>
       </div>
     </div>
