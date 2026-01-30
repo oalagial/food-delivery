@@ -404,10 +404,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!agree || isSubmitting} 
+            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError} 
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              agree && !isSubmitting 
+              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}

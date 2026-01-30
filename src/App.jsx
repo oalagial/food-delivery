@@ -171,6 +171,8 @@ function AppContent() {
   function handleSelect(point) {
     setSelectedPoint(point)
     setActiveCategory(null)
+    // Clear cart when changing delivery location
+    setCart([])
     // deliveredBy is now an array of restaurants
     if (Array.isArray(point.deliveredBy)) {
       if (point.deliveredBy.length === 1) {
@@ -720,6 +722,7 @@ function AppContent() {
               return (
                 <StorePage
                   point={selectedRestaurant}
+                  deliveryLocation={selectedPoint}
                   menu={menuByCategory}
                   categories={categoriesArr}
                   offers={offers}

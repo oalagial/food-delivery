@@ -4,6 +4,17 @@ export default function DeliveryPointCard({ point, onSelect }) {
   const [anim, setAnim] = useState(false)
   const timerRef = useRef(null)
 
+  // Check if restaurant is closed (when deliveredBy has only one restaurant)
+  // This has priority over location isActive status
+  // Use isOpen property from deliveredBy array
+  const isRestaurantClosed = (() => {
+    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length === 1) {
+      const restaurant = point.deliveredBy[0]
+      return restaurant.isOpen === false
+    }
+    return false
+  })()
+
   useEffect(() => {
     return () => {
       try {
@@ -50,10 +61,22 @@ export default function DeliveryPointCard({ point, onSelect }) {
         <div className="font-bold text-sm sm:text-base lg:text-lg text-slate-900 mb-0.5 truncate">
           {point.name}
         </div>
-        <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
-          <span>⚡</span>
-          <span>Fast Delivery</span>
-        </div>
+        {isRestaurantClosed ? (
+          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+            <span>🕐</span>
+            <span>Restaurant is closed</span>
+          </div>
+        ) : point.isActive === false ? (
+          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+            <span>⚠️</span>
+            <span>Temporarily Closed</span>
+          </div>
+        ) : (
+          <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
+            <span>⚡</span>
+            <span>Fast Delivery</span>
+          </div>
+        )}
       </div>
       <div className="flex-shrink-0">
         <button

@@ -2,12 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import ProductDetail from './ProductDetail'
 import OfferDetail from './OfferDetail'
 
-export default function StorePage({ point, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
+export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
   const [selectedProductDetail, setSelectedProductDetail] = useState(null)
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
   const categoryRefs = useRef({})
   const productsContainerRef = useRef(null)
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
+  const isLocationInactive = deliveryLocation?.isActive === false
+  const isRestaurantClosed = point?.isOpen === false
+  const cannotAddToCart = isLocationInactive || isRestaurantClosed
 
   // Detect which category is in view as user scrolls
   const handleProductsScroll = () => {
@@ -54,27 +57,39 @@ export default function StorePage({ point, menu, categories, offers = [], active
 
       {/* Delivery Info - Mobile Optimized */}
       <div className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-3 py-2.5 shadow-sm flex-shrink-0">
-        <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-sm">💰</span>
-            <span className="font-semibold">
-              Delivery fee:{' '}
-              <span className="underline decoration-white/60">
-                € {parseFloat(point?.deliveryFee || 0).toFixed(2)}
-              </span>
-            </span>
+        {isRestaurantClosed ? (
+          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+            <span className="text-lg">🕐</span>
+            <span className="font-semibold">Restaurant is closed</span>
           </div>
-          <div className="h-3 w-px bg-white/50"></div>
-          <div className="flex items-center gap-1">
-            <span className="text-sm">📦</span>
-            <span className="font-semibold">
-              Free delivery from:{' '}
-              <span className="underline decoration-white/60">
-                € {parseFloat(point?.minOrder || 0).toFixed(2)}
-              </span>
-            </span>
+        ) : isLocationInactive ? (
+          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+            <span className="text-lg">⚠️</span>
+            <span className="font-semibold">Temporarily Closed</span>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div className="flex items-center gap-1">
+              <span className="text-sm">💰</span>
+              <span className="font-semibold">
+                Delivery fee:{' '}
+                <span className="underline decoration-white/60">
+                  € {parseFloat(point?.deliveryFee || 0).toFixed(2)}
+                </span>
+              </span>
+            </div>
+            <div className="h-3 w-px bg-white/50"></div>
+            <div className="flex items-center gap-1">
+              <span className="text-sm">📦</span>
+              <span className="font-semibold">
+                Free delivery from:{' '}
+                <span className="underline decoration-white/60">
+                  € {parseFloat(point?.minOrder || 0).toFixed(2)}
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Categories - Mobile Optimized Horizontal Scroll */}
@@ -156,14 +171,21 @@ export default function StorePage({ point, menu, categories, offers = [], active
                       </h3>
                     </div>
                     <button
+                      disabled={cannotAddToCart}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setSelectedOfferDetail(offer)
+                        if (!cannotAddToCart) {
+                          setSelectedOfferDetail(offer)
+                        }
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
-                      className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500 text-white font-bold text-lg shadow-md active:scale-95 active:bg-orange-600 transition-all flex items-center justify-center"
-                      aria-label="Add to cart"
+                      className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
+                        cannotAddToCart
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
+                      }`}
+                      aria-label={cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
                     >
                       +
                     </button>
@@ -240,20 +262,20 @@ export default function StorePage({ point, menu, categories, offers = [], active
                     </div>
                     <button
                         type="button"
-                        disabled={isInactive}
+                        disabled={isInactive || cannotAddToCart}
                         onClick={() => {
-                          if (!isInactive) {
+                          if (!isInactive && !cannotAddToCart) {
                             setSelectedProductDetail(item)
                           }
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
-                          isInactive
+                          isInactive || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
                         }`}
-                        aria-label={isInactive ? 'Product not available' : 'Add to cart'}
+                        aria-label={isInactive ? 'Product not available' : cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
                     >
                       +
                     </button>
@@ -290,10 +312,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
         <ProductDetail
           key={selectedProductDetail.id}
           product={selectedProductDetail}
+          isLocationInactive={cannotAddToCart}
           onClose={() => setSelectedProductDetail(null)}
           onAdd={(item) => {
-            addToCart(item)
-            setSelectedProductDetail(null)
+            if (!cannotAddToCart) {
+              addToCart(item)
+              setSelectedProductDetail(null)
+            }
           }}
         />
       )}
@@ -302,10 +327,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
         <OfferDetail
           key={selectedOfferDetail.id}
           offer={selectedOfferDetail}
+          isLocationInactive={cannotAddToCart}
           onClose={() => setSelectedOfferDetail(null)}
           onAdd={(item) => {
-            addToCart(item)
-            setSelectedOfferDetail(null)
+            if (!cannotAddToCart) {
+              addToCart(item)
+              setSelectedOfferDetail(null)
+            }
           }}
         />
       )}

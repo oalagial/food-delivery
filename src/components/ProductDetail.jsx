@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { parsePrice, formatPrice } from '../utils/price'
 
-export default function ProductDetail({ product, onClose, onAdd }) {
+export default function ProductDetail({ product, isLocationInactive = false, onClose, onAdd }) {
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
@@ -322,10 +322,17 @@ export default function ProductDetail({ product, onClose, onAdd }) {
 
         {/* Footer Button - Fixed */}
         <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+          {isLocationInactive && (
+            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800 font-semibold text-center">
+                ⚠️ Location Temporarily Closed - Cannot add items to cart
+              </p>
+            </div>
+          )}
           <button
-            disabled={!isValid}
+            disabled={!isValid || isLocationInactive}
             onClick={() => {
-              if (!isValid) return
+              if (!isValid || isLocationInactive) return
               const options = {}
               const extraIds = []
               
@@ -366,7 +373,7 @@ export default function ProductDetail({ product, onClose, onAdd }) {
               onAdd(item)
             }}
             className={`w-full py-3.5 rounded-lg font-semibold text-base transition-all ${
-              isValid 
+              isValid && !isLocationInactive
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}

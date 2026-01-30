@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { parsePrice, formatPrice } from '../utils/price'
 
-export default function OfferDetail({ offer, onClose, onAdd }) {
+export default function OfferDetail({ offer, isLocationInactive = false, onClose, onAdd }) {
   const [selectedGroups, setSelectedGroups] = useState({}) // { groupId: [productIds] }
   const [qty, setQty] = useState(1)
   const modalRef = useRef(null)
@@ -223,10 +223,17 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
 
         {/* Footer Button - Fixed */}
         <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+          {isLocationInactive && (
+            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800 font-semibold text-center">
+                ⚠️ Location Temporarily Closed - Cannot add items to cart
+              </p>
+            </div>
+          )}
           <button
-            disabled={!isValid}
+            disabled={!isValid || isLocationInactive}
             onClick={() => {
-              if (!isValid) return
+              if (!isValid || isLocationInactive) return
               
               const selectedGroupsArray = []
               Object.entries(selectedGroups).forEach(([groupId, offerGroupProductIds]) => {
@@ -259,7 +266,7 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
               onAdd(item)
             }}
             className={`w-full py-3.5 rounded-lg font-semibold text-base transition-all ${
-              isValid 
+              isValid && !isLocationInactive
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
