@@ -230,10 +230,15 @@ export default function OfferDetail({ offer, onClose, onAdd }) {
               
               const selectedGroupsArray = []
               Object.entries(selectedGroups).forEach(([groupId, offerGroupProductIds]) => {
+                const group = offer.groups.find(g => String(g.id) === String(groupId))
                 offerGroupProductIds.forEach(offerGroupProductId => {
+                  const ogp = group?.offerGroupProducts?.find(p => p.id === offerGroupProductId)
+                  const selectedProductName = ogp?.product?.name
                   selectedGroupsArray.push({
                     groupId: parseInt(groupId),
+                    groupName: group?.name,
                     selectedItemId: offerGroupProductId,
+                    selectedItemName: selectedProductName,
                   })
                 })
               })

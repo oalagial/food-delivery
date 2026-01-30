@@ -1,6 +1,24 @@
 import { formatPrice } from '../utils/price'
 
 export default function CartPanel({ open, onClose, cart, updateQty, removeItem, total, lastAddedKey, onCheckout }) {
+  const offerSelectionSummary = (it) => {
+    if (!it?.isOffer) return null
+    const selections = Array.isArray(it.selectedGroups) ? it.selectedGroups : []
+    if (selections.length === 0) return null
+
+    const grouped = new Map()
+    for (const sel of selections) {
+      const groupLabel = sel?.groupName || (sel?.groupId !== undefined ? `Group ${sel.groupId}` : 'Selected')
+      const itemLabel = sel?.selectedItemName || (sel?.selectedItemId !== undefined ? `Item ${sel.selectedItemId}` : 'Item')
+      if (!grouped.has(groupLabel)) grouped.set(groupLabel, [])
+      grouped.get(groupLabel).push(itemLabel)
+    }
+
+    return Array.from(grouped.entries())
+      .map(([groupLabel, items]) => `${groupLabel}: ${items.join(', ')}`)
+      .join(' • ')
+  }
+
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={onClose} />}
@@ -24,6 +42,11 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
                       <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">Offer</span>
                     )}
                   </div>
+                  {it.isOffer && offerSelectionSummary(it) && (
+                    <div className="text-xs text-slate-500 mb-1">
+                      {offerSelectionSummary(it)}
+                    </div>
+                  )}
                   {(it.extraNames && it.extraNames.length > 0) && (
                     <div className="text-xs text-orange-600 mb-1">
                       Extras: {it.extraNames.join(', ')}
@@ -105,6 +128,11 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
                       <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0">Offer</span>
                     )}
                   </div>
+                  {it.isOffer && offerSelectionSummary(it) && (
+                    <div className="text-xs text-slate-500 mb-0.5">
+                      {offerSelectionSummary(it)}
+                    </div>
+                  )}
                   {(it.extraNames && it.extraNames.length > 0) && (
                     <div className="text-xs text-orange-600 mb-0.5">
                       Extras: {it.extraNames.join(', ')}

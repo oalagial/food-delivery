@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
 import { orderService } from '../services'
@@ -11,6 +11,9 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
   const [notes, setNotes] = useState('')
+  const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState(null)
+  const [deliveryTimeError, setDeliveryTimeError] = useState(null)
+  const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
   const { showAlert } = useAlert()
 
   // Calculate delivery costs based on selected delivery location
@@ -22,6 +25,102 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     rawDeliveryFee > 0 && (minOrderForFree === 0 || itemsTotal < minOrderForFree)
   const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
   const finalTotal = itemsTotal + deliveryCost
+
+  // Fetch estimated delivery time when restaurant and delivery location are available
+  useEffect(() => {
+    const fetchDeliveryTime = async () => {
+      if (!restaurant?.id || !deliveryLocation?.id) {
+        return
+      }
+
+      setDeliveryTimeLoading(true)
+      setDeliveryTimeError(null)
+      setEstimatedDeliveryTime(null)
+      
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE
+        const response = await fetch(
+          `${API_BASE}/public/delivery-time?restaurantId=${restaurant.id}&deliveryLocationId=${deliveryLocation.id}`
+        )
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch delivery time')
+        }
+        
+        const data = await response.json()
+        
+        // Handle restaurant closed error
+        if (data.error) {
+          setDeliveryTimeError(data.error)
+          setEstimatedDeliveryTime(null)
+          return
+        }
+        
+        // Handle successful response with timeslot
+        if (data.timeslot && data.timeslot.start) {
+          const startDate = new Date(data.timeslot.start)
+          const endDate = data.timeslot.end ? new Date(data.timeslot.end) : null
+          const now = new Date()
+          
+          let minutesUntilDelivery = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60))
+          
+          // If start time has passed, check if we're still within the timeslot
+          if (minutesUntilDelivery < 0) {
+            if (endDate && now < endDate) {
+              // We're within the delivery window, show 0 minutes
+              minutesUntilDelivery = 0
+            } else if (endDate) {
+              // Start and end have passed, calculate from now to end (shouldn't happen but handle it)
+              minutesUntilDelivery = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60))
+              if (minutesUntilDelivery < 0) {
+                minutesUntilDelivery = 0
+              }
+            } else {
+              // No end time, just set to 0 if start has passed
+              minutesUntilDelivery = 0
+            }
+          }
+          
+          // Store the timeslot information
+          setEstimatedDeliveryTime({
+            start: startDate,
+            end: endDate,
+            minutes: minutesUntilDelivery
+          })
+          setDeliveryTimeError(null)
+        } else {
+          setEstimatedDeliveryTime(null)
+        }
+      } catch (error) {
+        console.error('Error fetching delivery time:', error)
+        setEstimatedDeliveryTime(null)
+        setDeliveryTimeError(null)
+      } finally {
+        setDeliveryTimeLoading(false)
+      }
+    }
+
+    fetchDeliveryTime()
+  }, [restaurant?.id, deliveryLocation?.id])
+
+  const offerSelectionSummary = (it) => {
+    if (!it?.isOffer) return null
+    const selections = Array.isArray(it.selectedGroups) ? it.selectedGroups : []
+    if (selections.length === 0) return null
+
+    // Group by groupName (fallback to groupId)
+    const grouped = new Map()
+    for (const sel of selections) {
+      const groupLabel = sel?.groupName || (sel?.groupId !== undefined ? `Group ${sel.groupId}` : 'Selected')
+      const itemLabel = sel?.selectedItemName || (sel?.selectedItemId !== undefined ? `Item ${sel.selectedItemId}` : 'Item')
+      if (!grouped.has(groupLabel)) grouped.set(groupLabel, [])
+      grouped.get(groupLabel).push(itemLabel)
+    }
+
+    return Array.from(grouped.entries())
+      .map(([groupLabel, items]) => `${groupLabel}: ${items.join(', ')}`)
+      .join(' • ')
+  }
 
   const handleContinue = async () => {
     if (!agree) return
@@ -42,6 +141,33 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     
     setIsSubmitting(true)
     try {
+      // Filter and prepare offers - ensure each offer with different selections is separate
+      const offerItems = cart.filter(item => item.isOffer)
+      const offers = offerItems.map((item) => {
+        // Ensure selectedGroups is an array and properly structured
+        // Filter out any invalid entries and ensure all required fields exist
+        const selectedGroups = Array.isArray(item.selectedGroups) 
+          ? item.selectedGroups
+              .filter(group => 
+                group && 
+                typeof group.groupId !== 'undefined' && 
+                typeof group.selectedItemId !== 'undefined'
+              )
+              .map(group => ({
+                groupId: parseInt(group.groupId) || group.groupId,
+                groupName: group.groupName || null,
+                selectedItemId: parseInt(group.selectedItemId) || group.selectedItemId,
+                selectedItemName: group.selectedItemName || null,
+              }))
+          : []
+        
+        return {
+          offerId: item.offerId,
+          quantity: item.qty || 1,
+          selectedGroups: selectedGroups,
+        }
+      })
+
       // Prepare order data according to API specification
       const orderData = {
         restaurantId: restaurant?.id,
@@ -59,11 +185,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           quantity: item.qty,
           extraIds: item.extraIds || [],
         })),
-        offers: cart.filter(item => item.isOffer).map((item) => ({
-          offerId: item.offerId,
-          quantity: item.qty,
-          selectedGroups: item.selectedGroups || [],
-        })),
+        offers: offers,
       }
 
       // Submit order to backend
@@ -103,6 +225,21 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             <div className="text-center mb-4 sm:mb-5">
               <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || 'Restaurant'}</div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">Delivery to: {deliveryLocation?.name || 'Location'}</div>
+              {deliveryTimeLoading ? (
+                <div className="text-xs sm:text-sm text-slate-500 mt-2">Calculating delivery time...</div>
+              ) : deliveryTimeError ? (
+                <div className="text-xs sm:text-sm text-red-600 font-semibold mt-2">
+                  ⚠️ {deliveryTimeError}
+                </div>
+              ) : estimatedDeliveryTime ? (
+                <div className="text-xs sm:text-sm text-orange-600 font-semibold mt-2">
+                  ⏱️ {estimatedDeliveryTime.end ? (
+                    <span>{estimatedDeliveryTime.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {estimatedDeliveryTime.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  ) : (
+                    <span>{estimatedDeliveryTime.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {/* Customer Information Form */}
@@ -171,6 +308,11 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                           {it.name}
                           <span className="text-xs sm:text-sm text-slate-500 font-normal ml-1">({formatPrice(it.price)})</span>
                         </div>
+                        {it.isOffer && offerSelectionSummary(it) && (
+                          <div className="text-xs sm:text-sm text-slate-500 mt-1">
+                            {offerSelectionSummary(it)}
+                          </div>
+                        )}
                         {(it.extraNames && it.extraNames.length > 0) && (
                           <div className="text-xs sm:text-sm text-orange-600 mt-1">
                             Extras: {it.extraNames.join(', ')}

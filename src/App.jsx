@@ -706,6 +706,8 @@ function AppContent() {
                         optionGroups,
                         hasDiscount: hasActiveDiscount,
                         isNew,
+                        ingredients: product.ingredients || null,
+                        allergies: product.allergies || null,
                         // Keep original data for reference
                         _original: product,
                       }

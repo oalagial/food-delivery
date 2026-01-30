@@ -128,7 +128,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
             {offers.map((offer, index) => (
               <div 
                 key={offer.id}
-                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0"
+                onClick={() => setSelectedOfferDetail(offer)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
+                }}
+                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-slate-50 rounded-lg px-2 -mx-2"
               >
                 {offer.image && (
                   <div className="flex-shrink-0">
@@ -150,7 +156,12 @@ export default function StorePage({ point, menu, categories, offers = [], active
                       </h3>
                     </div>
                     <button
-                      onClick={() => setSelectedOfferDetail(offer)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedOfferDetail(offer)
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                       className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500 text-white font-bold text-lg shadow-md active:scale-95 active:bg-orange-600 transition-all flex items-center justify-center"
                       aria-label="Add to cart"
                     >
@@ -193,9 +204,18 @@ export default function StorePage({ point, menu, categories, offers = [], active
               return (
               <div 
                 key={item.id}
-                  className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 ${
+                  onClick={() => {
+                    if (!isInactive) setSelectedProductDetail(item)
+                  }}
+                  role={!isInactive ? 'button' : undefined}
+                  tabIndex={!isInactive ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (isInactive) return
+                    if (e.key === 'Enter' || e.key === ' ') setSelectedProductDetail(item)
+                  }}
+                  className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${
                     isInactive ? 'opacity-60' : ''
-                  }`}
+                  } ${isInactive ? 'cursor-not-allowed' : 'cursor-pointer active:bg-slate-50'}`}
               >
                   <div className="flex-shrink-0">
                     <img 
@@ -226,6 +246,8 @@ export default function StorePage({ point, menu, categories, offers = [], active
                             setSelectedProductDetail(item)
                           }
                         }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                           isInactive
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'

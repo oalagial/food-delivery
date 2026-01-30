@@ -185,14 +185,55 @@ export default function ProductDetail({ product, onClose, onAdd }) {
               </button>
             </div>
 
+            {/* Ingredients */}
+            {(product.ingredients || product._original?.ingredients) && (
+              <div className="mb-4">
+                <div className="font-semibold text-sm mb-2 text-slate-900">Ingredients:</div>
+                <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
+                  {(() => {
+                    const ingredients = product.ingredients || product._original?.ingredients
+                    if (Array.isArray(ingredients)) {
+                      return ingredients.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                      ))
+                    } else if (typeof ingredients === 'string') {
+                      // If it's a comma-separated string, split it
+                      const ingredientList = ingredients.split(',').map(i => i.trim()).filter(i => i)
+                      return ingredientList.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                      ))
+                    } else {
+                      return <li>{ingredients}</li>
+                    }
+                  })()}
+                </ul>
+              </div>
+            )}
+
             {/* Allergens */}
-            <div className="mb-4">
-              <div className="font-semibold text-sm mb-2 text-slate-900">Allergens:</div>
-              <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
-                <li>Milk and dairy</li>
-                <li>Fish and derivatives (Mediterranean)</li>
-              </ul>
-            </div>
+            {(product.allergies || product._original?.allergies) && (
+              <div className="mb-4">
+                <div className="font-semibold text-sm mb-2 text-slate-900">Allergens:</div>
+                <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
+                  {(() => {
+                    const allergies = product.allergies || product._original?.allergies
+                    if (Array.isArray(allergies)) {
+                      return allergies.map((allergy, index) => (
+                        <li key={index}>{allergy}</li>
+                      ))
+                    } else if (typeof allergies === 'string') {
+                      // If it's a comma-separated string, split it
+                      const allergyList = allergies.split(',').map(a => a.trim()).filter(a => a)
+                      return allergyList.map((allergy, index) => (
+                        <li key={index}>{allergy}</li>
+                      ))
+                    } else {
+                      return <li>{allergies}</li>
+                    }
+                  })()}
+                </ul>
+              </div>
+            )}
 
             {/* Extras */}
             {extrasGroup && extrasGroup.choices.length > 0 && (
