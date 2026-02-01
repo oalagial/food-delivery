@@ -266,11 +266,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     await submitOrder()
   }
 
-  // Use slot's timezone (e.g. Europe/Athens) so display is correct regardless of dev/server TZ
+  // Display in user's browser timezone (backend sends UTC)
   const formatTimeslotDisplay = (slot) => {
     if (!slot) return ''
-    const tz = slot.timezone || 'Europe/Athens'
-    const opts = { hour: '2-digit', minute: '2-digit', timeZone: tz }
+    const opts = { hour: '2-digit', minute: '2-digit' }
     const startStr = slot.start.toLocaleTimeString(undefined, opts)
     const endStr = slot.end ? slot.end.toLocaleTimeString(undefined, opts) : null
     return endStr ? `${startStr} - ${endStr}` : startStr
