@@ -277,7 +277,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center">
-      <div className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+      <div className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden h-[80vh] sm:h-auto sm:max-h-[90vh] flex flex-col">
         {/* Sticky Header */}
         <div className="sticky top-0 bg-white border-b border-slate-200 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between z-10 flex-shrink-0">
           <div className="text-lg sm:text-xl font-bold">Your order</div>
