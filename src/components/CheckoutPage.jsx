@@ -14,7 +14,38 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState(null)
   const [deliveryTimeError, setDeliveryTimeError] = useState(null)
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
+  const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
   const { showAlert } = useAlert()
+
+  const fetchDeliveryTimeFromApi = async () => {
+    if (!restaurant?.id || !deliveryLocation?.id) return null
+    const API_BASE = import.meta.env.VITE_API_BASE
+    const response = await fetch(
+      `${API_BASE}/public/delivery-time?restaurantId=${restaurant.id}&deliveryLocationId=${deliveryLocation.id}`
+    )
+    if (!response.ok) throw new Error('Failed to fetch delivery time')
+    return response.json()
+  }
+
+  const parseTimeslot = (data) => {
+    if (!data?.timeslot?.start) return null
+    const startDate = new Date(data.timeslot.start)
+    const endDate = data.timeslot.end ? new Date(data.timeslot.end) : null
+    return {
+      start: startDate,
+      end: endDate,
+      timezone: data.timeslot.timezone || 'Europe/Athens'
+    }
+  }
+
+  const areTimeslotsEqual = (a, b) => {
+    if (!a || !b) return false
+    const aStart = a.start?.getTime?.()
+    const bStart = b.start?.getTime?.()
+    const aEnd = a.end?.getTime?.()
+    const bEnd = b.end?.getTime?.()
+    return aStart === bStart && (aEnd == null && bEnd == null ? true : aEnd === bEnd)
+  }
 
   // Calculate delivery costs based on selected delivery location
   const itemsTotal = total || 0
@@ -81,11 +112,12 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             }
           }
           
-          // Store the timeslot information
+          // Store the timeslot information with timezone for locale-aware display
           setEstimatedDeliveryTime({
             start: startDate,
             end: endDate,
-            minutes: minutesUntilDelivery
+            minutes: minutesUntilDelivery,
+            timezone: data.timeslot.timezone || 'Europe/Athens'
           })
           setDeliveryTimeError(null)
         } else {
@@ -122,30 +154,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       .join(' • ')
   }
 
-  const handleContinue = async () => {
-    if (!agree) return
-    
-    // Validate customer information
-    if (!customerName.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your name.', 5000)
-      return
-    }
-    if (!customerPhone.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your phone number.', 5000)
-      return
-    }
-    if (!customerEmail.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your email address.', 5000)
-      return
-    }
-    
-    setIsSubmitting(true)
+  const submitOrder = async () => {
     try {
-      // Filter and prepare offers - ensure each offer with different selections is separate
       const offerItems = cart.filter(item => item.isOffer)
       const offers = offerItems.map((item) => {
-        // Ensure selectedGroups is an array and properly structured
-        // Filter out any invalid entries and ensure all required fields exist
         const selectedGroups = Array.isArray(item.selectedGroups) 
           ? item.selectedGroups
               .filter(group => 
@@ -160,7 +172,6 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 selectedItemName: group.selectedItemName || null,
               }))
           : []
-        
         return {
           offerId: item.offerId,
           quantity: item.qty || 1,
@@ -168,7 +179,6 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         }
       })
 
-      // Prepare order data according to API specification
       const orderData = {
         restaurantId: restaurant?.id,
         deliveryLocationId: deliveryLocation?.id,
@@ -188,19 +198,81 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         offers: offers,
       }
 
-      // Submit order to backend
       const response = await orderService.create(orderData)
-      
-      // Show success alert
       showAlert('success', 'Order Confirmed!', `Your order #${response.id || response.data?.id || 'has been'} has been successfully placed. You will receive a call from the rider shortly.`, 10000)
-      
       onClose()
       onConfirm && onConfirm()
     } catch (error) {
-      // Show error alert
       showAlert('error', 'Order Failed', error.response?.data?.message || error.message || 'Something went wrong. Please try again.', 10000)
       setIsSubmitting(false)
     }
+  }
+
+  const handleContinue = async () => {
+    if (!agree) return
+
+    if (!customerName.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your name.', 5000)
+      return
+    }
+    if (!customerPhone.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your phone number.', 5000)
+      return
+    }
+    if (!customerEmail.trim()) {
+      showAlert('error', 'Validation Error', 'Please enter your email address.', 5000)
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const data = await fetchDeliveryTimeFromApi()
+
+      if (data?.error) {
+        showAlert('error', 'Delivery Time', data.error, 5000)
+        setIsSubmitting(false)
+        return
+      }
+
+      const newTimeslot = parseTimeslot(data)
+      if (!newTimeslot) {
+        showAlert('error', 'Delivery Time', 'Could not get delivery time. Please try again.', 5000)
+        setIsSubmitting(false)
+        return
+      }
+
+      const currentSlot = estimatedDeliveryTime ? { start: estimatedDeliveryTime.start, end: estimatedDeliveryTime.end } : null
+      if (!areTimeslotsEqual(currentSlot, newTimeslot)) {
+        setTimeChangedConfirm(newTimeslot)
+        setIsSubmitting(false)
+        return
+      }
+
+      await submitOrder()
+    } catch (error) {
+      showAlert('error', 'Delivery Time', 'Failed to verify delivery time. Please try again.', 5000)
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleConfirmTimeChanged = async () => {
+    if (!timeChangedConfirm) return
+    setEstimatedDeliveryTime({
+      ...timeChangedConfirm,
+      minutes: 0
+    })
+    setTimeChangedConfirm(null)
+    setIsSubmitting(true)
+    await submitOrder()
+  }
+
+  const formatTimeslotDisplay = (slot) => {
+    if (!slot) return ''
+    const tz = slot.timezone || 'Europe/Athens'
+    const opts = { hour: '2-digit', minute: '2-digit', timeZone: tz }
+    const startStr = slot.start.toLocaleTimeString(undefined, opts)
+    const endStr = slot.end ? slot.end.toLocaleTimeString(undefined, opts) : null
+    return endStr ? `${startStr} - ${endStr}` : startStr
   }
 
   return (
@@ -211,10 +283,13 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           <div className="text-lg sm:text-xl font-bold">Your order</div>
           <button 
             onClick={onClose} 
-            className="w-8 h-8 flex items-center justify-center text-2xl sm:text-3xl text-slate-600 active:bg-slate-100 rounded-full transition-colors"
-            aria-label="Close"
+            className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-full transition-colors border border-slate-200 hover:border-slate-300"
+            aria-label="Close (go back)"
           >
-            ×
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -233,11 +308,13 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 </div>
               ) : estimatedDeliveryTime ? (
                 <div className="text-xs sm:text-sm text-orange-600 font-semibold mt-2">
-                  ⏱️ {estimatedDeliveryTime.end ? (
-                    <span>{estimatedDeliveryTime.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {estimatedDeliveryTime.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  ) : (
-                    <span>{estimatedDeliveryTime.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  )}
+                  ⏱️ {(() => {
+                    const tz = estimatedDeliveryTime.timezone || 'Europe/Athens'
+                    const opts = { hour: '2-digit', minute: '2-digit', timeZone: tz }
+                    const startStr = estimatedDeliveryTime.start.toLocaleTimeString(undefined, opts)
+                    const endStr = estimatedDeliveryTime.end ? estimatedDeliveryTime.end.toLocaleTimeString(undefined, opts) : null
+                    return endStr ? <span>{startStr} - {endStr}</span> : <span>{startStr}</span>
+                  })()}
                 </div>
               ) : null}
             </div>
@@ -404,10 +481,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError} 
+            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm} 
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError
+              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
@@ -416,6 +493,34 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           </button>
         </div>
       </div>
+
+      {/* Time changed confirmation modal */}
+      {timeChangedConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Estimated delivery time has changed</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              The estimated delivery time is now{' '}
+              <span className="font-semibold text-orange-600">{formatTimeslotDisplay(timeChangedConfirm)}</span>.
+              Do you want to confirm with the new time?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTimeChangedConfirm(null)}
+                className="flex-1 py-2.5 rounded-lg font-semibold border border-slate-300 text-slate-700 active:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmTimeChanged}
+                className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

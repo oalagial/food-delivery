@@ -759,9 +759,14 @@ function AppContent() {
             <span className="text-4xl">🛒</span>
             <span className="sr-only">Cart</span>
             {cart.length > 0 && (
-              <span className="absolute -top-4 -right-1 bg-white text-orange-500 w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-orange-500">
-                <span className="font-bold text-lg">{cartCount()}</span>
-              </span>
+              <>
+                <span className="absolute -top-4 -right-1 bg-white text-orange-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-orange-500 px-2.5 py-1.5 whitespace-nowrap">
+                  € {cartTotal().toFixed(2)}
+                </span>
+                <span className="absolute -bottom-1 -right-1 bg-white text-orange-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 border-orange-500">
+                  {cartCount()}
+                </span>
+              </>
             )}
           </button>
 
