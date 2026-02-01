@@ -266,10 +266,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     await submitOrder()
   }
 
+  // Display in user's local timezone (browser/device) - server may be in different TZ
   const formatTimeslotDisplay = (slot) => {
     if (!slot) return ''
-    const tz = slot.timezone || 'Europe/Athens'
-    const opts = { hour: '2-digit', minute: '2-digit', timeZone: tz }
+    const opts = { hour: '2-digit', minute: '2-digit' }
     const startStr = slot.start.toLocaleTimeString(undefined, opts)
     const endStr = slot.end ? slot.end.toLocaleTimeString(undefined, opts) : null
     return endStr ? `${startStr} - ${endStr}` : startStr
@@ -308,13 +308,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 </div>
               ) : estimatedDeliveryTime ? (
                 <div className="text-xs sm:text-sm text-orange-600 font-semibold mt-2">
-                  ⏱️ {(() => {
-                    const tz = estimatedDeliveryTime.timezone || 'Europe/Athens'
-                    const opts = { hour: '2-digit', minute: '2-digit', timeZone: tz }
-                    const startStr = estimatedDeliveryTime.start.toLocaleTimeString(undefined, opts)
-                    const endStr = estimatedDeliveryTime.end ? estimatedDeliveryTime.end.toLocaleTimeString(undefined, opts) : null
-                    return endStr ? <span>{startStr} - {endStr}</span> : <span>{startStr}</span>
-                  })()}
+                  ⏱️ {formatTimeslotDisplay(estimatedDeliveryTime)}
                 </div>
               ) : null}
             </div>
