@@ -3,6 +3,7 @@ import DeliveryPointCard from './components/DeliveryPointCard'
 import StorePage from './components/StorePage'
 import CartPanel from './components/CartPanel'
 import CheckoutPage from './components/CheckoutPage'
+import OrderStatusPage from './components/OrderStatusPage'
 import AlertDialog from './components/AlertDialog'
 import { AlertProvider, useAlert } from './context/AlertContext'
 import { restaurantService, orderService, deliveryLocationService } from './services'
@@ -892,7 +893,10 @@ export default function App() {
 
 function AppWithAlert() {
   const { alert, closeAlert } = useAlert()
-  
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
+  const orderStatusMatch = pathname.match(/^\/orders\/status\/([^/]+)$/)
+  const orderToken = orderStatusMatch ? orderStatusMatch[1] : null
+
   return (
     <>
       <AlertDialog
@@ -903,7 +907,7 @@ function AppWithAlert() {
         onClose={closeAlert}
         autoCloseDuration={alert.duration}
       />
-      <AppContent />
+      {orderToken ? <OrderStatusPage token={orderToken} /> : <AppContent />}
     </>
   )
 }

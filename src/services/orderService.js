@@ -25,6 +25,12 @@ export const orderService = {
     return response.data
   },
 
+  // Get order status by token (public)
+  getByToken: async (token) => {
+    const response = await apiClient.get(`public/orders/status/${token}`)
+    return response.data
+  },
+
   // Delete order
   delete: async (id) => {
     const response = await apiClient.delete(`/orders/${id}`)
