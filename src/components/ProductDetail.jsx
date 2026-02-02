@@ -12,10 +12,6 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (maxQty != null && qty > maxQty) setQty(maxQty)
-  }, [maxQty])
-
-  useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true))
     const prevActive = document.activeElement
 
@@ -60,6 +56,11 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
   const stockQty = product.stockQuantity != null ? Number(product.stockQuantity) : null
   const isOutOfStock = stockQty !== null && stockQty === 0
   const maxQty = stockQty != null && stockQty > 0 ? stockQty : null
+
+  useEffect(() => {
+    if (maxQty != null && qty > maxQty) setQty(maxQty)
+  }, [maxQty])
+
   // Use priceAfterDiscount if available, otherwise use original price
   const base = product.priceAfterDiscountNum !== null && product.priceAfterDiscountNum !== undefined 
     ? product.priceAfterDiscountNum 
