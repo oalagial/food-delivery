@@ -36,6 +36,11 @@ export default function OrderStatusPage({ token }) {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showEmailBanner, setShowEmailBanner] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const params = new URLSearchParams(window.location.search)
+    return params.get('confirmed') === '1'
+  })
 
   useEffect(() => {
     if (!token) return
@@ -115,6 +120,27 @@ export default function OrderStatusPage({ token }) {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pb-8 pt-4 space-y-4">
+        {/* Order confirmed + email banner */}
+        {showEmailBanner && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+            <span className="text-2xl flex-shrink-0" aria-hidden>✉️</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-green-800">Order confirmed!</h3>
+              <p className="text-sm text-green-700 mt-0.5">
+                We&apos;ve sent a confirmation email to your inbox. You can use this page to track your order status.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowEmailBanner(false)}
+              className="flex-shrink-0 text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100 transition-colors"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* Status card */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 sm:p-5">

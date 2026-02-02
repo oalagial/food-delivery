@@ -200,9 +200,14 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       }
 
       const response = await orderService.create(orderData)
-      showAlert('success', 'Order Confirmed!', `Your order #${response.id || response.data?.id || 'has been'} has been successfully placed. You will receive a call from the rider shortly.`, 10000)
+      const token = response?.token || response?.data?.token
       onClose()
       onConfirm && onConfirm()
+      if (token) {
+        window.location.href = `/orders/status/${token}?confirmed=1`
+      } else {
+        showAlert('success', 'Order Confirmed!', 'Your order has been placed. You will receive a call from the rider shortly.', 10000)
+      }
     } catch (error) {
       const data = error.response?.data
       if (data?.message && Array.isArray(data?.products) && data.products.length > 0) {
