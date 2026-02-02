@@ -16,7 +16,22 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
   const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
+  const [touched, setTouched] = useState({ name: false, phone: false, email: false, notes: false })
+  const [dirty, setDirty] = useState({ name: false, phone: false, email: false, notes: false })
   const { showAlert } = useAlert()
+
+  const setFieldTouched = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }))
+  const setFieldDirty = (field) => () => setDirty((prev) => ({ ...prev, [field]: true }))
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const errors = {
+    name: !customerName.trim() ? 'Please enter your name.' : null,
+    phone: !customerPhone.trim() ? 'Please enter your phone number.' : null,
+    email: !customerEmail.trim() ? 'Please enter your email address.' : !emailRegex.test(customerEmail.trim()) ? 'Please enter a valid email address (e.g. name@example.com).' : null,
+    notes: null,
+  }
+  const showError = (field) => touched[field] && errors[field]
+  const formValid = Boolean(customerName.trim() && customerPhone.trim() && customerEmail.trim() && emailRegex.test(customerEmail.trim()))
 
   const fetchDeliveryTimeFromApi = async () => {
     if (!restaurant?.id || !deliveryLocation?.id) return null
@@ -251,7 +266,12 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       showAlert('error', 'Validation Error', 'Please enter your email address.', 5000)
       return
     }
-
+    const emailTrimmed = customerEmail.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailTrimmed)) {
+      showAlert('error', 'Validation Error', 'Please enter a valid email address (e.g. name@example.com).', 5000)
+      return
+    }
     setIsSubmitting(true)
     try {
       const data = await fetchDeliveryTimeFromApi()
@@ -350,33 +370,39 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                   <input
                     type="text"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => { setCustomerName(e.target.value); setFieldDirty('name')() }}
+                    onBlur={setFieldTouched('name')}
                     placeholder="Enter your name"
-                    className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('name') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
+                  {showError('name') && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">Phone *</label>
                   <input
                     type="tel"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onChange={(e) => { setCustomerPhone(e.target.value); setFieldDirty('phone')() }}
+                    onBlur={setFieldTouched('phone')}
                     placeholder="Enter your phone number"
-                    className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('phone') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
+                  {showError('phone') && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">Email *</label>
                   <input
                     type="email"
                     value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    onChange={(e) => { setCustomerEmail(e.target.value); setFieldDirty('email')() }}
+                    onBlur={setFieldTouched('email')}
                     placeholder="Enter your email"
-                    className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('email') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
+                  {showError('email') && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
                 </div>
               </div>
             </div>
@@ -503,10 +529,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
+            disabled={!formValid || !agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
+              formValid && agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
