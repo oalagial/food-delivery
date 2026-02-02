@@ -197,6 +197,11 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             {isOutOfStock && (
               <p className="text-sm font-semibold text-amber-600 text-center -mt-2">Out of stock</p>
             )}
+            {!isOutOfStock && maxQty != null && qty >= maxQty && (
+              <p className="text-sm text-slate-600 text-center -mt-2">
+                Maximum available: {maxQty}. You cannot add more than the current stock.
+              </p>
+            )}
 
             {/* Ingredients */}
             {(product.ingredients || product._original?.ingredients) && (
