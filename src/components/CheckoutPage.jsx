@@ -15,6 +15,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [deliveryTimeError, setDeliveryTimeError] = useState(null)
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
   const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
+  const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
   const { showAlert } = useAlert()
 
   const fetchDeliveryTimeFromApi = async () => {
@@ -203,9 +204,31 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       onClose()
       onConfirm && onConfirm()
     } catch (error) {
-      showAlert('error', 'Order Failed', error.response?.data?.message || error.message || 'Something went wrong. Please try again.', 10000)
+      const data = error.response?.data
+      if (data?.message && Array.isArray(data?.products) && data.products.length > 0) {
+        setInsufficientStock({ message: data.message, products: data.products })
+      } else {
+        showAlert('error', 'Order Failed', data?.message || error.message || 'Something went wrong. Please try again.', 10000)
+      }
       setIsSubmitting(false)
     }
+  }
+
+  const handleAcceptInsufficientStock = () => {
+    if (!insufficientStock?.products?.length) {
+      setInsufficientStock(null)
+      setIsSubmitting(false)
+      return
+    }
+    for (const product of insufficientStock.products) {
+      const cartItemsWithProduct = cart.filter((it) => !it.isOffer && Number(it.id) === Number(product.productId))
+      cartItemsWithProduct.forEach((item, index) => {
+        const newQty = index === 0 ? Math.max(0, Number(product.available)) : 0
+        updateQty(item.key, newQty)
+      })
+    }
+    setInsufficientStock(null)
+    setIsSubmitting(false)
   }
 
   const handleContinue = async () => {
@@ -475,10 +498,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm} 
+            disabled={!agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm
+              agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
@@ -510,6 +533,43 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Insufficient stock modal */}
+      {insufficientStock && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Insufficient stock</h3>
+            <p className="text-sm text-slate-600 mb-4">{insufficientStock.message}</p>
+            <ul className="space-y-2 mb-4">
+              {insufficientStock.products.map((p) => (
+                <li key={p.productId} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-2">
+                  <span className="font-medium text-slate-800">{p.productName}</span>
+                  <span className="text-slate-600">
+                    requested {p.requested} → available {p.available}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-slate-500 mb-4">
+              Accept to update your cart: quantities will be set to available stock for each product above.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setInsufficientStock(null); setIsSubmitting(false) }}
+                className="flex-1 py-2.5 rounded-lg font-semibold border border-slate-300 text-slate-700 active:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAcceptInsufficientStock}
+                className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
+              >
+                Accept
               </button>
             </div>
           </div>

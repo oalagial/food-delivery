@@ -222,29 +222,31 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
             {menu[category] && menu[category].map((item, index) => {
               const original = item._original || {}
               const isInactive = original.isAvailable === false || original.isActive === false
+              const isOutOfStock = item.stockQuantity != null && Number(item.stockQuantity) === 0
+              const cannotSelect = isInactive || isOutOfStock
 
               return (
               <div 
                 key={item.id}
                   onClick={() => {
-                    if (!isInactive) setSelectedProductDetail(item)
+                    if (!cannotSelect) setSelectedProductDetail(item)
                   }}
-                  role={!isInactive ? 'button' : undefined}
-                  tabIndex={!isInactive ? 0 : undefined}
+                  role={!cannotSelect ? 'button' : undefined}
+                  tabIndex={!cannotSelect ? 0 : undefined}
                   onKeyDown={(e) => {
-                    if (isInactive) return
+                    if (cannotSelect) return
                     if (e.key === 'Enter' || e.key === ' ') setSelectedProductDetail(item)
                   }}
                   className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${
-                    isInactive ? 'opacity-60' : ''
-                  } ${isInactive ? 'cursor-not-allowed' : 'cursor-pointer active:bg-slate-50'}`}
+                    cannotSelect ? 'opacity-60' : ''
+                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-slate-50'}`}
               >
                   <div className="flex-shrink-0">
                     <img 
                       src={item.image} 
                       alt={item.name} 
                       className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg ${
-                        isInactive ? 'grayscale' : ''
+                        cannotSelect ? 'grayscale' : ''
                       }`} 
                     />
                   </div>
@@ -259,29 +261,34 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                             Μη διαθέσιμο
                           </span>
                         )}
+                        {!isInactive && isOutOfStock && (
+                          <span className="inline-block text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                            Εξαντλήθηκε
+                          </span>
+                        )}
                     </div>
                     <button
                         type="button"
-                        disabled={isInactive || cannotAddToCart}
+                        disabled={cannotSelect || cannotAddToCart}
                         onClick={() => {
-                          if (!isInactive && !cannotAddToCart) {
+                          if (!cannotSelect && !cannotAddToCart) {
                             setSelectedProductDetail(item)
                           }
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
-                          isInactive || cannotAddToCart
+                          cannotSelect || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
                         }`}
-                        aria-label={isInactive ? 'Product not available' : cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
+                        aria-label={cannotSelect ? (isOutOfStock ? 'Out of stock' : 'Product not available') : cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
                     >
                       +
                     </button>
                   </div>
                     <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${
-                      isInactive ? 'text-slate-500' : 'text-orange-600'
+                      cannotSelect ? 'text-slate-500' : 'text-orange-600'
                     }`}>
                       {item.priceAfterDiscount ? (
                         <>
@@ -294,10 +301,10 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                     </div>
                   {item.desc && (
                       <p className={`text-xs line-clamp-2 leading-snug ${
-                        isInactive ? 'text-slate-500' : 'text-slate-600'
+                        cannotSelect ? 'text-slate-500' : 'text-slate-600'
                       }`}>
-                      {item.desc}
-                    </p>
+                        {item.desc}
+                      </p>
                   )}
                 </div>
               </div>

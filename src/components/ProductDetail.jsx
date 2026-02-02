@@ -12,6 +12,10 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    if (maxQty != null && qty > maxQty) setQty(maxQty)
+  }, [maxQty])
+
+  useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true))
     const prevActive = document.activeElement
 
@@ -53,6 +57,9 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
   }, [onClose])
 
   const isValid = otherOptionGroups.every((g) => !g.required || Boolean(selectedOptions[g.id]))
+  const stockQty = product.stockQuantity != null ? Number(product.stockQuantity) : null
+  const isOutOfStock = stockQty !== null && stockQty === 0
+  const maxQty = stockQty != null && stockQty > 0 ? stockQty : null
   // Use priceAfterDiscount if available, otherwise use original price
   const base = product.priceAfterDiscountNum !== null && product.priceAfterDiscountNum !== undefined 
     ? product.priceAfterDiscountNum 
@@ -172,18 +179,23 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             <div className="flex items-center justify-center gap-4 my-4 py-3 border-y border-slate-200">
               <button 
                 onClick={() => setQty((q) => Math.max(1, q - 1))} 
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
+                disabled={isOutOfStock}
+                className={`w-10 h-10 rounded-full text-lg font-semibold transition-colors ${isOutOfStock ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-700 active:bg-slate-200'}`}
               >
                 −
               </button>
               <div className="text-xl font-bold w-12 text-center">{qty}</div>
               <button 
-                onClick={() => setQty((q) => q + 1)} 
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
+                onClick={() => setQty((q) => (maxQty != null ? Math.min(maxQty, q + 1) : q + 1))} 
+                disabled={isOutOfStock || (maxQty != null && qty >= maxQty)}
+                className={`w-10 h-10 rounded-full text-lg font-semibold transition-colors ${isOutOfStock || (maxQty != null && qty >= maxQty) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-700 active:bg-slate-200'}`}
               >
                 +
               </button>
             </div>
+            {isOutOfStock && (
+              <p className="text-sm font-semibold text-amber-600 text-center -mt-2">Out of stock</p>
+            )}
 
             {/* Ingredients */}
             {(product.ingredients || product._original?.ingredients) && (
@@ -330,9 +342,9 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             </div>
           )}
           <button
-            disabled={!isValid || isLocationInactive}
+            disabled={!isValid || isLocationInactive || isOutOfStock}
             onClick={() => {
-              if (!isValid || isLocationInactive) return
+              if (!isValid || isLocationInactive || isOutOfStock) return
               const options = {}
               const extraIds = []
               
@@ -361,11 +373,12 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                 }
               })
 
+              const effectiveQty = maxQty != null ? Math.min(qty, maxQty) : qty
               const item = {
                 id: product.id,
                 name: product.name,
                 price: base + otherOptionsTotal + extrasTotal,
-                qty,
+                qty: effectiveQty,
                 options,
                 extraIds,
                 extraNames,
@@ -373,7 +386,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               onAdd(item)
             }}
             className={`w-full py-3.5 rounded-lg font-semibold text-base transition-all ${
-              isValid && !isLocationInactive
+              isValid && !isLocationInactive && !isOutOfStock
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}

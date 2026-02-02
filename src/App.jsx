@@ -711,6 +711,7 @@ function AppContent() {
                         isNew,
                         ingredients: product.ingredients || null,
                         allergies: product.allergies || null,
+                        stockQuantity: product.stockQuantity != null ? Number(product.stockQuantity) : null,
                         // Keep original data for reference
                         _original: product,
                       }
