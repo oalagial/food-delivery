@@ -141,9 +141,11 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
             {isLocationInactive ? 'Delivery temporarily unavailable' : openLabel}
           </div>
           <div className="mt-1 flex items-center justify-center gap-2 text-xs sm:text-sm text-slate-600">
-            <span>Delivery € {deliveryFee}</span>
+            <span>Delivery {deliveryFee} €</span>
             <span className="w-1 h-1 rounded-full bg-slate-300" />
-            <span>Min order € {minOrder}</span>
+            <span>Free delivery over {minOrder} €</span>
+            <span className="w-1 h-1 rounded-full bg-slate-300" />
+            <span>Min order 0 €</span>
           </div>
         </div>
       </div>
