@@ -122,7 +122,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Header - Mobile Optimized */}
-      <div className="px-3 bg-zinc-200 pt-3 pb-4 shadow-sm flex-shrink-0">
+      <div className="px-3 bg-orange-300 pt-3 pb-4 shadow-sm flex-shrink-0">
         <div className="flex items-center mb-3">
           <button 
             onClick={onBack} 
