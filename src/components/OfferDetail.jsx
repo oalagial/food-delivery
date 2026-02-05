@@ -74,48 +74,57 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
     })
   }
 
+  const handleClose = () => {
+    setMounted(false)
+    setTimeout(() => onClose(), 180)
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div
         className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
-        onClick={() => {
-          setMounted(false)
-          setTimeout(() => onClose(), 180)
-        }}
+        onClick={handleClose}
+        aria-hidden="true"
       />
       <div
-        className={`relative bg-white w-full max-w-lg max-h-[80vh] sm:max-h-[90vh] h-auto rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 flex flex-col ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full sm:translate-y-4'}`}
+        className={`relative w-full h-full max-h-full flex flex-col bg-white overflow-hidden transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`offer-${offer.id}-title`}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Fixed */}
-        <div className="flex-shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 relative">
-          <button 
-            onClick={onClose} 
-            className="w-8 h-8 flex items-center justify-center text-2xl text-slate-600 active:bg-slate-100 rounded-full transition-colors"
+        {/* Photo - full width, X top-left (like ProductDetail) */}
+        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-slate-200">
+          {offer.image ? (
+            <img
+              src={offer.image}
+              alt={offer.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400 text-lg font-semibold">
+              Offer
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
             aria-label="Close"
           >
             ×
           </button>
-          <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
-            Offer
-          </span>
-          <div className="w-8"></div>
+          <div className="absolute top-4 right-4">
+            <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+              Offer
+            </span>
+          </div>
         </div>
 
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
           <div className="p-4">
-            {offer.image && (
-              <img 
-                src={offer.image} 
-                alt={offer.name} 
-                className="w-full h-48 sm:h-64 object-cover rounded-lg mb-4" 
-              />
-            )}
-            
             <h2 id={`offer-${offer.id}-title`} className="text-xl font-bold mb-2 text-slate-900">
               {offer.name}
             </h2>
@@ -125,23 +134,6 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                 {offer.description}
               </p>
             )}
-
-            {/* Quantity Selector */}
-            <div className="flex items-center justify-center gap-4 my-4 py-3 border-y border-slate-200">
-              <button 
-                onClick={() => setQty((q) => Math.max(1, q - 1))} 
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
-              >
-                −
-              </button>
-              <div className="text-xl font-bold w-12 text-center">{qty}</div>
-              <button 
-                onClick={() => setQty((q) => q + 1)} 
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 text-lg font-semibold active:bg-slate-200 transition-colors"
-              >
-                +
-              </button>
-            </div>
 
             {/* Offer Groups */}
             {offer.groups.map((group) => {
@@ -221,7 +213,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
           </div>
         </div>
 
-        {/* Footer Button - Fixed */}
+        {/* Footer - left: quantity, right: Add (like ProductDetail) */}
         <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
           {isLocationInactive && (
             <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -230,49 +222,66 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               </p>
             </div>
           )}
-          <button
-            disabled={!isValid || isLocationInactive}
-            onClick={() => {
-              if (!isValid || isLocationInactive) return
-              
-              const selectedGroupsArray = []
-              Object.entries(selectedGroups).forEach(([groupId, offerGroupProductIds]) => {
-                const group = offer.groups.find(g => String(g.id) === String(groupId))
-                offerGroupProductIds.forEach(offerGroupProductId => {
-                  const ogp = group?.offerGroupProducts?.find(p => p.id === offerGroupProductId)
-                  const selectedProductName = ogp?.product?.name
-                  selectedGroupsArray.push({
-                    groupId: parseInt(groupId),
-                    groupName: group?.name,
-                    selectedItemId: offerGroupProductId,
-                    selectedItemName: selectedProductName,
+          <div className="flex items-center gap-4">
+            {/* Quantity - left */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-slate-200 text-slate-700 active:bg-slate-300"
+              >
+                −
+              </button>
+              <span className="text-lg font-bold w-8 text-center tabular-nums">{qty}</span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-slate-200 text-slate-700 active:bg-slate-300"
+              >
+                +
+              </button>
+            </div>
+            {/* Add button - right */}
+            <button
+              disabled={!isValid || isLocationInactive}
+              onClick={() => {
+                if (!isValid || isLocationInactive) return
+
+                const selectedGroupsArray = []
+                Object.entries(selectedGroups).forEach(([groupId, offerGroupProductIds]) => {
+                  const group = offer.groups.find(g => String(g.id) === String(groupId))
+                  offerGroupProductIds.forEach(offerGroupProductId => {
+                    const ogp = group?.offerGroupProducts?.find(p => p.id === offerGroupProductId)
+                    const selectedProductName = ogp?.product?.name
+                    selectedGroupsArray.push({
+                      groupId: parseInt(groupId),
+                      groupName: group?.name,
+                      selectedItemId: offerGroupProductId,
+                      selectedItemName: selectedProductName,
+                    })
                   })
                 })
-              })
 
-              const item = {
-                id: `offer_${offer.id}`,
-                name: offer.name,
-                price: basePrice,
-                qty,
-                options: {},
-                extraIds: [],
-                extraNames: [],
-                isOffer: true,
-                offerId: offer.id,
-                quantity: qty,
-                selectedGroups: selectedGroupsArray,
-              }
-              onAdd(item)
-            }}
-            className={`w-full py-3.5 rounded-lg font-semibold text-base transition-all ${
-              isValid && !isLocationInactive
-                ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            Add to cart (+ {formatPrice(total)})
-          </button>
+                const item = {
+                  id: `offer_${offer.id}`,
+                  name: offer.name,
+                  price: basePrice,
+                  qty,
+                  options: {},
+                  extraIds: [],
+                  extraNames: [],
+                  isOffer: true,
+                  offerId: offer.id,
+                  quantity: qty,
+                  selectedGroups: selectedGroupsArray,
+                }
+                onAdd(item)
+              }}
+              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+            >
+              Add (+ {formatPrice(total)})
+            </button>
+          </div>
         </div>
       </div>
     </div>

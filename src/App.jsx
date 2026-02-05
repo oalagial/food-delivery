@@ -20,6 +20,9 @@ function AppContent() {
   const [restaurantLoading, setRestaurantLoading] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
 
+  const STORAGE_KEYS = { location: 'delivery_location_id', restaurant: 'delivery_restaurant_id' }
+  const hasRestoredSession = useRef(false)
+
   // Initialize auth and fetch delivery locations on mount
   useEffect(() => {
     const initAndFetch = async () => {
@@ -42,6 +45,46 @@ function AppContent() {
     }
     initAndFetch()
   }, [showAlert])
+
+  // Restore last selected location + restaurant on load (e.g. after refresh) — keep cart
+  useEffect(() => {
+    if (loading || points.length === 0 || hasRestoredSession.current) return
+    const locId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.location) : null
+    if (!locId) return
+    const point = points.find((p) => String(p.id) === String(locId))
+    if (!point) {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.location)
+        localStorage.removeItem(STORAGE_KEYS.restaurant)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    hasRestoredSession.current = true
+    setSelectedPoint(point)
+    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length > 0) {
+      if (point.deliveredBy.length === 1) {
+        const rest = point.deliveredBy[0]
+        setRestaurants([])
+        setSelectedRestaurant(rest)
+        fetchRestaurantMenu(rest.id)
+      } else {
+        setRestaurants(point.deliveredBy)
+        const restId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.restaurant) : null
+        const rest = restId ? point.deliveredBy.find((r) => String(r.id) === String(restId)) : null
+        if (rest) {
+          setSelectedRestaurant(rest)
+          fetchRestaurantMenu(rest.id)
+        } else {
+          setSelectedRestaurant(null)
+        }
+      }
+    } else {
+      setRestaurants([])
+      setSelectedRestaurant(null)
+    }
+  }, [loading, points])
 
   // cart persisted in localStorage
   const [cart, setCart] = useState(() => {
@@ -174,22 +217,43 @@ function AppContent() {
     setActiveCategory(null)
     // Clear cart when changing delivery location
     setCart([])
+    try {
+      localStorage.setItem(STORAGE_KEYS.location, String(point.id))
+    } catch {
+      /* ignore */
+    }
     // deliveredBy is now an array of restaurants
     if (Array.isArray(point.deliveredBy)) {
       if (point.deliveredBy.length === 1) {
         // Only one restaurant, go directly to StorePage
         setRestaurants([])
-        setSelectedRestaurant(point.deliveredBy[0])
-        fetchRestaurantMenu(point.deliveredBy[0].id)
+        const rest = point.deliveredBy[0]
+        setSelectedRestaurant(rest)
+        try {
+          localStorage.setItem(STORAGE_KEYS.restaurant, String(rest.id))
+        } catch {
+          /* ignore */
+        }
+        fetchRestaurantMenu(rest.id)
       } else {
         // Multiple restaurants, show selection
         setRestaurants(point.deliveredBy)
         setSelectedRestaurant(null)
+        try {
+          localStorage.removeItem(STORAGE_KEYS.restaurant)
+        } catch {
+          /* ignore */
+        }
       }
     } else {
       // Fallback: no deliveredBy or not array
       setRestaurants([])
       setSelectedRestaurant(null)
+      try {
+        localStorage.removeItem(STORAGE_KEYS.restaurant)
+      } catch {
+        /* ignore */
+      }
     }
   }
   const [selectedRestaurant, setSelectedRestaurant] = useState(null)
@@ -200,6 +264,12 @@ function AppContent() {
     setSelectedRestaurant(null)
     setFetchedMenu(null)
     setActiveCategory(null)
+    try {
+      localStorage.removeItem(STORAGE_KEYS.location)
+      localStorage.removeItem(STORAGE_KEYS.restaurant)
+    } catch {
+      /* ignore */
+    }
   }
 
   const sampleMenu = {
@@ -531,7 +601,7 @@ function AppContent() {
   const categories = Object.keys(sampleMenu)
 
   function handleCheckout() {
-    // close cart panel then open checkout page
+    if (cart.length === 0) return
     setCartOpen(false)
     setCheckoutOpen(true)
   }
@@ -570,13 +640,9 @@ function AppContent() {
                     if (restaurants.length > 0) {
                       setSelectedRestaurant(null)
                       setFetchedMenu(null)
+                      try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
                     } else {
-                      // Go back to location selection
-                      setSelectedPoint(null)
-                      setRestaurants([])
-                      setSelectedRestaurant(null)
-                      setFetchedMenu(null)
-                      setActiveCategory(null)
+                      handleBack()
                     }
                   }}
                   className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
@@ -736,13 +802,9 @@ function AppContent() {
                     if (restaurants.length > 0) {
                       setSelectedRestaurant(null)
                       setFetchedMenu(null)
+                      try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
                     } else {
-                      // Go back to location selection
-                      setSelectedPoint(null)
-                      setRestaurants([])
-                      setSelectedRestaurant(null)
-                      setFetchedMenu(null)
-                      setActiveCategory(null)
+                      handleBack()
                     }
                   }}
                   addToCart={addToCart}
@@ -805,13 +867,7 @@ function AppContent() {
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  setSelectedPoint(null)
-                  setRestaurants([])
-                  setSelectedRestaurant(null)
-                  setFetchedMenu(null)
-                  setActiveCategory(null)
-                }}
+                onClick={handleBack}
                 className="text-2xl leading-none active:opacity-70 transition-opacity"
                 aria-label="Go back"
               >
@@ -828,7 +884,11 @@ function AppContent() {
             {restaurants.length > 0 ? (
               <section className="flex flex-col gap-3 sm:gap-4 max-w-2xl mx-auto">
                 {restaurants.map((r) => (
-                  <DeliveryPointCard key={r.id} point={r} onSelect={() => { setSelectedRestaurant(r); fetchRestaurantMenu(r.id); }} />
+                  <DeliveryPointCard key={r.id} point={r} onSelect={() => {
+                  setSelectedRestaurant(r)
+                  try { localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id)) } catch { /* ignore */ }
+                  fetchRestaurantMenu(r.id)
+                }} />
                 ))}
               </section>
             ) : (

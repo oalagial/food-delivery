@@ -7,100 +7,156 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
   const categoryRefs = useRef({})
   const productsContainerRef = useRef(null)
+  const scrollTargetRef = useRef(null) // όταν πατήθηκε pill, αγνοούμε scroll μέχρι να σταματήσει
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
   const isLocationInactive = deliveryLocation?.isActive === false
   const isRestaurantClosed = point?.isOpen === false
   const cannotAddToCart = isLocationInactive || isRestaurantClosed
 
+  const deliveryFee = parseFloat(point?.deliveryFee || 0).toFixed(2)
+  const minOrder = parseFloat(point?.minOrder || 0).toFixed(2)
+
+  // Derive today's opening / closing from deliveredBy.openingHours (point.openingHours)
+  const todayHours = (() => {
+    const hours = point?.openingHours
+    if (!Array.isArray(hours) || hours.length === 0) return null
+
+    const now = new Date()
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      timeZone: point?.timezone || 'Europe/Athens',
+    })
+    const todayName = formatter.format(now) // e.g. "Monday"
+
+    const matchToday = hours.find((h) => {
+      if (!h?.day) return false
+      return String(h.day).toLowerCase() === todayName.toLowerCase()
+    })
+
+    if (!matchToday) return null
+
+    return {
+      opensAt: matchToday.open,
+      closesAt: matchToday.close,
+    }
+  })()
+
+  const openLabel = (() => {
+    if (isRestaurantClosed) {
+      if (point?.opensAt) return `Opens at ${point.opensAt}`
+      if (point?.nextOpeningTime) return `Opens at ${point.nextOpeningTime}`
+      if (todayHours?.opensAt) return `Opens at ${todayHours.opensAt}`
+      return 'Currently closed'
+    }
+
+    if (todayHours?.closesAt) {
+      return `Open until ${todayHours.closesAt}`
+    }
+
+    if (point?.openUntil) return `Open until ${point.openUntil}`
+    return 'Open now'
+  })()
+
   // Detect which category is in view as user scrolls
   const handleProductsScroll = () => {
-    if (!productsContainerRef.current) return
-    
-    const scrollPos = productsContainerRef.current.scrollTop
-    const allCategories = offers.length > 0 ? ['Offers', ...categories] : categories
-    let currentVisible = allCategories[0]
-    
-    Object.entries(categoryRefs.current).forEach(([category, ref]) => {
-      if (ref && ref.offsetTop <= scrollPos + 60) {
-        currentVisible = category
-      }
-    })
-    
-    setVisibleCategory(currentVisible)
-    setActiveCategory(currentVisible)
-  }
+    const container = productsContainerRef.current
+    if (!container) return
 
-  // Scroll to category when clicked
-  const scrollToCategory = (category) => {
-    setVisibleCategory(category)
-    setActiveCategory(category)
-    if (categoryRefs.current[category] && productsContainerRef.current) {
-      const element = categoryRefs.current[category]
-      const scrollTop = element.offsetTop - 10
-      productsContainerRef.current.scrollTo({ top: scrollTop, behavior: 'smooth' })
+    // Μην αλλάζουμε selected pill όσο τρέχει smooth scroll από κλικ
+    if (scrollTargetRef.current) return
+
+    const scrollTop = container.scrollTop
+
+    // Ensure deterministic order: Offers (if any) followed by categories
+    const orderedKeys = [
+      ...(offers.length > 0 ? ['Offers'] : []),
+      ...categories,
+    ]
+
+    let currentVisible = orderedKeys[0]
+
+    for (const key of orderedKeys) {
+      const ref = categoryRefs.current[key]
+      if (!ref) continue
+
+      // ref.offsetTop is relative to the scroll container content
+      if (ref.offsetTop <= scrollTop + 70) {
+        currentVisible = key
+      } else {
+        break
+      }
+    }
+
+    if (currentVisible && currentVisible !== visibleCategory) {
+      setVisibleCategory(currentVisible)
+      setActiveCategory(currentVisible)
     }
   }
 
+  // Scroll to category when clicked - align header at top of scroll container
+  const scrollToCategory = (category) => {
+    const container = productsContainerRef.current
+    const element = categoryRefs.current[category]
+    if (!container || !element) return
+
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+
+    // Distance from element to container top, plus current scrollTop
+    const offset = elementRect.top - containerRect.top + container.scrollTop
+
+    setVisibleCategory(category)
+    setActiveCategory(category)
+
+    // Κράτα το pill selected: αγνόησε scroll events μέχρι να τελειώσει το smooth scroll
+    scrollTargetRef.current = category
+    container.scrollTo({
+      top: Math.max(offset - 8, 0),
+      behavior: 'smooth',
+    })
+    setTimeout(() => {
+      scrollTargetRef.current = null
+    }, 600)
+  }
+
   return (
-    <div className="w-full h-screen bg-white flex flex-col overflow-hidden">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Header - Mobile Optimized */}
-      <div className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-2.5 z-20 shadow-md flex-shrink-0">
-        <button 
-          onClick={onBack} 
-          className="mr-2 text-2xl leading-none active:opacity-70 transition-opacity"
-          aria-label="Go back"
-        >
-          ←
-        </button>
-        <div className="flex-1 font-bold text-base sm:text-lg lg:text-xl truncate">🏪 {point.name}</div>
+      <div className="px-3 bg-zinc-200 pt-3 pb-4 shadow-sm flex-shrink-0">
+        <div className="flex items-center mb-3">
+          <button 
+            onClick={onBack} 
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 text-lg active:bg-slate-200 transition-colors"
+            aria-label="Go back"
+          >
+            ←
+          </button>
+          <div className="flex-1"></div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+            {point?.name}
+          </div>
+          <div className="mt-1 text-xs sm:text-sm text-slate-500">
+            {isLocationInactive ? 'Delivery temporarily unavailable' : openLabel}
+          </div>
+          <div className="mt-1 flex items-center justify-center gap-2 text-xs sm:text-sm text-slate-600">
+            <span>Delivery € {deliveryFee}</span>
+            <span className="w-1 h-1 rounded-full bg-slate-300" />
+            <span>Min order € {minOrder}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Delivery Info - Mobile Optimized */}
-      <div className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-3 py-2.5 shadow-sm flex-shrink-0">
-        {isRestaurantClosed ? (
-          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
-            <span className="text-lg">🕐</span>
-            <span className="font-semibold">Restaurant is closed</span>
-          </div>
-        ) : isLocationInactive ? (
-          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
-            <span className="text-lg">⚠️</span>
-            <span className="font-semibold">Temporarily Closed</span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
-            <div className="flex items-center gap-1">
-              <span className="text-sm">💰</span>
-              <span className="font-semibold">
-                Delivery fee:{' '}
-                <span className="underline decoration-white/60">
-                  € {parseFloat(point?.deliveryFee || 0).toFixed(2)}
-                </span>
-              </span>
-            </div>
-            <div className="h-3 w-px bg-white/50"></div>
-            <div className="flex items-center gap-1">
-              <span className="text-sm">📦</span>
-              <span className="font-semibold">
-                Free delivery from:{' '}
-                <span className="underline decoration-white/60">
-                  € {parseFloat(point?.minOrder || 0).toFixed(2)}
-                </span>
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Categories - Mobile Optimized Horizontal Scroll */}
-      <div className="flex gap-2 overflow-x-auto px-3 py-2.5 bg-white border-b border-slate-200 z-10 flex-shrink-0 scrollbar-hide">
+      {/* Categories - text-only tabs, active = underline + color */}
+      <div className="flex gap-5 overflow-x-auto px-3 py-3 bg-white border-b border-slate-200 z-10 flex-shrink-0 scrollbar-hide">
         {offers.length > 0 && (
           <button
             onClick={() => scrollToCategory('Offers')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${
               visibleCategory === 'Offers'
-                ? 'bg-orange-500 text-white shadow-sm' 
-                : 'bg-slate-100 text-slate-700 active:bg-slate-200'
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
             Offers
@@ -110,10 +166,10 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
           <button
             key={c}
             onClick={() => scrollToCategory(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${
               visibleCategory === c
-                ? 'bg-orange-500 text-white shadow-sm' 
-                : 'bg-slate-100 text-slate-700 active:bg-slate-200'
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
             {c}
@@ -136,9 +192,10 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   categoryRefs.current['Offers'] = el
                 }
               }}
-              className="mb-3 pb-2 border-b-2 border-orange-500"
+              id="section-Offers"
+              className="mb-3 pb-2 border-b-2 border-[#f6a94b]"
             >
-              <h2 className="text-base font-bold text-slate-900">Special Offers</h2>
+              <h2 className="text-base font-bold text-[#1f2933]">Special Offers</h2>
             </div>
             {offers.map((offer, index) => (
               <div 
@@ -149,7 +206,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
                 }}
-                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-slate-50 rounded-lg px-2 -mx-2"
+                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-[#f4ebe1] rounded-lg px-2 -mx-2"
               >
                 {offer.image && (
                   <div className="flex-shrink-0">
@@ -166,7 +223,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-medium mb-1">
                         Offer
                       </span>
-                      <h3 className="text-sm font-bold text-slate-900 leading-tight break-words">
+                      <h3 className="text-sm font-bold text-[#1f2933] leading-tight break-words">
                         {offer.name}
                       </h3>
                     </div>
@@ -183,14 +240,14 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                         cannotAddToCart
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
+                          : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
                       }`}
                       aria-label={cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
                     >
                       +
                     </button>
                   </div>
-                  <div className="text-sm font-semibold text-orange-600 mb-1">
+                  <div className="text-sm font-semibold text-[#5a2b00] mb-1">
                     € {parseFloat(offer.price || 0).toFixed(2)}
                   </div>
                   {offer.description && (
@@ -214,9 +271,10 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                     categoryRefs.current[category] = el
                   }
                 }}
-                className="mb-3 pb-2 border-b-2 border-blue-500"
+                id={`section-${category}`}
+                className="mb-3 pb-2 border-b-2 border-[#f6a94b]"
               >
-                <h2 className="text-base font-bold text-slate-900">{category}</h2>
+                <h2 className="text-base font-bold text-[#1f2933]">{category}</h2>
               </div>
             )}
             {menu[category] && menu[category].map((item, index) => {
@@ -239,7 +297,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   }}
                   className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${
                     cannotSelect ? 'opacity-60' : ''
-                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-slate-50'}`}
+                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-[#f4ebe1]'}`}
               >
                   <div className="flex-shrink-0">
                     <img 
@@ -253,17 +311,17 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 leading-tight break-words mb-1">
+                      <h3 className="text-sm font-bold text-[#1f2933] leading-tight break-words mb-1">
                         {item.name}
                       </h3>
                         {isInactive && (
                           <span className="inline-block text-[10px] font-semibold text-red-500 uppercase tracking-wide">
-                            Μη διαθέσιμο
+                            Not available
                           </span>
                         )}
                         {!isInactive && isOutOfStock && (
                           <span className="inline-block text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
-                            Εξαντλήθηκε
+                            Out of stock
                           </span>
                         )}
                     </div>
@@ -280,7 +338,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                           cannotSelect || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
+                            : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
                         }`}
                         aria-label={cannotSelect ? (isOutOfStock ? 'Out of stock' : 'Product not available') : cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
                     >
@@ -288,7 +346,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                     </button>
                   </div>
                     <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${
-                      cannotSelect ? 'text-slate-500' : 'text-orange-600'
+                      cannotSelect ? 'text-slate-500' : 'text-[#5a2b00]'
                     }`}>
                       {item.priceAfterDiscount ? (
                         <>

@@ -3,14 +3,34 @@ import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
 import { orderService } from '../services'
 
+const CHECKOUT_FORM_KEY = 'checkout_form'
+
+function getStoredCheckoutForm() {
+  try {
+    const s = localStorage.getItem(CHECKOUT_FORM_KEY)
+    if (s) {
+      const o = JSON.parse(s)
+      return {
+        name: typeof o.name === 'string' ? o.name : '',
+        phone: typeof o.phone === 'string' ? o.phone : '',
+        email: typeof o.email === 'string' ? o.email : '',
+        notes: typeof o.notes === 'string' ? o.notes : '',
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return { name: '', phone: '', email: '', notes: '' }
+}
+
 export default function CheckoutPage({ restaurant, deliveryLocation, cart, total, onClose, updateQty, removeItem, onConfirm }) {
   const [promo, setPromo] = useState('')
   const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
-  const [notes, setNotes] = useState('')
+  const [customerName, setCustomerName] = useState(() => getStoredCheckoutForm().name)
+  const [customerPhone, setCustomerPhone] = useState(() => getStoredCheckoutForm().phone)
+  const [customerEmail, setCustomerEmail] = useState(() => getStoredCheckoutForm().email)
+  const [notes, setNotes] = useState(() => getStoredCheckoutForm().notes)
   const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState(null)
   const [deliveryTimeError, setDeliveryTimeError] = useState(null)
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
@@ -32,6 +52,23 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   }
   const showError = (field) => touched[field] && errors[field]
   const formValid = Boolean(customerName.trim() && customerPhone.trim() && customerEmail.trim() && emailRegex.test(customerEmail.trim()))
+
+  // Persist checkout form until order is placed or page is closed
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CHECKOUT_FORM_KEY,
+        JSON.stringify({
+          name: customerName,
+          phone: customerPhone,
+          email: customerEmail,
+          notes: notes,
+        })
+      )
+    } catch {
+      /* ignore */
+    }
+  }, [customerName, customerPhone, customerEmail, notes])
 
   const fetchDeliveryTimeFromApi = async () => {
     if (!restaurant?.id || !deliveryLocation?.id) return null
@@ -216,6 +253,11 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
       const response = await orderService.create(orderData)
       const token = response?.token || response?.data?.token
+      try {
+        localStorage.removeItem(CHECKOUT_FORM_KEY)
+      } catch {
+        /* ignore */
+      }
       onClose()
       onConfirm && onConfirm()
       if (token) {
@@ -324,21 +366,25 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center">
-      <div className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden h-[80vh] sm:h-auto sm:max-h-[90vh] flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between z-10 flex-shrink-0">
-          <div className="text-lg sm:text-xl font-bold">Your order</div>
-          <button 
-            onClick={onClose} 
-            className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-full transition-colors border border-slate-200 hover:border-slate-300"
-            aria-label="Close (go back)"
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <div className="absolute inset-0 bg-black/50" aria-hidden="true" onClick={onClose} />
+      <div
+        className="relative w-full h-full max-h-full flex flex-col bg-white overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header with X top-left (like ProductDetail) */}
+        <div className="relative flex-shrink-0 w-full h-14 min-h-[56px] bg-slate-100 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
+            aria-label="Close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            ×
           </button>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <h1 className="text-lg font-bold text-slate-900">Your order</h1>
+          </div>
         </div>
 
         {/* Scrollable Content */}

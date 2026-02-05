@@ -92,8 +92,9 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
             <div className="text-xl font-bold">{formatPrice(total)}</div>
           </div>
           <button 
-            onClick={() => { if (onCheckout) onCheckout() }} 
-            className="w-full bg-orange-500 text-white py-3 text-base font-semibold rounded-lg active:bg-orange-600 active:scale-[0.98] transition-all"
+            disabled={cart.length === 0}
+            onClick={() => { if (cart.length > 0 && onCheckout) onCheckout() }} 
+            className={`w-full py-3 text-base font-semibold rounded-lg transition-all ${cart.length === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]'}`}
           >
             Checkout
           </button>
@@ -178,8 +179,9 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
             <div className="text-lg font-bold">{formatPrice(total)}</div>
           </div>
           <button 
-            onClick={() => { if (onCheckout) onCheckout() }} 
-            className="w-full bg-orange-500 text-white py-3 text-base font-semibold rounded-lg active:bg-orange-600 active:scale-[0.98] transition-all"
+            disabled={cart.length === 0}
+            onClick={() => { if (cart.length > 0 && onCheckout) onCheckout() }} 
+            className={`w-full py-3 text-base font-semibold rounded-lg transition-all ${cart.length === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]'}`}
           >
             Checkout
           </button>
