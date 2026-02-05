@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import ProductDetail from './ProductDetail'
 import OfferDetail from './OfferDetail'
+import restaurantImage from '../assets/restaurant-image.png'
+import logo from '../assets/logo.png'
 
 export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
   const [selectedProductDetail, setSelectedProductDetail] = useState(null)
@@ -61,97 +63,81 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const handleProductsScroll = () => {
     const container = productsContainerRef.current
     if (!container) return
-
-    // Μην αλλάζουμε selected pill όσο τρέχει smooth scroll από κλικ
     if (scrollTargetRef.current) return
 
     const scrollTop = container.scrollTop
-
-    // Ensure deterministic order: Offers (if any) followed by categories
     const orderedKeys = [
       ...(offers.length > 0 ? ['Offers'] : []),
       ...categories,
     ]
-
     let currentVisible = orderedKeys[0]
-
     for (const key of orderedKeys) {
       const ref = categoryRefs.current[key]
       if (!ref) continue
-
-      // ref.offsetTop is relative to the scroll container content
-      if (ref.offsetTop <= scrollTop + 70) {
-        currentVisible = key
-      } else {
-        break
-      }
+      if (ref.offsetTop <= scrollTop + 70) currentVisible = key
+      else break
     }
-
     if (currentVisible && currentVisible !== visibleCategory) {
       setVisibleCategory(currentVisible)
       setActiveCategory(currentVisible)
     }
   }
 
-  // Scroll to category when clicked - align header at top of scroll container
   const scrollToCategory = (category) => {
     const container = productsContainerRef.current
     const element = categoryRefs.current[category]
     if (!container || !element) return
-
     const containerRect = container.getBoundingClientRect()
     const elementRect = element.getBoundingClientRect()
-
-    // Distance from element to container top, plus current scrollTop
-    const offset = elementRect.top - containerRect.top + container.scrollTop
-
+    const targetScrollTop = Math.max(elementRect.top - containerRect.top + container.scrollTop - 8, 0)
     setVisibleCategory(category)
     setActiveCategory(category)
-
-    // Κράτα το pill selected: αγνόησε scroll events μέχρι να τελειώσει το smooth scroll
     scrollTargetRef.current = category
-    container.scrollTo({
-      top: Math.max(offset - 8, 0),
-      behavior: 'smooth',
-    })
-    setTimeout(() => {
-      scrollTargetRef.current = null
-    }, 600)
+    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+    setTimeout(() => { scrollTargetRef.current = null }, 600)
   }
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
-      {/* Header - Mobile Optimized */}
-      <div className="px-3 bg-orange-300 pt-3 pb-4 shadow-sm flex-shrink-0">
-        <div className="flex items-center mb-3">
-          <button 
-            onClick={onBack} 
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 text-lg active:bg-slate-200 transition-colors"
-            aria-label="Go back"
-          >
-            ←
-          </button>
-          <div className="flex-1"></div>
-        </div>
-        <div className="text-center">
-          <div className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+      {/* Σταθερή εικόνα restaurant + logo στη μέση + info κάτω */}
+      <div
+        className="relative flex-shrink-0 min-h-[240px] bg-cover bg-center bg-no-repeat flex items-center justify-center py-4"
+        style={{ backgroundImage: `url(${restaurantImage})` }}
+      >
+        <div className="absolute inset-0 bg-black/25 rounded-b-lg" aria-hidden="true" />
+        <button
+          onClick={onBack}
+          className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
+          aria-label="Go back"
+        >
+          ←
+        </button>
+        <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="text-lg sm:text-xl font-extrabold tracking-tight text-white drop-shadow-md">
             {point?.name}
           </div>
-          <div className="mt-1 text-xs sm:text-sm text-slate-500">
-            {isLocationInactive ? 'Delivery temporarily unavailable' : openLabel}
-          </div>
-          <div className="mt-1 flex items-center justify-center gap-2 text-xs sm:text-sm text-slate-600">
-            <span>Delivery {deliveryFee} €</span>
-            <span className="w-1 h-1 rounded-full bg-slate-300" />
-            <span>Free delivery over {minOrder} €</span>
-            <span className="w-1 h-1 rounded-full bg-slate-300" />
-            <span>Min order 0 €</span>
+          <img
+            src={logo}
+            alt=""
+            className="mt-2 w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 ring-white/50 shadow-lg"
+          />
+          <div className="mt-2 text-white drop-shadow-md">
+            <div className="text-xs sm:text-sm font-semibold text-white">
+              {isLocationInactive ? 'Delivery temporarily unavailable' : openLabel}
+            </div>
+            <div className="mt-1 flex items-center justify-center gap-2 text-xs font-medium text-white flex-wrap">
+              <span>Delivery {deliveryFee} €</span>
+              <span className="w-1 h-1 rounded-full bg-white/80" />
+              <span>Free delivery over {minOrder} €</span>
+              <span className="w-1 h-1 rounded-full bg-white/80" />
+              <span>Min order 0 €</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Categories - text-only tabs, active = underline + color */}
-      <div className="flex gap-5 overflow-x-auto px-3 py-3 bg-white border-b border-slate-200 z-10 flex-shrink-0 scrollbar-hide">
+      {/* Σταθερά section buttons */}
+      <div className="flex-shrink-0 flex gap-5 overflow-x-auto px-3 py-3 bg-white border-b border-slate-200 shadow-sm scrollbar-hide">
         {offers.length > 0 && (
           <button
             onClick={() => scrollToCategory('Offers')}
@@ -179,12 +165,13 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         ))}
       </div>
 
-      {/* Products List - Mobile Optimized */}
-      <div 
+      {/* Μόνο το περιεχόμενο κάνει scroll */}
+      <div
         ref={productsContainerRef}
         onScroll={handleProductsScroll}
-        className="flex-1 overflow-y-auto pb-20"
+        className="flex-1 overflow-y-auto"
       >
+      <div className="pb-20">
         {/* Offers Section */}
         {offers.length > 0 && (
           <div key="Offers" className="px-3 pt-4">
@@ -372,6 +359,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
             })}
           </div>
         ))}
+      </div>
       </div>
 
       {/* Modals */}
