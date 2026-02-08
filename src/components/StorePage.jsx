@@ -118,7 +118,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         >
           ←
         </button>
-        <div className="relative z-10 flex flex-col items-center text-center px-4 py-3 rounded-xl bg-black/30 backdrop-blur-sm drop-shadow-xl">
+        <div className="relative z-10 flex flex-col items-center text-center drop-shadow-xl">
           <div className="text-xl sm:text-2xl font-black tracking-tight text-white">
             {point?.name}
           </div>
