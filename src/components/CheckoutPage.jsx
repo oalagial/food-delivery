@@ -38,7 +38,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
   const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
-  const [paymentMethod, setPaymentMethod] = useState('CASH') // 'CASH' | 'CARD'
+  const [paymentMethod, setPaymentMethod] = useState('CASH') // 'CASH' | 'CARD' | 'ONLINE'
   const [touched, setTouched] = useState({ name: false, phone: false, email: false, notes: false })
   const [dirty, setDirty] = useState({ name: false, phone: false, email: false, notes: false })
   const { showAlert } = useAlert()
@@ -211,8 +211,8 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   const submitOrder = async () => {
     try {
-      if (paymentMethod === 'CARD') {
-        // Πρώτα πηγαίνουμε στο Stripe – το create order θα το κάνεις εσύ στο backend
+      if (paymentMethod === 'ONLINE') {
+        // Pay online via Stripe
         const API_BASE = import.meta.env.VITE_API_BASE
         const amountCents = Math.round(finalTotal * 100)
         const payRes = await fetch(`${API_BASE}/payments/checkout`, {
@@ -238,7 +238,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         throw new Error('No payment URL returned')
       }
 
-      // CASH: create order κανονικά
+      // CASH / CARD: create order (pay on delivery)
       const offerItems = cart.filter(item => item.isOffer)
       const offers = offerItems.map((item) => {
         const selectedGroups = Array.isArray(item.selectedGroups) 
@@ -265,7 +265,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       const orderData = {
         restaurantId: restaurant?.id,
         deliveryLocationId: deliveryLocation?.id,
-        paymentMethod: 'CASH',
+        paymentMethod,
         paymentStatus: 'UNPAID',
         customer: {
           name: customerName.trim(),
@@ -346,11 +346,12 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     }
     setIsSubmitting(true)
     try {
-      if (paymentMethod === 'CASH') {
+      if (paymentMethod === 'CASH' || paymentMethod === 'CARD') {
         await submitOrder()
         return
       }
 
+      // ONLINE: verify delivery time then redirect to Stripe
       const data = await fetchDeliveryTimeFromApi()
 
       if (data?.error) {
@@ -503,9 +504,9 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             {/* Payment Method */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
               <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.paymentMethod')}</div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
                 <label
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
                     paymentMethod === 'CASH'
                       ? 'border-orange-500 bg-orange-50 text-orange-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
@@ -520,22 +521,43 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                     className="sr-only"
                   />
                   <span className="text-lg">💵</span>
-                  <span className="font-medium">{t('checkout.cash')}</span>
+                  <span className="font-medium text-xs sm:text-base">{t('checkout.cash')}</span>
                 </label>
                 <label
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-75 transition-all pointer-events-none"
-                  aria-disabled="true"
+                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'CARD'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
                 >
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="CARD"
-                    disabled
-                    readOnly
+                    checked={paymentMethod === 'CARD'}
+                    onChange={() => setPaymentMethod('CARD')}
                     className="sr-only"
                   />
                   <span className="text-lg">💳</span>
-                  <span className="font-medium">{t('checkout.card')}</span>
+                  <span className="font-medium text-xs sm:text-base">{t('checkout.card')}</span>
+                </label>
+                <label
+                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'ONLINE'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="ONLINE"
+                    checked={paymentMethod === 'ONLINE'}
+                    onChange={() => setPaymentMethod('ONLINE')}
+                    className="sr-only"
+                  />
+                  <span className="text-lg">🌐</span>
+                  <span className="font-medium text-xs sm:text-base">{t('checkout.online')}</span>
                 </label>
               </div>
             </div>
