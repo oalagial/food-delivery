@@ -103,10 +103,14 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Σταθερή εικόνα restaurant + logo στη μέση + info κάτω */}
       <div
-        className="relative flex-shrink-0 min-h-[240px] bg-cover bg-center bg-no-repeat flex items-center justify-center py-4"
-        style={{ backgroundImage: `url(${restaurantImage})` }}
+        className="relative flex-shrink-0 min-h-[240px] flex items-center justify-center py-4 overflow-hidden rounded-b-lg"
       >
-        <div className="absolute inset-0 bg-black/25 rounded-b-lg" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75"
+          style={{ backgroundImage: `url(${restaurantImage})` }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-black/25" aria-hidden="true" />
         <button
           onClick={onBack}
           className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
@@ -114,24 +118,24 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         >
           ←
         </button>
-        <div className="relative z-10 flex flex-col items-center text-center">
-          <div className="text-lg sm:text-xl font-extrabold tracking-tight text-white drop-shadow-md">
+        <div className="relative z-10 flex flex-col items-center text-center px-4 py-3 rounded-xl bg-black/30 backdrop-blur-sm drop-shadow-xl">
+          <div className="text-xl sm:text-2xl font-black tracking-tight text-white">
             {point?.name}
           </div>
           <img
             src={logo}
             alt=""
-            className="mt-2 w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 ring-white/50 shadow-lg"
+            className="mt-2 w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 ring-white shadow-xl"
           />
-          <div className="mt-2 text-white drop-shadow-md">
-            <div className="text-xs sm:text-sm font-semibold text-white">
+          <div className="mt-2 text-white">
+            <div className="text-sm sm:text-base font-bold text-stone-100">
               {isLocationInactive ? t('store.deliveryUnavailable') : openLabel}
             </div>
-            <div className="mt-1 flex items-center justify-center gap-2 text-xs font-medium text-white flex-wrap">
+            <div className="mt-1 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-white flex-wrap">
               <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
-              <span className="w-1 h-1 rounded-full bg-white/80" />
+              <span className="w-1 h-1 rounded-full bg-white/90" />
               <span>{t('store.freeDeliveryOver', { min: minOrder })}</span>
-              <span className="w-1 h-1 rounded-full bg-white/80" />
+              <span className="w-1 h-1 rounded-full bg-white/90" />
               <span>{t('store.minOrder')}</span>
             </div>
           </div>
@@ -184,9 +188,9 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 }
               }}
               id="section-Offers"
-              className="mb-3 pb-2 border-b-2 border-[#f6a94b]"
+              className="mb-3 pb-2 border-b-2 border-orange-400"
             >
-              <h2 className="text-base font-bold text-[#1f2933]">{t('store.specialOffers')}</h2>
+              <h2 className="text-base font-bold text-slate-800">{t('store.specialOffers')}</h2>
             </div>
             {offers.map((offer, index) => (
               <div 
@@ -197,7 +201,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
                 }}
-                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-[#f4ebe1] rounded-lg px-2 -mx-2"
+                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-amber-50 rounded-lg px-2 -mx-2"
               >
                 {offer.image && (
                   <div className="flex-shrink-0">
@@ -214,7 +218,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-medium mb-1">
                         {t('common.offer')}
                       </span>
-                      <h3 className="text-sm font-bold text-[#1f2933] leading-tight break-words">
+                      <h3 className="text-sm font-bold text-slate-800 leading-tight break-words">
                         {offer.name}
                       </h3>
                     </div>
@@ -231,14 +235,14 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                         cannotAddToCart
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
+                          : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
                       }`}
                       aria-label={cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
                     >
                       +
                     </button>
                   </div>
-                  <div className="text-sm font-semibold text-[#5a2b00] mb-1">
+                  <div className="text-sm font-semibold text-amber-900 mb-1">
                     € {parseFloat(offer.price || 0).toFixed(2)}
                   </div>
                   {offer.description && (
@@ -263,9 +267,9 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   }
                 }}
                 id={`section-${category}`}
-                className="mb-3 pb-2 border-b-2 border-[#f6a94b]"
+                className="mb-3 pb-2 border-b-2 border-orange-400"
               >
-                <h2 className="text-base font-bold text-[#1f2933]">{category}</h2>
+                <h2 className="text-base font-bold text-slate-800">{category}</h2>
               </div>
             )}
             {menu[category] && menu[category].map((item, index) => {
@@ -288,7 +292,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   }}
                   className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${
                     cannotSelect ? 'opacity-60' : ''
-                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-[#f4ebe1]'}`}
+                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-amber-50'}`}
               >
                   <div className="flex-shrink-0">
                     <img 
@@ -302,16 +306,16 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-[#1f2933] leading-tight break-words mb-1">
+                      <h3 className="text-sm font-bold text-slate-800 leading-tight break-words mb-1">
                         {item.name}
                       </h3>
                         {isInactive && (
-                          <span className="inline-block text-[10px] font-semibold text-red-500 uppercase tracking-wide">
+                          <span className="inline-block text-xs font-semibold text-red-500 uppercase tracking-wide">
                             {t('store.notAvailable')}
                           </span>
                         )}
                         {!isInactive && isOutOfStock && (
-                          <span className="inline-block text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                          <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide">
                             {t('store.outOfStock')}
                           </span>
                         )}
@@ -329,7 +333,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                           cannotSelect || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
+                            : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
                         }`}
                         aria-label={cannotSelect ? (isOutOfStock ? t('store.outOfStock') : t('store.productNotAvailable')) : cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
                     >
@@ -337,7 +341,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                     </button>
                   </div>
                     <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${
-                      cannotSelect ? 'text-slate-500' : 'text-[#5a2b00]'
+                      cannotSelect ? 'text-slate-500' : 'text-amber-900'
                     }`}>
                       {item.priceAfterDiscount ? (
                         <>
