@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'el', label: 'Ελληνικά' },
-  { code: 'it', label: 'Italiano' },
+  { code: 'en', label: 'EN' },
+  { code: 'el', label: 'EL' },
+  { code: 'it', label: 'IT' },
 ]
 
 export default function LanguageSwitcher() {
