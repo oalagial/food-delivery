@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { parsePrice, formatPrice } from '../utils/price'
 
 export default function ProductDetail({ product, isLocationInactive = false, onClose, onAdd }) {
+  const { t } = useTranslation()
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
@@ -145,19 +147,19 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             type="button"
             onClick={handleClose}
             className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
           <div className="absolute top-4 right-4 flex items-center gap-2">
             {product.isNew && (
               <span className="bg-white/90 text-slate-800 px-2.5 py-1 rounded-full text-xs font-semibold">
-                New
+                {t('common.new')}
               </span>
             )}
             {product.hasDiscount && (
               <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
-                Offer
+                {t('common.offer')}
               </span>
             )}
           </div>
@@ -196,18 +198,18 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             )}
 
             {isOutOfStock && (
-              <p className="text-sm font-semibold text-amber-600 mb-4">Out of stock</p>
+              <p className="text-sm font-semibold text-amber-600 mb-4">{t('product.outOfStock')}</p>
             )}
             {!isOutOfStock && maxQty != null && qty >= maxQty && (
               <p className="text-sm text-slate-600 mb-4">
-                Maximum available: {maxQty}.
+                {t('product.maxAvailable', { n: maxQty })}
               </p>
             )}
 
             {/* Ingredients */}
             {(product.ingredients || product._original?.ingredients) && (
               <div className="mb-4">
-                <div className="font-semibold text-sm mb-2 text-slate-900">Ingredients:</div>
+                <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.ingredients')}</div>
                 <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
                   {(() => {
                     const ingredients = product.ingredients || product._original?.ingredients
@@ -232,7 +234,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
             {/* Allergens */}
             {(product.allergies || product._original?.allergies) && (
               <div className="mb-4">
-                <div className="font-semibold text-sm mb-2 text-slate-900">Allergens:</div>
+                <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.allergens')}</div>
                 <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
                   {(() => {
                     const allergies = product.allergies || product._original?.allergies
@@ -313,7 +315,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                 </div>
                 {g.required && !selectedOptions[g.id] && (
                   <div className="text-xs text-red-500 mt-2 font-medium">
-                    Please choose a {g.title.toLowerCase()} option.
+                    {t('product.pleaseChooseOption', { option: g.title.toLowerCase() })}
                   </div>
                 )}
               </div>
@@ -398,7 +400,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               }}
               className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive && !isOutOfStock ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
             >
-              Add (+ {formatPrice(total)})
+              {t('product.add', { price: formatPrice(total) })}
             </button>
           </div>
         </div>
@@ -418,14 +420,14 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               aria-labelledby="extras-modal-title"
             >
               <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200">
-                <h2 id="extras-modal-title" className="text-base font-semibold text-slate-700">
-                  {extrasGroup?.title || 'Extras'}
-                </h2>
+              <h2 id="extras-modal-title" className="text-base font-semibold text-slate-700">
+                {extrasGroup?.title || t('common.extras')}
+              </h2>
                 <button
                   type="button"
                   onClick={closeExtrasModal}
                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   ×
                 </button>
@@ -463,14 +465,14 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                   onClick={closeExtrasModal}
                   className="flex-1 py-3 rounded-lg font-semibold text-sm bg-slate-200 text-slate-700 active:bg-slate-300 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={applyExtrasModal}
                   className="flex-1 py-3 rounded-lg font-semibold text-sm bg-orange-500 text-white active:bg-orange-600 transition-colors"
                 >
-                  Apply
+                  {t('common.apply')}
                 </button>
               </div>
             </div>

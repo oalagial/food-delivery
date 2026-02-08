@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { parsePrice, formatPrice } from '../utils/price'
 
 export default function OfferDetail({ offer, isLocationInactive = false, onClose, onAdd }) {
+  const { t } = useTranslation()
   const [selectedGroups, setSelectedGroups] = useState({}) // { groupId: [productIds] }
   const [qty, setQty] = useState(1)
   const modalRef = useRef(null)
@@ -145,10 +147,10 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                   <div className="font-semibold text-sm mb-2 text-slate-900">
                     {group.name}
                     <span className="text-xs font-normal text-slate-500 ml-1">
-                      (Select {group.minItems} {group.minItems === group.maxItems ? '' : `- ${group.maxItems}`})
+                      ({group.minItems === group.maxItems ? t('offerDetail.selectMin', { min: group.minItems }) : t('offerDetail.selectRange', { min: group.minItems, max: group.maxItems })})
                     </span>
                     {selected.length < group.minItems && (
-                      <span className="text-red-500 ml-2 text-xs">* Required</span>
+                      <span className="text-red-500 ml-2 text-xs">* {t('common.required')}</span>
                     )}
                   </div>
                   
@@ -204,7 +206,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                   
                   {selected.length < group.minItems && (
                     <div className="text-xs text-red-500 mt-2 font-medium">
-                      Please select at least {group.minItems} item{group.minItems > 1 ? 's' : ''}.
+                      {t('offerDetail.pleaseSelectItems', { count: group.minItems })}
                     </div>
                   )}
                 </div>
@@ -279,7 +281,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               }}
               className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
             >
-              Add (+ {formatPrice(total)})
+              {t('offerDetail.add', { price: formatPrice(total) })}
             </button>
           </div>
         </div>

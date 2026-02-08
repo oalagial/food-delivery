@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import DeliveryPointCard from './components/DeliveryPointCard'
 import StorePage from './components/StorePage'
 import CartPanel from './components/CartPanel'
 import CheckoutPage from './components/CheckoutPage'
 import OrderStatusPage from './components/OrderStatusPage'
+import PaymentSuccessPage from './components/PaymentSuccessPage'
+import PaymentCancelPage from './components/PaymentCancelPage'
 import AlertDialog from './components/AlertDialog'
+import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
 import { restaurantService, orderService, deliveryLocationService } from './services'
 import { initializeAuth } from './services/authInit'
 
 function AppContent() {
+  const { t } = useTranslation()
   const { alert, closeAlert, showAlert } = useAlert()
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,14 +42,14 @@ function AppContent() {
         setPoints(Array.isArray(data) ? data : data.data || [])
       } catch (error) {
         console.error('Failed to fetch delivery locations:', error)
-        const errorMessage = error.response?.data?.message || 'Failed to load delivery locations. Please check your connection and try again.'
-        showAlert('error', 'Loading Error', errorMessage, 5000)
+        const errorMessage = error.response?.data?.message || t('app.failedToLoadLocations')
+        showAlert('error', t('app.loadingError'), errorMessage, 5000)
       } finally {
         setLoading(false)
       }
     }
     initAndFetch()
-  }, [showAlert])
+  }, [showAlert, t])
 
   // Restore last selected location + restaurant on load (e.g. after refresh) — keep cart
   useEffect(() => {
@@ -625,13 +630,13 @@ function AppContent() {
                 <div className="animate-spin mb-4">
                   <span className="text-5xl">⏳</span>
                 </div>
-                <p className="text-lg font-semibold text-slate-700">Loading menu...</p>
+                <p className="text-lg font-semibold text-slate-700">{t('app.loadingMenu')}</p>
               </div>
             </div>
           ) : fetchedMenu?.error ? (
             <div className="w-full h-screen bg-slate-50 flex items-center justify-center">
               <div className="text-center">
-                <p className="text-lg font-semibold text-red-600 mb-4">Error loading menu</p>
+                <p className="text-lg font-semibold text-red-600 mb-4">{t('app.errorLoadingMenu')}</p>
                 <p className="text-base text-slate-600 mb-4">{fetchedMenu.error}</p>
                 <button
                   onClick={() => {
@@ -647,7 +652,7 @@ function AppContent() {
                   }}
                   className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                 >
-                  Go Back
+                  {t('app.goBack')}
                 </button>
               </div>
             </div>
@@ -815,13 +820,13 @@ function AppContent() {
 
           <button
             onClick={() => setCartOpen(true)}
-            aria-label="Open cart"
+            aria-label={t('app.openCart')}
             className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
               cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
             }`}
           >
             <span className="text-4xl">🛒</span>
-            <span className="sr-only">Cart</span>
+            <span className="sr-only">{t('app.cart')}</span>
             {cart.length > 0 && (
               <>
                 <span className="absolute -top-4 -right-1 bg-white text-orange-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-orange-500 px-2.5 py-1.5 whitespace-nowrap">
@@ -869,13 +874,13 @@ function AppContent() {
               <button
                 onClick={handleBack}
                 className="text-2xl leading-none active:opacity-70 transition-opacity"
-                aria-label="Go back"
+                aria-label={t('common.goBack')}
               >
                 ←
               </button>
               <div className="flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-center">Choose a Restaurant</h2>
-                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">Available for your selected delivery location</p>
+                <h2 className="text-lg sm:text-xl font-bold text-center">{t('app.chooseRestaurant')}</h2>
+                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">{t('app.availableForLocation')}</p>
               </div>
               <div className="w-8"></div>
             </div>
@@ -893,7 +898,7 @@ function AppContent() {
               </section>
             ) : (
               <div className="text-center py-12">
-                <p className="text-sm sm:text-base text-slate-600">No restaurants available for this location.</p>
+                <p className="text-sm sm:text-base text-slate-600">{t('app.noRestaurants')}</p>
               </div>
             )}
           </div>
@@ -912,9 +917,9 @@ function AppContent() {
                 <span className="text-5xl sm:text-6xl lg:text-7xl">🍽️</span>
               </div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">
-                Choose Your Delivery Location
+                {t('app.chooseDeliveryLocation')}
               </h1>
-              <p className="text-sm sm:text-base text-slate-600">Start ordering delicious food now! 🚀</p>
+              <p className="text-sm sm:text-base text-slate-600">{t('app.startOrdering')} 🚀</p>
             </header>
 
             {loading ? (
@@ -922,7 +927,7 @@ function AppContent() {
                 <div className="animate-spin mb-3">
                   <span className="text-4xl">⏳</span>
                 </div>
-                <span className="text-sm sm:text-base text-slate-600 font-medium">Loading delivery locations...</span>
+                <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
               </div>
             ) : points.length > 0 ? (
               <section className="flex flex-col gap-3 sm:gap-4">
@@ -932,7 +937,7 @@ function AppContent() {
               </section>
             ) : (
               <div className="text-center py-12">
-                <p className="text-sm sm:text-base text-slate-600">No delivery locations available. Please try again later.</p>
+                <p className="text-sm sm:text-base text-slate-600">{t('app.noLocations')}</p>
               </div>
             )}
           </div>
@@ -958,16 +963,38 @@ function AppWithAlert() {
   const orderStatusMatch = pathname.match(/^\/orders\/status\/([^/]+)$/)
   const orderToken = orderStatusMatch ? orderStatusMatch[1] : null
 
+  const alertDialog = (
+    <AlertDialog type={alert.type} title={alert.title} message={alert.message} isOpen={alert.isOpen} onClose={closeAlert} autoCloseDuration={alert.duration} />
+  )
+  if (pathname === '/payment/success') {
+    return (
+      <>
+        <div className="fixed top-4 right-4 z-[100]" aria-hidden="false">
+          <LanguageSwitcher />
+        </div>
+        {alertDialog}
+        <PaymentSuccessPage />
+      </>
+    )
+  }
+  if (pathname === '/payment/cancel') {
+    return (
+      <>
+        <div className="fixed top-4 right-4 z-[100]">
+          <LanguageSwitcher />
+        </div>
+        {alertDialog}
+        <PaymentCancelPage />
+      </>
+    )
+  }
+
   return (
     <>
-      <AlertDialog
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        isOpen={alert.isOpen}
-        onClose={closeAlert}
-        autoCloseDuration={alert.duration}
-      />
+      <div className="fixed top-4 right-4 z-[100]">
+        <LanguageSwitcher />
+      </div>
+      {alertDialog}
       {orderToken ? <OrderStatusPage token={orderToken} /> : <AppContent />}
     </>
   )

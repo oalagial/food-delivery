@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
 import { orderService } from '../services'
@@ -24,6 +25,7 @@ function getStoredCheckoutForm() {
 }
 
 export default function CheckoutPage({ restaurant, deliveryLocation, cart, total, onClose, updateQty, removeItem, onConfirm }) {
+  const { t } = useTranslation()
   const [promo, setPromo] = useState('')
   const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,6 +38,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
   const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
+  const [paymentMethod, setPaymentMethod] = useState('CASH') // 'CASH' | 'CARD'
   const [touched, setTouched] = useState({ name: false, phone: false, email: false, notes: false })
   const [dirty, setDirty] = useState({ name: false, phone: false, email: false, notes: false })
   const { showAlert } = useAlert()
@@ -45,9 +48,9 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const errors = {
-    name: !customerName.trim() ? 'Please enter your name.' : null,
-    phone: !customerPhone.trim() ? 'Please enter your phone number.' : null,
-    email: !customerEmail.trim() ? 'Please enter your email address.' : !emailRegex.test(customerEmail.trim()) ? 'Please enter a valid email address (e.g. name@example.com).' : null,
+    name: !customerName.trim() ? t('checkout.errorName') : null,
+    phone: !customerPhone.trim() ? t('checkout.errorPhone') : null,
+    email: !customerEmail.trim() ? t('checkout.errorEmail') : !emailRegex.test(customerEmail.trim()) ? t('checkout.errorEmailInvalid') : null,
     notes: null,
   }
   const showError = (field) => touched[field] && errors[field]
@@ -193,11 +196,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     const selections = Array.isArray(it.selectedGroups) ? it.selectedGroups : []
     if (selections.length === 0) return null
 
-    // Group by groupName (fallback to groupId)
     const grouped = new Map()
     for (const sel of selections) {
-      const groupLabel = sel?.groupName || (sel?.groupId !== undefined ? `Group ${sel.groupId}` : 'Selected')
-      const itemLabel = sel?.selectedItemName || (sel?.selectedItemId !== undefined ? `Item ${sel.selectedItemId}` : 'Item')
+      const groupLabel = sel?.groupName || (sel?.groupId !== undefined ? `${t('common.group')} ${sel.groupId}` : t('common.selected'))
+      const itemLabel = sel?.selectedItemName || (sel?.selectedItemId !== undefined ? `${t('common.item')} ${sel.selectedItemId}` : t('common.item'))
       if (!grouped.has(groupLabel)) grouped.set(groupLabel, [])
       grouped.get(groupLabel).push(itemLabel)
     }
@@ -209,6 +211,34 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   const submitOrder = async () => {
     try {
+      if (paymentMethod === 'CARD') {
+        // Πρώτα πηγαίνουμε στο Stripe – το create order θα το κάνεις εσύ στο backend
+        const API_BASE = import.meta.env.VITE_API_BASE
+        const amountCents = Math.round(finalTotal * 100)
+        const payRes = await fetch(`${API_BASE}/payments/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amountCents }),
+        })
+        const payData = await payRes.json()
+        if (!payRes.ok) {
+          throw new Error(payData?.message || 'Payment checkout failed')
+        }
+        if (payData?.url) {
+          try {
+            localStorage.removeItem(CHECKOUT_FORM_KEY)
+          } catch {
+            /* ignore */
+          }
+          onClose()
+          onConfirm && onConfirm()
+          window.location.href = payData.url
+          return
+        }
+        throw new Error('No payment URL returned')
+      }
+
+      // CASH: create order κανονικά
       const offerItems = cart.filter(item => item.isOffer)
       const offers = offerItems.map((item) => {
         const selectedGroups = Array.isArray(item.selectedGroups) 
@@ -263,14 +293,14 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       if (token) {
         window.location.href = `/orders/status/${token}?confirmed=1`
       } else {
-        showAlert('success', 'Order Confirmed!', 'Your order has been placed. You will receive a call from the rider shortly.', 10000)
+        showAlert('success', t('checkout.orderConfirmed'), t('checkout.orderPlaced'), 10000)
       }
     } catch (error) {
       const data = error.response?.data
       if (data?.message && Array.isArray(data?.products) && data.products.length > 0) {
         setInsufficientStock({ message: data.message, products: data.products })
       } else {
-        showAlert('error', 'Order Failed', data?.message || error.message || 'Something went wrong. Please try again.', 10000)
+        showAlert('error', t('checkout.orderFailed'), data?.message || error.message || t('checkout.somethingWrong'), 10000)
       }
       setIsSubmitting(false)
     }
@@ -297,36 +327,41 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     if (!agree) return
 
     if (!customerName.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your name.', 5000)
+      showAlert('error', t('checkout.validationError'), t('checkout.errorName'), 5000)
       return
     }
     if (!customerPhone.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your phone number.', 5000)
+      showAlert('error', t('checkout.validationError'), t('checkout.errorPhone'), 5000)
       return
     }
     if (!customerEmail.trim()) {
-      showAlert('error', 'Validation Error', 'Please enter your email address.', 5000)
+      showAlert('error', t('checkout.validationError'), t('checkout.errorEmail'), 5000)
       return
     }
     const emailTrimmed = customerEmail.trim()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(emailTrimmed)) {
-      showAlert('error', 'Validation Error', 'Please enter a valid email address (e.g. name@example.com).', 5000)
+      showAlert('error', t('checkout.validationError'), t('checkout.errorEmailInvalid'), 5000)
       return
     }
     setIsSubmitting(true)
     try {
+      if (paymentMethod === 'CASH') {
+        await submitOrder()
+        return
+      }
+
       const data = await fetchDeliveryTimeFromApi()
 
       if (data?.error) {
-        showAlert('error', 'Delivery Time', data.error, 5000)
+        showAlert('error', t('checkout.deliveryTime'), data.error, 5000)
         setIsSubmitting(false)
         return
       }
 
       const newTimeslot = parseTimeslot(data)
       if (!newTimeslot) {
-        showAlert('error', 'Delivery Time', 'Could not get delivery time. Please try again.', 5000)
+        showAlert('error', t('checkout.deliveryTime'), t('checkout.couldNotGetTime'), 5000)
         setIsSubmitting(false)
         return
       }
@@ -340,7 +375,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
       await submitOrder()
     } catch (error) {
-      showAlert('error', 'Delivery Time', 'Failed to verify delivery time. Please try again.', 5000)
+      showAlert('error', t('checkout.deliveryTime'), t('checkout.failedToVerifyTime'), 5000)
       setIsSubmitting(false)
     }
   }
@@ -378,12 +413,12 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             type="button"
             onClick={onClose}
             className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <h1 className="text-lg font-bold text-slate-900">Your order</h1>
+            <h1 className="text-lg font-bold text-slate-900">{t('checkout.yourOrder')}</h1>
           </div>
         </div>
 
@@ -392,10 +427,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           <div className="p-3 sm:p-4 lg:p-6">
             {/* Restaurant & Location Info */}
             <div className="text-center mb-4 sm:mb-5">
-              <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || 'Restaurant'}</div>
-              <div className="text-xs sm:text-sm text-slate-600 mt-1">Delivery to: {deliveryLocation?.name || 'Location'}</div>
+              <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || t('common.restaurant')}</div>
+              <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('checkout.deliveryTo')} {deliveryLocation?.name || t('common.location')}</div>
               {deliveryTimeLoading ? (
-                <div className="text-xs sm:text-sm text-slate-500 mt-2">Calculating delivery time...</div>
+                <div className="text-xs sm:text-sm text-slate-500 mt-2">{t('checkout.calculatingTime')}</div>
               ) : deliveryTimeError ? (
                 <div className="text-xs sm:text-sm text-red-600 font-semibold mt-2">
                   ⚠️ {deliveryTimeError}
@@ -409,42 +444,42 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
             {/* Customer Information Form */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
-              <div className="text-sm sm:text-base font-semibold mb-3">Customer Information</div>
+              <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.customerInfo')}</div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">Name *</label>
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.nameRequired')}</label>
                   <input
                     type="text"
                     value={customerName}
                     onChange={(e) => { setCustomerName(e.target.value); setFieldDirty('name')() }}
                     onBlur={setFieldTouched('name')}
-                    placeholder="Enter your name"
+                    placeholder={t('checkout.enterName')}
                     className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('name') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
                   {showError('name') && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">Phone *</label>
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.phoneRequired')}</label>
                   <input
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => { setCustomerPhone(e.target.value); setFieldDirty('phone')() }}
                     onBlur={setFieldTouched('phone')}
-                    placeholder="Enter your phone number"
+                    placeholder={t('checkout.enterPhone')}
                     className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('phone') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
                   {showError('phone') && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">Email *</label>
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.emailRequired')}</label>
                   <input
                     type="email"
                     value={customerEmail}
                     onChange={(e) => { setCustomerEmail(e.target.value); setFieldDirty('email')() }}
                     onBlur={setFieldTouched('email')}
-                    placeholder="Enter your email"
+                    placeholder={t('checkout.enterEmail')}
                     className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('email') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                     required
                   />
@@ -455,21 +490,61 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
             {/* Delivery Notes */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
-              <div className="text-sm sm:text-base font-semibold mb-3">Delivery Notes (Optional)</div>
+              <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.deliveryNotes')}</div>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g., Leave at the door, Ring the bell, etc."
+                placeholder={t('checkout.deliveryNotesPlaceholder')}
                 className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
                 rows="2"
               />
             </div>
 
+            {/* Payment Method */}
+            <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
+              <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.paymentMethod')}</div>
+              <div className="flex gap-3">
+                <label
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'CASH'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="CASH"
+                    checked={paymentMethod === 'CASH'}
+                    onChange={() => setPaymentMethod('CASH')}
+                    className="sr-only"
+                  />
+                  <span className="text-lg">💵</span>
+                  <span className="font-medium">{t('checkout.cash')}</span>
+                </label>
+                <label
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-75 transition-all pointer-events-none"
+                  aria-disabled="true"
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="CARD"
+                    disabled
+                    readOnly
+                    className="sr-only"
+                  />
+                  <span className="text-lg">💳</span>
+                  <span className="font-medium">{t('checkout.card')}</span>
+                </label>
+              </div>
+            </div>
+
             {/* Cart Items */}
             <div className="mb-4 sm:mb-5">
-              <div className="text-sm sm:text-base font-semibold mb-3">Order Items</div>
+              <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.orderItems')}</div>
               {cart.length === 0 ? (
-                <div className="text-sm text-slate-500 py-4 text-center">Your cart is empty</div>
+                <div className="text-sm text-slate-500 py-4 text-center">{t('checkout.cartEmpty')}</div>
               ) : (
                 <div className="space-y-3">
                   {cart.map((it) => (
@@ -486,7 +561,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                         )}
                         {(it.extraNames && it.extraNames.length > 0) && (
                           <div className="text-xs sm:text-sm text-orange-600 mt-1">
-                            Extras: {it.extraNames.join(', ')}
+                            {t('common.extras')}: {it.extraNames.join(', ')}
                           </div>
                         )}
                         {it.options && Object.keys(it.options).length > 0 && (
@@ -497,7 +572,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                         <button 
                           onClick={() => updateQty(it.key, Math.max(1, it.qty - 1))} 
                           className="w-7 h-7 sm:w-8 sm:h-8 text-sm sm:text-base rounded-full bg-slate-100 text-slate-700 active:bg-slate-200 transition-colors flex items-center justify-center font-semibold"
-                          aria-label="Decrease quantity"
+                          aria-label={t('checkout.decreaseQty')}
                         >
                           −
                         </button>
@@ -505,7 +580,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                         <button 
                           onClick={() => updateQty(it.key, it.qty + 1)} 
                           className="w-7 h-7 sm:w-8 sm:h-8 text-sm sm:text-base rounded-full bg-slate-100 text-slate-700 active:bg-slate-200 transition-colors flex items-center justify-center font-semibold"
-                          aria-label="Increase quantity"
+                          aria-label={t('checkout.increaseQty')}
                         >
                           +
                         </button>
@@ -515,7 +590,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                         <button 
                           onClick={() => removeItem(it.key)} 
                           className="ml-1 sm:ml-2 text-base sm:text-lg text-red-500 active:opacity-70 transition-opacity"
-                          aria-label="Remove item"
+                          aria-label={t('checkout.removeItem')}
                         >
                           🗑
                         </button>
@@ -529,27 +604,27 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             {/* Order Summary */}
             <div className="border-t border-slate-200 pt-4 sm:pt-5">
               <div className="mb-3 text-xs sm:text-sm text-slate-600 flex justify-between">
-                <span>Delivery costs:</span>
+                <span>{t('checkout.deliveryCosts')}</span>
                 <span>{formatPrice(deliveryCost)}</span>
               </div>
 
               <div className="mb-3 sm:mb-4">
-                <div className="text-xs sm:text-sm font-semibold mb-2 text-slate-700">Promo code</div>
+                <div className="text-xs sm:text-sm font-semibold mb-2 text-slate-700">{t('checkout.promoCode')}</div>
                 <div className="flex gap-2">
                   <input 
                     value={promo} 
                     onChange={(e) => setPromo(e.target.value)} 
-                    placeholder="Enter code" 
+                    placeholder={t('checkout.enterCode')} 
                     className="flex-1 border border-slate-300 px-3 py-2 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
                   />
                   <button className="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-orange-600 transition-colors whitespace-nowrap">
-                    Verify
+                    {t('common.verify')}
                   </button>
                 </div>
               </div>
 
               <div className="bg-sky-100 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4 flex items-center justify-between">
-                <div className="text-base sm:text-lg font-semibold text-slate-900">Total:</div>
+                <div className="text-base sm:text-lg font-semibold text-slate-900">{t('common.total')}:</div>
                 <div className="text-lg sm:text-xl font-bold text-slate-900">{formatPrice(finalTotal)}</div>
               </div>
 
@@ -561,12 +636,12 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                   className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 accent-orange-500" 
                 />
                 <span>
-                  I confirm the delivery location is <span className="font-semibold">{deliveryLocation?.name || ''}</span>
+                  {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
                 </span>
               </label>
 
               <p className="mt-3 text-[10px] sm:text-xs text-slate-500 leading-relaxed">
-                You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location.
+                {t('checkout.riderCall')}
               </p>
             </div>
           </div>
@@ -583,7 +658,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
           >
-            {isSubmitting ? 'Processing...' : 'Confirm Order'}
+            {isSubmitting ? t('checkout.processing') : t('checkout.confirmOrder')}
           </button>
         </div>
       </div>
@@ -592,24 +667,22 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       {timeChangedConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Estimated delivery time has changed</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('checkout.timeChangedTitle')}</h3>
             <p className="text-sm text-slate-600 mb-4">
-              The estimated delivery time is now{' '}
-              <span className="font-semibold text-orange-600">{formatTimeslotDisplay(timeChangedConfirm)}</span>.
-              Do you want to confirm with the new time?
+              {t('checkout.timeChangedMessage', { time: formatTimeslotDisplay(timeChangedConfirm) })}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setTimeChangedConfirm(null)}
                 className="flex-1 py-2.5 rounded-lg font-semibold border border-slate-300 text-slate-700 active:bg-slate-100"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirmTimeChanged}
                 className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
               >
-                Confirm
+                {t('common.confirm')}
               </button>
             </div>
           </div>
@@ -620,33 +693,33 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       {insufficientStock && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Insufficient stock</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('checkout.insufficientStock')}</h3>
             <p className="text-sm text-slate-600 mb-4">{insufficientStock.message}</p>
             <ul className="space-y-2 mb-4">
               {insufficientStock.products.map((p) => (
                 <li key={p.productId} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-2">
                   <span className="font-medium text-slate-800">{p.productName}</span>
                   <span className="text-slate-600">
-                    requested {p.requested} → available {p.available}
+                    {t('checkout.requestedAvailable', { requested: p.requested, available: p.available })}
                   </span>
                 </li>
               ))}
             </ul>
             <p className="text-xs text-slate-500 mb-4">
-              Accept to update your cart: quantities will be set to available stock for each product above.
+              {t('checkout.acceptUpdateCart')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setInsufficientStock(null); setIsSubmitting(false) }}
                 className="flex-1 py-2.5 rounded-lg font-semibold border border-slate-300 text-slate-700 active:bg-slate-100"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleAcceptInsufficientStock}
                 className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
               >
-                Accept
+                {t('common.accept')}
               </button>
             </div>
           </div>

@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import ProductDetail from './ProductDetail'
 import OfferDetail from './OfferDetail'
 import restaurantImage from '../assets/restaurant-image.png'
 import logo from '../assets/logo.png'
 
 export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
+  const { t } = useTranslation()
   const [selectedProductDetail, setSelectedProductDetail] = useState(null)
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
   const categoryRefs = useRef({})
@@ -45,18 +47,18 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
 
   const openLabel = (() => {
     if (isRestaurantClosed) {
-      if (point?.opensAt) return `Opens at ${point.opensAt}`
-      if (point?.nextOpeningTime) return `Opens at ${point.nextOpeningTime}`
-      if (todayHours?.opensAt) return `Opens at ${todayHours.opensAt}`
-      return 'Currently closed'
+      if (point?.opensAt) return t('store.opensAt', { time: point.opensAt })
+      if (point?.nextOpeningTime) return t('store.opensAt', { time: point.nextOpeningTime })
+      if (todayHours?.opensAt) return t('store.opensAt', { time: todayHours.opensAt })
+      return t('store.currentlyClosed')
     }
 
     if (todayHours?.closesAt) {
-      return `Open until ${todayHours.closesAt}`
+      return t('store.openUntil', { time: todayHours.closesAt })
     }
 
-    if (point?.openUntil) return `Open until ${point.openUntil}`
-    return 'Open now'
+    if (point?.openUntil) return t('store.openUntil', { time: point.openUntil })
+    return t('store.openNow')
   })()
 
   // Detect which category is in view as user scrolls
@@ -108,7 +110,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         <button
           onClick={onBack}
           className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
-          aria-label="Go back"
+          aria-label={t('store.goBack')}
         >
           ←
         </button>
@@ -123,14 +125,14 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
           />
           <div className="mt-2 text-white drop-shadow-md">
             <div className="text-xs sm:text-sm font-semibold text-white">
-              {isLocationInactive ? 'Delivery temporarily unavailable' : openLabel}
+              {isLocationInactive ? t('store.deliveryUnavailable') : openLabel}
             </div>
             <div className="mt-1 flex items-center justify-center gap-2 text-xs font-medium text-white flex-wrap">
-              <span>Delivery {deliveryFee} €</span>
+              <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
               <span className="w-1 h-1 rounded-full bg-white/80" />
-              <span>Free delivery over {minOrder} €</span>
+              <span>{t('store.freeDeliveryOver', { min: minOrder })}</span>
               <span className="w-1 h-1 rounded-full bg-white/80" />
-              <span>Min order 0 €</span>
+              <span>{t('store.minOrder')}</span>
             </div>
           </div>
         </div>
@@ -147,7 +149,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
-            Offers
+            {t('store.offers')}
           </button>
         )}
         {categories.map((c) => (
@@ -184,7 +186,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
               id="section-Offers"
               className="mb-3 pb-2 border-b-2 border-[#f6a94b]"
             >
-              <h2 className="text-base font-bold text-[#1f2933]">Special Offers</h2>
+              <h2 className="text-base font-bold text-[#1f2933]">{t('store.specialOffers')}</h2>
             </div>
             {offers.map((offer, index) => (
               <div 
@@ -210,7 +212,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex-1 min-w-0">
                       <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-medium mb-1">
-                        Offer
+                        {t('common.offer')}
                       </span>
                       <h3 className="text-sm font-bold text-[#1f2933] leading-tight break-words">
                         {offer.name}
@@ -231,7 +233,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                           : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
                       }`}
-                      aria-label={cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
+                      aria-label={cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
                     >
                       +
                     </button>
@@ -305,12 +307,12 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       </h3>
                         {isInactive && (
                           <span className="inline-block text-[10px] font-semibold text-red-500 uppercase tracking-wide">
-                            Not available
+                            {t('store.notAvailable')}
                           </span>
                         )}
                         {!isInactive && isOutOfStock && (
                           <span className="inline-block text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
-                            Out of stock
+                            {t('store.outOfStock')}
                           </span>
                         )}
                     </div>
@@ -329,7 +331,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             : 'bg-[#f6a94b] text-white active:scale-95 active:bg-[#e7952f]'
                         }`}
-                        aria-label={cannotSelect ? (isOutOfStock ? 'Out of stock' : 'Product not available') : cannotAddToCart ? (isLocationInactive ? 'Location temporarily closed' : 'Restaurant is closed') : 'Add to cart'}
+                        aria-label={cannotSelect ? (isOutOfStock ? t('store.outOfStock') : t('store.productNotAvailable')) : cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
                     >
                       +
                     </button>

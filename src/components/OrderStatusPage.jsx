@@ -1,18 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { orderService } from '../services'
 import { formatPrice } from '../utils/price'
 
 const API_BASE = import.meta.env.VITE_API_BASE
-
-const STATUS_CONFIG = {
-  PENDING: { label: 'Pending', color: 'bg-amber-100 text-amber-800', icon: '⏳' },
-  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800', icon: '✓' },
-  PREPARING: { label: 'Preparing', color: 'bg-indigo-100 text-indigo-800', icon: '👨‍🍳' },
-  READY: { label: 'Ready', color: 'bg-teal-100 text-teal-800', icon: '📦' },
-  DELIVERING: { label: 'On the way', color: 'bg-orange-100 text-orange-800', icon: '🚗' },
-  DELIVERED: { label: 'Delivered', color: 'bg-green-100 text-green-800', icon: '✅' },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: '✕' },
-}
 
 function imageUrl(img) {
   if (!img) return null
@@ -53,13 +44,13 @@ export default function OrderStatusPage({ token }) {
         if (!cancelled) setOrder(data)
       })
       .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load order')
+        if (!cancelled) setError(err.response?.data?.message || err.message || t('orderStatus.failedToLoadOrder'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [token])
+  }, [token, t])
 
   if (loading) {
     return (
@@ -68,7 +59,7 @@ export default function OrderStatusPage({ token }) {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 mb-4 animate-pulse">
             <span className="text-2xl">⏳</span>
           </div>
-          <p className="text-slate-600 font-medium">Loading your order...</p>
+          <p className="text-slate-600 font-medium">{t('orderStatus.loadingOrder')}</p>
         </div>
       </div>
     )
@@ -79,13 +70,13 @@ export default function OrderStatusPage({ token }) {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-amber-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
           <div className="text-5xl mb-4">😕</div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Order not found</h2>
-          <p className="text-slate-600 mb-6">{error || 'This order could not be loaded.'}</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">{t('orderStatus.orderNotFound')}</h2>
+          <p className="text-slate-600 mb-6">{error || t('orderStatus.couldNotLoad')}</p>
           <a
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 active:scale-[0.98] transition-all"
           >
-            ← Back to home
+            ← {t('orderStatus.backToHome')}
           </a>
         </div>
       </div>
@@ -107,7 +98,7 @@ export default function OrderStatusPage({ token }) {
             <a
               href="/"
               className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:opacity-80 transition-colors"
-              aria-label="Back to home"
+              aria-label={t('orderStatus.backToHome')}
             >
               ←
             </a>
@@ -125,16 +116,16 @@ export default function OrderStatusPage({ token }) {
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
             <span className="text-2xl flex-shrink-0" aria-hidden>✉️</span>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-green-800">Order confirmed!</h3>
+              <h3 className="font-semibold text-green-800">{t('orderStatus.orderConfirmed')}</h3>
               <p className="text-sm text-green-700 mt-0.5">
-                We&apos;ve sent a confirmation email to your inbox. You can use this page to track your order status.
+                {t('orderStatus.confirmationEmail')}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowEmailBanner(false)}
               className="flex-shrink-0 text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100 transition-colors"
-              aria-label="Dismiss"
+              aria-label={t('common.dismiss')}
             >
               ×
             </button>
@@ -145,7 +136,7 @@ export default function OrderStatusPage({ token }) {
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <span className="text-sm font-medium text-slate-500">Status</span>
+              <span className="text-sm font-medium text-slate-500">{t('orderStatus.status')}</span>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${statusInfo.color}`}>
                 <span>{statusInfo.icon}</span>
                 {statusInfo.label}
@@ -153,17 +144,17 @@ export default function OrderStatusPage({ token }) {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-slate-500 block">Ordered</span>
+                <span className="text-slate-500 block">{t('orderStatus.ordered')}</span>
                 <span className="font-medium text-slate-800">{formatDate(order.createdAt)}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">Delivery time</span>
+                <span className="text-slate-500 block">{t('orderStatus.deliveryTime')}</span>
                 <span className="font-medium text-slate-800">{formatTime(order.deliveryTime)}</span>
               </div>
             </div>
             {order.notes && (
               <div className="mt-3 pt-3 border-t border-slate-100">
-                <span className="text-slate-500 text-sm block">Notes</span>
+                <span className="text-slate-500 text-sm block">{t('orderStatus.notes')}</span>
                 <p className="text-slate-800 text-sm">{order.notes}</p>
               </div>
             )}
@@ -174,14 +165,14 @@ export default function OrderStatusPage({ token }) {
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 sm:p-5 space-y-4">
             <div>
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Delivery</h3>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('orderStatus.delivery')}</h3>
               <p className="font-semibold text-slate-800">{order.deliveryLocation?.name}</p>
               {order.deliveryLocation?.address && (
                 <p className="text-sm text-slate-600">{order.deliveryLocation.address}</p>
               )}
             </div>
             <div>
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Customer</h3>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('orderStatus.customer')}</h3>
               <p className="font-semibold text-slate-800">{order.customer?.name}</p>
               <p className="text-sm text-slate-600">{order.customer?.phone}</p>
               {order.customer?.email && (
@@ -194,7 +185,7 @@ export default function OrderStatusPage({ token }) {
         {/* Order items */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-slate-100">
-            <h3 className="font-bold text-slate-800">Your order</h3>
+            <h3 className="font-bold text-slate-800">{t('orderStatus.yourOrder')}</h3>
           </div>
           <div className="divide-y divide-slate-100">
             {(order.products || []).map((item) => (
@@ -244,20 +235,20 @@ export default function OrderStatusPage({ token }) {
           <div className="p-4 sm:p-5 space-y-2">
             {order.deliveryFee != null && order.deliveryFee > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Delivery fee</span>
+                <span className="text-slate-600">{t('orderStatus.deliveryFee')}</span>
                 <span className="font-medium">{formatPrice(order.deliveryFee)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Subtotal</span>
+              <span className="text-slate-600">{t('orderStatus.subtotal')}</span>
               <span className="font-medium">{formatPrice(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100">
-              <span className="text-slate-800">Total</span>
+              <span className="text-slate-800">{t('common.total')}</span>
               <span className="text-orange-600">{formatPrice(order.total)}</span>
             </div>
             <div className="flex justify-between text-xs text-slate-500 pt-1">
-              <span>Payment: {order.paymentMethod || '—'}</span>
+              <span>{t('orderStatus.payment')}: {order.paymentMethod || '—'}</span>
               <span>{order.paymentStatus || '—'}</span>
             </div>
           </div>
@@ -268,7 +259,7 @@ export default function OrderStatusPage({ token }) {
           href="/"
           className="block w-full py-4 text-center font-semibold rounded-xl bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98] transition-all shadow-md"
         >
-          Order again
+          {t('orderStatus.orderAgain')}
         </a>
       </main>
     </div>
