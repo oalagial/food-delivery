@@ -5,6 +5,17 @@ import { formatPrice } from '../utils/price'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+const STATUS_CONFIG = {
+  pending:   { labelKey: 'orderStatus.pending',   color: 'bg-amber-100 text-amber-800', icon: '⏳' },
+  confirmed: { labelKey: 'orderStatus.confirmed', color: 'bg-blue-100 text-blue-800',   icon: '✓' },
+  preparing: { labelKey: 'orderStatus.preparing', color: 'bg-orange-100 text-orange-800', icon: '👨‍🍳' },
+  ready:     { labelKey: 'orderStatus.ready',     color: 'bg-lime-100 text-lime-800',   icon: '✅' },
+  onTheWay:  { labelKey: 'orderStatus.onTheWay',  color: 'bg-cyan-100 text-cyan-800',   icon: '🚴' },
+  on_the_way: { labelKey: 'orderStatus.onTheWay', color: 'bg-cyan-100 text-cyan-800',   icon: '🚴' },
+  delivered: { labelKey: 'orderStatus.delivered', color: 'bg-green-100 text-green-800',  icon: '🎉' },
+  cancelled: { labelKey: 'orderStatus.cancelled', color: 'bg-red-100 text-red-800',     icon: '✕' },
+}
+
 function imageUrl(img) {
   if (!img) return null
   if (img.startsWith('http')) return img
@@ -24,6 +35,7 @@ function formatTime(iso) {
 }
 
 export default function OrderStatusPage({ token }) {
+  const { t } = useTranslation()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -84,6 +96,7 @@ export default function OrderStatusPage({ token }) {
   }
 
   const statusInfo = STATUS_CONFIG[order.status] || {
+    labelKey: null,
     label: order.status,
     color: 'bg-slate-100 text-slate-800',
     icon: '📋',
@@ -139,7 +152,7 @@ export default function OrderStatusPage({ token }) {
               <span className="text-sm font-medium text-slate-500">{t('orderStatus.status')}</span>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${statusInfo.color}`}>
                 <span>{statusInfo.icon}</span>
-                {statusInfo.label}
+                {statusInfo.labelKey ? t(statusInfo.labelKey) : statusInfo.label}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
