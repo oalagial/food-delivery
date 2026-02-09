@@ -27,6 +27,9 @@ function getStoredCheckoutForm() {
 export default function CheckoutPage({ restaurant, deliveryLocation, cart, total, onClose, updateQty, removeItem, onConfirm }) {
   const { t } = useTranslation()
   const [promo, setPromo] = useState('')
+  const [coupon, setCoupon] = useState(null) // { code, type, value, restaurantId } when valid
+  const [couponError, setCouponError] = useState(null)
+  const [couponLoading, setCouponLoading] = useState(false)
   const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState(() => getStoredCheckoutForm().name)
@@ -73,6 +76,37 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     }
   }, [customerName, customerPhone, customerEmail, notes])
 
+  const handleVerifyCoupon = async () => {
+    const code = promo.trim()
+    if (!code || !restaurant?.id) return
+    setCouponLoading(true)
+    setCouponError(null)
+    setCoupon(null)
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE
+      const url = `${API_BASE}/public/verify-coupon?code=${encodeURIComponent(code)}&restaurantId=${restaurant.id}`
+      const response = await fetch(url)
+      const data = await response.json().catch(() => ({}))
+      if (response.ok && data?.code && data?.type != null && data?.value != null) {
+        setCoupon({ code: data.code, type: data.type, value: String(data.value), restaurantId: data.restaurantId })
+        setCouponError(null)
+      } else {
+        setCoupon(null)
+        setCouponError(t('checkout.couponInvalid'))
+      }
+    } catch {
+      setCoupon(null)
+      setCouponError(t('checkout.couponInvalid'))
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setCoupon(null)
+    setCouponError(null)
+  }
+
   const fetchDeliveryTimeFromApi = async () => {
     if (!restaurant?.id || !deliveryLocation?.id) return null
     const API_BASE = import.meta.env.VITE_API_BASE
@@ -111,7 +145,17 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const shouldChargeDelivery =
     rawDeliveryFee > 0 && (minOrderForFree === 0 || itemsTotal < minOrderForFree)
   const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
-  const finalTotal = itemsTotal + deliveryCost
+  const totalBeforeCoupon = itemsTotal + deliveryCost
+
+  // Coupon discount (apply to items only; value from API is string)
+  const couponDiscountAmount = (() => {
+    if (!coupon?.type || !coupon?.value) return 0
+    const val = parseFloat(coupon.value) || 0
+    if (coupon.type === 'PERCENTAGE') return (itemsTotal * val) / 100
+    if (coupon.type === 'FIXED') return Math.min(val, itemsTotal)
+    return 0
+  })()
+  const finalTotal = Math.max(0, totalBeforeCoupon - couponDiscountAmount)
 
   // Fetch estimated delivery time when restaurant and delivery location are available
   useEffect(() => {
@@ -279,6 +323,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           extraIds: item.extraIds || [],
         })),
         offers: offers,
+        ...(coupon?.code ? { couponCode: coupon.code } : {}),
       }
 
       const response = await orderService.create(orderData)
@@ -632,22 +677,54 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
               <div className="mb-3 sm:mb-4">
                 <div className="text-xs sm:text-sm font-semibold mb-2 text-slate-700">{t('checkout.promoCode')}</div>
-                <div className="flex gap-2">
-                  <input 
-                    value={promo} 
-                    onChange={(e) => setPromo(e.target.value)} 
-                    placeholder={t('checkout.enterCode')} 
-                    className="flex-1 border border-slate-300 px-3 py-2 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
-                  />
-                  <button className="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-orange-600 transition-colors whitespace-nowrap">
-                    {t('common.verify')}
-                  </button>
-                </div>
+                {coupon ? (
+                  <div className="flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-green-50 border border-green-200">
+                    <span className="text-sm font-medium text-green-800">
+                      {t('checkout.couponApplied', { code: coupon.code })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs font-semibold text-green-700 hover:text-green-900 underline"
+                    >
+                      {t('checkout.removeCoupon')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      value={promo}
+                      onChange={(e) => { setPromo(e.target.value); setCouponError(null) }}
+                      placeholder={t('checkout.enterCode')}
+                      className={`flex-1 border px-3 py-2 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${couponError ? 'border-red-500' : 'border-slate-300'}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyCoupon}
+                      disabled={!promo.trim() || couponLoading}
+                      className="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-orange-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {couponLoading ? t('checkout.verifying') : t('common.verify')}
+                    </button>
+                  </div>
+                )}
+                {couponError && (
+                  <p className="text-xs text-red-600 mt-1.5">{couponError}</p>
+                )}
               </div>
 
               <div className="bg-sky-100 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4 flex items-center justify-between">
                 <div className="text-base sm:text-lg font-semibold text-slate-900">{t('common.total')}:</div>
-                <div className="text-lg sm:text-xl font-bold text-slate-900">{formatPrice(finalTotal)}</div>
+                <div className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                  {coupon && couponDiscountAmount > 0 ? (
+                    <>
+                      <span className="line-through text-slate-400 font-semibold">{formatPrice(totalBeforeCoupon)}</span>
+                      <span>{formatPrice(finalTotal)}</span>
+                    </>
+                  ) : (
+                    formatPrice(finalTotal)
+                  )}
+                </div>
               </div>
 
               <label className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">

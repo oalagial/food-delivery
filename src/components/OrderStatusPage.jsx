@@ -256,6 +256,12 @@ export default function OrderStatusPage({ token }) {
               <span className="text-slate-600">{t('orderStatus.subtotal')}</span>
               <span className="font-medium">{formatPrice(order.subtotal)}</span>
             </div>
+            {(order.discount != null && Number(order.discount) > 0) && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>{t('orderStatus.discount')}</span>
+                <span className="font-medium">−{formatPrice(order.discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100">
               <span className="text-slate-800">{t('common.total')}</span>
               <span className="text-orange-600">{formatPrice(order.total)}</span>

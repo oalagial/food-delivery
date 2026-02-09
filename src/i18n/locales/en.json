@@ -70,6 +70,10 @@
     "deliveryCosts": "Delivery costs:",
     "promoCode": "Promo code",
     "enterCode": "Enter code",
+    "couponInvalid": "Invalid or expired coupon code.",
+    "couponApplied": "{{code}} applied",
+    "removeCoupon": "Remove",
+    "verifying": "Verifying...",
     "confirmLocation": "I confirm the delivery location is",
     "riderCall": "You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location.",
     "processing": "Processing...",
@@ -149,6 +153,7 @@
     "yourOrder": "Your order",
     "deliveryFee": "Delivery fee",
     "subtotal": "Subtotal",
+    "discount": "Discount",
     "payment": "Payment",
     "orderAgain": "Order again"
   },

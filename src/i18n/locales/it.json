@@ -70,6 +70,10 @@
     "deliveryCosts": "Costi di consegna:",
     "promoCode": "Codice promozionale",
     "enterCode": "Inserisci codice",
+    "couponInvalid": "Codice coupon non valido o scaduto.",
+    "couponApplied": "{{code}} applicato",
+    "removeCoupon": "Rimuovi",
+    "verifying": "Verifica...",
     "confirmLocation": "Confermo che il punto di consegna è",
     "riderCall": "Riceverai una chiamata dal rider poco prima della consegna, per incontrarci all'ingresso.",
     "processing": "Elaborazione...",
@@ -149,6 +153,7 @@
     "yourOrder": "Il tuo ordine",
     "deliveryFee": "Spese di consegna",
     "subtotal": "Subtotale",
+    "discount": "Sconto",
     "payment": "Pagamento",
     "orderAgain": "Ordina di nuovo"
   },
