@@ -1,94 +1,169 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import ProductDetail from './ProductDetail'
 import OfferDetail from './OfferDetail'
+import restaurantImage from '../assets/restaurant-image.png'
+import logo from '../assets/logo.png'
 
-export default function StorePage({ point, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
+export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
+  const { t } = useTranslation()
   const [selectedProductDetail, setSelectedProductDetail] = useState(null)
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
   const categoryRefs = useRef({})
   const productsContainerRef = useRef(null)
+  const scrollTargetRef = useRef(null) // όταν πατήθηκε pill, αγνοούμε scroll μέχρι να σταματήσει
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
+  const isLocationInactive = deliveryLocation?.isActive === false
+  const isRestaurantClosed = point?.isOpen === false
+  const cannotAddToCart = isLocationInactive || isRestaurantClosed
+
+  const deliveryFee = parseFloat(point?.deliveryFee || 0).toFixed(2)
+  const minOrder = parseFloat(point?.minOrder || 0).toFixed(2)
+
+  // Derive today's opening / closing from deliveredBy.openingHours (point.openingHours)
+  const todayHours = (() => {
+    const hours = point?.openingHours
+    if (!Array.isArray(hours) || hours.length === 0) return null
+
+    const now = new Date()
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      timeZone: point?.timezone || 'Europe/Athens',
+    })
+    const todayName = formatter.format(now) // e.g. "Monday"
+
+    const matchToday = hours.find((h) => {
+      if (!h?.day) return false
+      return String(h.day).toLowerCase() === todayName.toLowerCase()
+    })
+
+    if (!matchToday) return null
+
+    return {
+      opensAt: matchToday.open,
+      closesAt: matchToday.close,
+    }
+  })()
+
+  const openLabel = (() => {
+    if (isRestaurantClosed) {
+      if (point?.opensAt) return t('store.opensAt', { time: point.opensAt })
+      if (point?.nextOpeningTime) return t('store.opensAt', { time: point.nextOpeningTime })
+      if (todayHours?.opensAt) return t('store.opensAt', { time: todayHours.opensAt })
+      return t('store.currentlyClosed')
+    }
+
+    if (todayHours?.closesAt) {
+      return t('store.openUntil', { time: todayHours.closesAt })
+    }
+
+    if (point?.openUntil) return t('store.openUntil', { time: point.openUntil })
+    return t('store.openNow')
+  })()
 
   // Detect which category is in view as user scrolls
   const handleProductsScroll = () => {
-    if (!productsContainerRef.current) return
-    
-    const scrollPos = productsContainerRef.current.scrollTop
-    const allCategories = offers.length > 0 ? ['Offers', ...categories] : categories
-    let currentVisible = allCategories[0]
-    
-    Object.entries(categoryRefs.current).forEach(([category, ref]) => {
-      if (ref && ref.offsetTop <= scrollPos + 60) {
-        currentVisible = category
-      }
-    })
-    
-    setVisibleCategory(currentVisible)
-    setActiveCategory(currentVisible)
-  }
+    const container = productsContainerRef.current
+    if (!container) return
+    if (scrollTargetRef.current) return
 
-  // Scroll to category when clicked
-  const scrollToCategory = (category) => {
-    setVisibleCategory(category)
-    setActiveCategory(category)
-    if (categoryRefs.current[category] && productsContainerRef.current) {
-      const element = categoryRefs.current[category]
-      const scrollTop = element.offsetTop - 10
-      productsContainerRef.current.scrollTo({ top: scrollTop, behavior: 'smooth' })
+    const scrollTop = container.scrollTop
+    const orderedKeys = [
+      ...(offers.length > 0 ? ['Offers'] : []),
+      ...categories,
+    ]
+    let currentVisible = orderedKeys[0]
+    for (const key of orderedKeys) {
+      const ref = categoryRefs.current[key]
+      if (!ref) continue
+      if (ref.offsetTop <= scrollTop + 70) currentVisible = key
+      else break
+    }
+    if (currentVisible && currentVisible !== visibleCategory) {
+      setVisibleCategory(currentVisible)
+      setActiveCategory(currentVisible)
     }
   }
 
+  const scrollToCategory = (category) => {
+    const container = productsContainerRef.current
+    const element = categoryRefs.current[category]
+    if (!container || !element) return
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    const targetScrollTop = Math.max(elementRect.top - containerRect.top + container.scrollTop - 8, 0)
+    setVisibleCategory(category)
+    setActiveCategory(category)
+    scrollTargetRef.current = category
+    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+    setTimeout(() => { scrollTargetRef.current = null }, 600)
+  }
+
   return (
-    <div className="w-full h-screen bg-white flex flex-col overflow-hidden">
-      {/* Header - Mobile Optimized */}
-      <div className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-2.5 z-20 shadow-md flex-shrink-0">
-        <button 
-          onClick={onBack} 
-          className="mr-2 text-2xl leading-none active:opacity-70 transition-opacity"
-          aria-label="Go back"
+    <div className="w-full h-screen flex flex-col overflow-hidden">
+      {/* Σταθερή εικόνα restaurant + logo στη μέση + info κάτω */}
+      <div
+        className="relative flex-shrink-0 min-h-[240px] flex items-center justify-center py-4 overflow-hidden rounded-b-lg"
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-75"
+          style={{ backgroundImage: `url(${restaurantImage})` }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-black/25" aria-hidden="true" />
+        <button
+          onClick={onBack}
+          className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
+          aria-label={t('store.goBack')}
         >
           ←
         </button>
-        <div className="flex-1 font-bold text-base sm:text-lg lg:text-xl truncate">🏪 {point.name}</div>
-      </div>
-
-      {/* Delivery Info - Mobile Optimized */}
-      <div className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-3 py-2.5 shadow-sm flex-shrink-0">
-        <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-sm">💰</span>
-            <span className="font-semibold">€ {parseFloat(point?.deliveryFee || 0).toFixed(2)}</span>
+        <div className="relative z-10 flex flex-col items-center text-center drop-shadow-xl">
+          <div className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            {point?.name}
           </div>
-          <div className="h-3 w-px bg-white/50"></div>
-          <div className="flex items-center gap-1">
-            <span className="text-sm">📦</span>
-            <span className="font-semibold">€ {parseFloat(point?.minOrder || 0).toFixed(2)}</span>
+          <img
+            src={logo}
+            alt=""
+            className="mt-2 w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 ring-white shadow-xl"
+          />
+          <div className="mt-2 text-white">
+            <div className="text-sm sm:text-base font-bold text-stone-100">
+              {isLocationInactive ? t('store.deliveryUnavailable') : openLabel}
+            </div>
+            <div className="mt-1 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-white flex-wrap">
+              <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
+              <span className="w-1 h-1 rounded-full bg-white/90" />
+              <span>{t('store.freeDeliveryOver', { min: minOrder })}</span>
+              <span className="w-1 h-1 rounded-full bg-white/90" />
+              <span>{t('store.minOrder')}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Categories - Mobile Optimized Horizontal Scroll */}
-      <div className="flex gap-2 overflow-x-auto px-3 py-2.5 bg-white border-b border-slate-200 z-10 flex-shrink-0 scrollbar-hide">
+      {/* Σταθερά section buttons */}
+      <div className="flex-shrink-0 flex gap-5 overflow-x-auto px-3 py-3 bg-white border-b border-slate-200 shadow-sm scrollbar-hide">
         {offers.length > 0 && (
           <button
             onClick={() => scrollToCategory('Offers')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${
               visibleCategory === 'Offers'
-                ? 'bg-orange-500 text-white shadow-sm' 
-                : 'bg-slate-100 text-slate-700 active:bg-slate-200'
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
-            Offers
+            {t('store.offers')}
           </button>
         )}
         {categories.map((c) => (
           <button
             key={c}
             onClick={() => scrollToCategory(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${
               visibleCategory === c
-                ? 'bg-orange-500 text-white shadow-sm' 
-                : 'bg-slate-100 text-slate-700 active:bg-slate-200'
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
             {c}
@@ -96,12 +171,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
         ))}
       </div>
 
-      {/* Products List - Mobile Optimized */}
-      <div 
+      {/* Μόνο το περιεχόμενο κάνει scroll */}
+      <div
         ref={productsContainerRef}
         onScroll={handleProductsScroll}
-        className="flex-1 overflow-y-auto pb-20"
+        className="flex-1 overflow-y-auto"
       >
+      <div className="pb-20">
         {/* Offers Section */}
         {offers.length > 0 && (
           <div key="Offers" className="px-3 pt-4">
@@ -111,21 +187,28 @@ export default function StorePage({ point, menu, categories, offers = [], active
                   categoryRefs.current['Offers'] = el
                 }
               }}
-              className="mb-3 pb-2 border-b-2 border-orange-500"
+              id="section-Offers"
+              className="mb-3 pb-2 border-b-2 border-orange-400"
             >
-              <h2 className="text-base font-bold text-slate-900">Special Offers</h2>
+              <h2 className="text-base font-bold text-slate-800">{t('store.specialOffers')}</h2>
             </div>
             {offers.map((offer, index) => (
               <div 
                 key={offer.id}
-                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0"
+                onClick={() => setSelectedOfferDetail(offer)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
+                }}
+                className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-amber-50 rounded-lg px-2 -mx-2"
               >
                 {offer.image && (
                   <div className="flex-shrink-0">
                     <img 
                       src={offer.image} 
                       alt={offer.name} 
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg" 
+                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg" 
                     />
                   </div>
                 )}
@@ -133,21 +216,33 @@ export default function StorePage({ point, menu, categories, offers = [], active
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex-1 min-w-0">
                       <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-medium mb-1">
-                        Offer
+                        {t('common.offer')}
                       </span>
-                      <h3 className="text-sm font-bold text-slate-900 leading-tight break-words">
+                      <h3 className="text-sm font-bold text-slate-800 leading-tight break-words">
                         {offer.name}
                       </h3>
                     </div>
                     <button
-                      onClick={() => setSelectedOfferDetail(offer)}
-                      className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-500 text-white font-bold text-lg shadow-md active:scale-95 active:bg-orange-600 transition-all flex items-center justify-center"
-                      aria-label="Add to cart"
+                      disabled={cannotAddToCart}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!cannotAddToCart) {
+                          setSelectedOfferDetail(offer)
+                        }
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
+                        cannotAddToCart
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
+                      }`}
+                      aria-label={cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
                     >
                       +
                     </button>
                   </div>
-                  <div className="text-sm font-semibold text-orange-600 mb-1">
+                  <div className="text-sm font-semibold text-amber-900 mb-1">
                     € {parseFloat(offer.price || 0).toFixed(2)}
                   </div>
                   {offer.description && (
@@ -171,79 +266,106 @@ export default function StorePage({ point, menu, categories, offers = [], active
                     categoryRefs.current[category] = el
                   }
                 }}
-                className="mb-3 pb-2 border-b-2 border-blue-500"
+                id={`section-${category}`}
+                className="mb-3 pb-2 border-b-2 border-orange-400"
               >
-                <h2 className="text-base font-bold text-slate-900">{category}</h2>
+                <h2 className="text-base font-bold text-slate-800">{category}</h2>
               </div>
             )}
             {menu[category] && menu[category].map((item, index) => {
               const original = item._original || {}
               const isInactive = original.isAvailable === false || original.isActive === false
+              const isOutOfStock = item.stockQuantity != null && Number(item.stockQuantity) === 0
+              const cannotSelect = isInactive || isOutOfStock
 
               return (
-                <div 
-                  key={item.id}
-                  className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 ${
-                    isInactive ? 'opacity-60' : ''
-                  }`}
-                >
+              <div 
+                key={item.id}
+                  onClick={() => {
+                    if (!cannotSelect) setSelectedProductDetail(item)
+                  }}
+                  role={!cannotSelect ? 'button' : undefined}
+                  tabIndex={!cannotSelect ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (cannotSelect) return
+                    if (e.key === 'Enter' || e.key === ' ') setSelectedProductDetail(item)
+                  }}
+                  className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${
+                    cannotSelect ? 'opacity-60' : ''
+                  } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-amber-50'}`}
+              >
                   <div className="flex-shrink-0">
                     <img 
                       src={item.image} 
                       alt={item.name} 
-                      className={`w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg ${
-                        isInactive ? 'grayscale' : ''
+                      className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg ${
+                        cannotSelect ? 'grayscale' : ''
                       }`} 
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 leading-tight break-words mb-1">
-                          {item.name}
-                        </h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-slate-800 leading-tight break-words mb-1">
+                        {item.name}
+                      </h3>
                         {isInactive && (
-                          <span className="inline-block text-[10px] font-semibold text-red-500 uppercase tracking-wide">
-                            Μη διαθέσιμο
+                          <span className="inline-block text-xs font-semibold text-red-500 uppercase tracking-wide">
+                            {t('store.notAvailable')}
                           </span>
                         )}
-                      </div>
-                      <button
+                        {!isInactive && isOutOfStock && (
+                          <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide">
+                            {t('store.outOfStock')}
+                          </span>
+                        )}
+                    </div>
+                    <button
                         type="button"
-                        disabled={isInactive}
+                        disabled={cannotSelect || cannotAddToCart}
                         onClick={() => {
-                          if (!isInactive) {
+                          if (!cannotSelect && !cannotAddToCart) {
                             setSelectedProductDetail(item)
                           }
                         }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         className={`flex-shrink-0 w-9 h-9 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
-                          isInactive
+                          cannotSelect || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-orange-500 text-white active:scale-95 active:bg-orange-600'
+                            : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
                         }`}
-                        aria-label={isInactive ? 'Product not available' : 'Add to cart'}
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className={`text-sm font-semibold mb-1 ${
-                      isInactive ? 'text-slate-500' : 'text-orange-600'
+                        aria-label={cannotSelect ? (isOutOfStock ? t('store.outOfStock') : t('store.productNotAvailable')) : cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
+                    >
+                      +
+                    </button>
+                  </div>
+                    <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${
+                      cannotSelect ? 'text-slate-500' : 'text-amber-900'
                     }`}>
-                      {item.price}
+                      {item.priceAfterDiscount ? (
+                        <>
+                          <span className="line-through text-slate-400">{item.originalPrice}</span>
+                          <span>{item.priceAfterDiscount}</span>
+                        </>
+                      ) : (
+                        <span>{item.price}</span>
+                      )}
                     </div>
-                    {item.desc && (
+                  {item.desc && (
                       <p className={`text-xs line-clamp-2 leading-snug ${
-                        isInactive ? 'text-slate-500' : 'text-slate-600'
+                        cannotSelect ? 'text-slate-500' : 'text-slate-600'
                       }`}>
                         {item.desc}
                       </p>
-                    )}
-                  </div>
+                  )}
                 </div>
+              </div>
               )
             })}
           </div>
         ))}
+      </div>
       </div>
 
       {/* Modals */}
@@ -251,10 +373,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
         <ProductDetail
           key={selectedProductDetail.id}
           product={selectedProductDetail}
+          isLocationInactive={cannotAddToCart}
           onClose={() => setSelectedProductDetail(null)}
           onAdd={(item) => {
-            addToCart(item)
-            setSelectedProductDetail(null)
+            if (!cannotAddToCart) {
+              addToCart(item)
+              setSelectedProductDetail(null)
+            }
           }}
         />
       )}
@@ -263,10 +388,13 @@ export default function StorePage({ point, menu, categories, offers = [], active
         <OfferDetail
           key={selectedOfferDetail.id}
           offer={selectedOfferDetail}
+          isLocationInactive={cannotAddToCart}
           onClose={() => setSelectedOfferDetail(null)}
           onAdd={(item) => {
-            addToCart(item)
-            setSelectedOfferDetail(null)
+            if (!cannotAddToCart) {
+              addToCart(item)
+              setSelectedOfferDetail(null)
+            }
           }}
         />
       )}

@@ -1,8 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function DeliveryPointCard({ point, onSelect }) {
+  const { t } = useTranslation()
   const [anim, setAnim] = useState(false)
   const timerRef = useRef(null)
+
+  // Check if restaurant is closed (when deliveredBy has only one restaurant)
+  // This has priority over location isActive status
+  // Use isOpen property from deliveredBy array
+  const isRestaurantClosed = (() => {
+    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length === 1) {
+      const restaurant = point.deliveredBy[0]
+      return restaurant.isOpen === false
+    }
+    return false
+  })()
 
   useEffect(() => {
     return () => {
@@ -50,10 +63,22 @@ export default function DeliveryPointCard({ point, onSelect }) {
         <div className="font-bold text-sm sm:text-base lg:text-lg text-slate-900 mb-0.5 truncate">
           {point.name}
         </div>
-        <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
-          <span>⚡</span>
-          <span>Fast Delivery</span>
-        </div>
+        {isRestaurantClosed ? (
+          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+            <span>🕐</span>
+            <span>{t('deliveryPoint.restaurantClosed')}</span>
+          </div>
+        ) : point.isActive === false ? (
+          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+            <span>⚠️</span>
+            <span>{t('deliveryPoint.temporarilyClosed')}</span>
+          </div>
+        ) : (
+          <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
+            <span>⚡</span>
+            <span>{t('deliveryPoint.fastDelivery')}</span>
+          </div>
+        )}
       </div>
       <div className="flex-shrink-0">
         <button
@@ -64,7 +89,7 @@ export default function DeliveryPointCard({ point, onSelect }) {
           disabled={anim}
           className="px-4 py-2 sm:px-5 sm:py-2.5 bg-orange-500 text-white rounded-lg font-semibold text-xs sm:text-sm shadow-md active:bg-orange-600 active:scale-95 transition-all disabled:opacity-60"
         >
-          Choose
+          {t('deliveryPoint.choose')}
         </button>
       </div>
     </div>
