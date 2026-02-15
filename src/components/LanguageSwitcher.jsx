@@ -39,14 +39,17 @@ export default function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white shadow-sm hover:bg-slate-50 transition-colors text-sm font-semibold text-slate-700"
+        className={
+          `flex items-center gap-1 px-2 py-1.5 rounded-full border-2 border-orange-500 bg-orange-500 text-white shadow-md transition-all text-xs font-bold focus:outline-none focus:ring-2 focus:ring-orange-300 hover:bg-orange-600 hover:border-orange-600 active:scale-95 ${open ? 'ring-2 ring-orange-300' : ''}`
+        }
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label="Επιλογή γλώσσας"
+        aria-label="Select language"
+        style={{ minWidth: 0 }}
       >
-        <span>{current.label}</span>
+        <span className="tracking-widest drop-shadow-sm text-xs">{current.label}</span>
         <svg
-          className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -59,17 +62,17 @@ export default function LanguageSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute top-full right-0 mt-1 py-1 min-w-[140px] rounded-lg border border-slate-200 bg-white shadow-lg z-50"
+          className="absolute top-full right-0 mt-1 min-w-[70px] rounded-xl border-2  bg-white shadow-xl z-50 animate-fade-in"
         >
           {LANGUAGES.map((lang) => (
             <li key={lang.code} role="option">
               <button
                 type="button"
                 onClick={() => setLanguage(lang.code)}
-                className={`w-full text-left px-3 py-2 text-sm font-medium transition-colors ${
+                className={`w-full text-left px-2 py-1 text-xs font-bold rounded-lg transition-all ${
                   i18n.language === lang.code
-                    ? 'bg-orange-500 text-white'
-                    : 'text-slate-700 hover:bg-slate-100'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-orange-600 hover:bg-orange-50 hover:text-orange-700'
                 }`}
               >
                 {lang.label}
