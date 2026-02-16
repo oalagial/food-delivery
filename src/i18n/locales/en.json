@@ -127,7 +127,10 @@
     "restaurantClosed": "Restaurant is closed",
     "temporarilyClosed": "Temporarily Closed",
     "fastDelivery": "Fast Delivery",
-    "choose": "Choose"
+    "choose": "Choose",
+    "minOrder": "Min. order",
+    "deliveryFee": "Delivery fee",
+    "closesAt": "Closes at {{time}}"
   },
   "orderStatus": {
     "pending": "Pending",
