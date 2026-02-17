@@ -12,7 +12,7 @@ import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
 import { restaurantService, orderService, deliveryLocationService } from './services'
 import { initializeAuth } from './services/authInit'
-
+import logo from './assets/logo.png'
 function AppContent() {
   const { t } = useTranslation()
   const { alert, closeAlert, showAlert } = useAlert()
@@ -887,7 +887,7 @@ function AppContent() {
           </div>
           <div className="flex-1 p-4 sm:p-6">
             {restaurants.length > 0 ? (
-              <section className="flex flex-col gap-3 sm:gap-4 max-w-2xl mx-auto">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
                 {restaurants.map((r) => (
                   <DeliveryPointCard key={r.id} point={r} onSelect={() => {
                   setSelectedRestaurant(r)
@@ -911,10 +911,10 @@ function AppContent() {
     <>
       <main className="w-full min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-4xl px-2 sm:px-4">
             <header className="mb-6 sm:mb-8 text-center">
               <div className="inline-block mb-3 sm:mb-4">
-                <span className="text-5xl sm:text-6xl lg:text-7xl">🍽️</span>
+                <img src={logo} alt="Logo" className="w-48 h-48" />
               </div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">
                 {t('app.chooseDeliveryLocation')}
@@ -930,7 +930,7 @@ function AppContent() {
                 <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
               </div>
             ) : points.length > 0 ? (
-              <section className="flex flex-col gap-3 sm:gap-4">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center">
                 {points.map((p) => (
                   <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
                 ))}

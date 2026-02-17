@@ -6,15 +6,20 @@ export default function DeliveryPointCard({ point, onSelect }) {
   const [anim, setAnim] = useState(false)
   const timerRef = useRef(null)
 
+  const singleRestaurant = Array.isArray(point.deliveredBy) && point.deliveredBy.length === 1 ? point.deliveredBy[0] : null
+
   // Check if restaurant is closed (when deliveredBy has only one restaurant)
-  // This has priority over location isActive status
-  // Use isOpen property from deliveredBy array
-  const isRestaurantClosed = (() => {
-    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length === 1) {
-      const restaurant = point.deliveredBy[0]
-      return restaurant.isOpen === false
-    }
-    return false
+  const isRestaurantClosed = singleRestaurant ? singleRestaurant.isOpen === false : false
+
+  // Today's closing time (current day) from openingHours
+  const todayClosesAt = (() => {
+    if (!singleRestaurant?.openingHours?.length) return null
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const todayName = dayNames[new Date().getDay()]
+    const todayHours = singleRestaurant.openingHours.find(
+      (h) => h?.day && String(h.day).toLowerCase() === todayName.toLowerCase()
+    )
+    return todayHours?.close ?? null
   })()
 
   useEffect(() => {
@@ -41,56 +46,58 @@ export default function DeliveryPointCard({ point, onSelect }) {
   }
 
   return (
-    <div 
+    <div
       onClick={handleChoose}
-      className={`flex items-center gap-3 p-3 rounded-xl border-2 bg-white w-full transition-all active:scale-[0.98] ${
-        anim 
-          ? 'ring-2 ring-orange-300 border-orange-400' 
-          : 'border-slate-200 active:border-orange-300'
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleChoose() } }}
+      className={`overflow-hidden rounded-xl border-2 border-slate-200 bg-white w-full max-w-[280px] transition-all active:scale-[0.98] shadow-sm hover:shadow-md cursor-pointer ${
+        anim
+          ? 'ring-2 ring-orange-300 border-orange-400'
+          : 'hover:border-orange-200 active:border-orange-300'
       }`}
     >
-      <div className="relative flex-shrink-0">
-        <img 
-          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg" 
-          src={point.image} 
-          alt={point.name} 
+      <div className="relative w-full aspect-[4/3] bg-slate-100">
+        <img
+          className="absolute inset-0 w-full h-full object-cover"
+          src={`${import.meta.env.VITE_API_BASE}/images/${point.image}`}
+          alt={point.name}
         />
-        <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full shadow-sm">
-          📍
-        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-sm sm:text-base lg:text-lg text-slate-900 mb-0.5 truncate">
+
+      <div className="p-3 flex flex-col gap-1.5 bg-slate-100">
+        <div className="font-bold text-lg text-slate-900 truncate">
           {point.name}
         </div>
         {isRestaurantClosed ? (
-          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+          <div className="text-sm text-red-600 font-medium flex items-center gap-1">
             <span>🕐</span>
             <span>{t('deliveryPoint.restaurantClosed')}</span>
           </div>
         ) : point.isActive === false ? (
-          <div className="text-xs sm:text-sm text-red-600 font-semibold flex items-center gap-1">
+          <div className="text-sm text-red-600 font-medium flex items-center gap-1">
             <span>⚠️</span>
             <span>{t('deliveryPoint.temporarilyClosed')}</span>
           </div>
-        ) : (
-          <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1">
-            <span>⚡</span>
-            <span>{t('deliveryPoint.fastDelivery')}</span>
+        ) : null}
+
+        {singleRestaurant && (
+          <div className="flex flex-col gap-1 text-sm text-slate-600 pt-1.5 mt-0.5 border-t border-slate-200">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <span>
+                {t('deliveryPoint.minOrder')}: <strong className="text-slate-800">{singleRestaurant.minOrder}€</strong>
+              </span>
+              <span>
+                {t('deliveryPoint.deliveryFee')}: <strong className="text-slate-800">{singleRestaurant.deliveryFee}€</strong>
+              </span>
+            </div>
+            {todayClosesAt != null && (
+              <span>
+                {t('deliveryPoint.closesAt', { time: todayClosesAt })}
+              </span>
+            )}
           </div>
         )}
-      </div>
-      <div className="flex-shrink-0">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleChoose()
-          }}
-          disabled={anim}
-          className="px-4 py-2 sm:px-5 sm:py-2.5 bg-orange-500 text-white rounded-lg font-semibold text-xs sm:text-sm shadow-md active:bg-orange-600 active:scale-95 transition-all disabled:opacity-60"
-        >
-          {t('deliveryPoint.choose')}
-        </button>
       </div>
     </div>
   )
