@@ -65,7 +65,7 @@ export default function DeliveryPointCard({ point, onSelect }) {
         />
       </div>
 
-      <div className="p-3 flex flex-col gap-1.5 bg-slate-100">
+      <div className="p-3 flex flex-col gap-1.5 bg-orange-200">
         <div className="font-bold text-lg text-slate-900 truncate">
           {point.name}
         </div>
@@ -75,14 +75,14 @@ export default function DeliveryPointCard({ point, onSelect }) {
             <span>{t('deliveryPoint.restaurantClosed')}</span>
           </div>
         ) : point.isActive === false ? (
-          <div className="text-sm text-red-600 font-medium flex items-center gap-1">
+          <div className="text-sm text-orange-600 font-medium flex items-center gap-1">
             <span>⚠️</span>
             <span>{t('deliveryPoint.temporarilyClosed')}</span>
           </div>
         ) : null}
 
         {singleRestaurant && (
-          <div className="flex flex-col gap-1 text-sm text-slate-600 pt-1.5 mt-0.5 border-t border-slate-200">
+          <div className="flex flex-col gap-1 text-sm text-slate-600 pt-1.5 mt-0.5 border-t border-slate-300">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <span>
                 {t('deliveryPoint.minOrder')}: <strong className="text-slate-800">{singleRestaurant.minOrder}€</strong>
