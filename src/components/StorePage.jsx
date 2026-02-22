@@ -4,6 +4,7 @@ import ProductDetail from './ProductDetail'
 import OfferDetail from './OfferDetail'
 import restaurantImage from '../assets/restaurant-image.png'
 import logo from '../assets/logo.png'
+import { getProductLabelIcons } from '../utils/productLabels'
 
 export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
   const { t } = useTranslation()
@@ -274,6 +275,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
             )}
             {menu[category] && menu[category].map((item, index) => {
               const original = item._original || {}
+              const labelIcons = getProductLabelIcons(item.labels || original.labels)
               const isInactive = original.isAvailable === false || original.isActive === false
               const isOutOfStock = item.stockQuantity != null && Number(item.stockQuantity) === 0
               const cannotSelect = isInactive || isOutOfStock
@@ -309,6 +311,20 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       <h3 className="text-sm font-bold text-slate-800 leading-tight break-words mb-1">
                         {item.name}
                       </h3>
+                      {labelIcons.length > 0 && (
+                        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+                          {labelIcons.map((icon) => (
+                            <img
+                              key={icon.key}
+                              src={icon.src}
+                              alt={icon.alt}
+                              title={icon.alt}
+                              className="w-6 h-6"
+                              loading="lazy"
+                            />
+                          ))}
+                        </div>
+                      )}
                         {isInactive && (
                           <span className="inline-block text-xs font-semibold text-red-500 uppercase tracking-wide">
                             {t('store.notAvailable')}
