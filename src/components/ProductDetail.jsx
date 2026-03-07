@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parsePrice, formatPrice } from '../utils/price'
+import { getProductLabelIcons } from '../utils/productLabels'
 
 export default function ProductDetail({ product, isLocationInactive = false, onClose, onAdd }) {
   const { t } = useTranslation()
+  const labelIcons = getProductLabelIcons(product.labels || product._original?.labels)
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
@@ -195,6 +197,21 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               <p className="text-sm text-slate-600 mb-4 leading-relaxed">
                 {product.desc}
               </p>
+            )}
+
+            {labelIcons.length > 0 && (
+              <div className="mb-4 flex items-center gap-2 flex-wrap" aria-label="Product labels">
+                {labelIcons.map((icon) => (
+                  <img
+                    key={icon.key}
+                    src={icon.src}
+                    alt={icon.alt}
+                    title={icon.alt}
+                    className="w-8 h-8"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
             )}
 
             {isOutOfStock && (

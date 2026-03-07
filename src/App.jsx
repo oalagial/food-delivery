@@ -780,6 +780,7 @@ function AppContent() {
                         optionGroups,
                         hasDiscount: hasActiveDiscount,
                         isNew,
+                        labels: product.labels || [],
                         ingredients: product.ingredients || null,
                         allergies: product.allergies || null,
                         stockQuantity: product.stockQuantity != null ? Number(product.stockQuantity) : null,
