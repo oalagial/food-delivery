@@ -139,6 +139,8 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   // Calculate delivery costs based on selected delivery location
   const itemsTotal = total || 0
+  const itemCount = cart.reduce((sum, item) => sum + Math.max(0, Number(item?.qty) || 0), 0)
+  const hasOrderItems = itemCount > 0
   // Use same fields as in StorePage header (restaurant delivery settings)
   const rawDeliveryFee = parseFloat(restaurant?.deliveryFee ?? 0) || 0
   const minOrderForFree = parseFloat(restaurant?.minOrder ?? 0) || 0
@@ -370,6 +372,11 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
 
   const handleContinue = async () => {
     if (!agree) return
+
+    if (!hasOrderItems) {
+      showAlert('error', t('checkout.validationError'), t('checkout.cartEmpty'), 5000)
+      return
+    }
 
     if (!customerName.trim()) {
       showAlert('error', t('checkout.validationError'), t('checkout.errorName'), 5000)
@@ -749,10 +756,10 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!formValid || !agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
+            disabled={!hasOrderItems || !formValid || !agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              formValid && agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
+              hasOrderItems && formValid && agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
