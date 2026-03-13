@@ -465,7 +465,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
+            className="pb-1 absolute top-4 left-4 w-8 h-8 font-semibold rounded-full bg-black/60 text-white flex items-center justify-center text-xl font-light hover:bg-black/80 active:bg-black/80 transition-colors"
             aria-label={t('common.close')}
           >
             ×

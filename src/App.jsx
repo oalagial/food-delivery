@@ -822,7 +822,7 @@ function AppContent() {
           <button
             onClick={() => setCartOpen(true)}
             aria-label={t('app.openCart')}
-            className={`fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
+            className={`pb-1 fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
               cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
             }`}
           >
