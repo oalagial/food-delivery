@@ -233,7 +233,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
-                      className={`flex-shrink-0 w-8 h-8 pb-1 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
+                      className={`flex-shrink-0 w-8 h-8 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                         cannotAddToCart
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                           : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
@@ -346,7 +346,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
-                        className={`flex-shrink-0 w-8 h-8 pb-1 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
+                        className={`flex-shrink-0 w-8 h-8 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${
                           cannotSelect || cannotAddToCart
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
