@@ -114,7 +114,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         <div className="absolute inset-0 bg-black/25" aria-hidden="true" />
         <button
           onClick={onBack}
-          className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
+          className="pb-1 absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white text-lg active:bg-black/60 transition-colors"
           aria-label={t('store.goBack')}
         >
           ←
