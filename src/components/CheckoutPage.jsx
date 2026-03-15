@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import PhoneInputModule from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
 import { orderService } from '../services'
+
+const PhoneInput = PhoneInputModule.default || PhoneInputModule
 
 const CHECKOUT_FORM_KEY = 'checkout_form'
 
@@ -58,6 +62,14 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   }
   const showError = (field) => touched[field] && errors[field]
   const formValid = Boolean(customerName.trim() && customerPhone.trim() && customerEmail.trim() && emailRegex.test(customerEmail.trim()))
+
+  useEffect(() => {
+    if (!customerPhone.trim()) {
+      setCustomerPhone('39')
+    }
+    // Run only once to set default dial code for new checkouts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Persist checkout form until order is placed or page is closed
   useEffect(() => {
@@ -514,14 +526,35 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.phoneRequired')}</label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    country="it"
+                    preferredCountries={['it', 'gr']}
+                    countryCodeEditable={false}
                     value={customerPhone}
-                    onChange={(e) => { setCustomerPhone(e.target.value); setFieldDirty('phone')() }}
+                    onChange={(value) => {
+                      setCustomerPhone(value || '')
+                      setFieldDirty('phone')()
+                    }}
                     onBlur={setFieldTouched('phone')}
+                    inputProps={{
+                      name: 'customerPhone',
+                      required: true,
+                    }}
+                    containerStyle={{ width: '100%' }}
+                    inputStyle={{
+                      width: '100%',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      minHeight: '42px',
+                      borderColor: showError('phone') ? '#ef4444' : '#cbd5e1',
+                    }}
+                    buttonStyle={{
+                      borderTopLeftRadius: '0.5rem',
+                      borderBottomLeftRadius: '0.5rem',
+                      borderColor: showError('phone') ? '#ef4444' : '#cbd5e1',
+                    }}
+                    inputClass={showError('phone') ? 'focus:!ring-red-500' : 'focus:!ring-orange-500'}
                     placeholder={t('checkout.enterPhone')}
-                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('phone') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
-                    required
                   />
                   {showError('phone') && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                 </div>
