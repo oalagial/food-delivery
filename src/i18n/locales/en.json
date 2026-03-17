@@ -74,6 +74,7 @@
     "couponInvalid": "Invalid or expired coupon code.",
     "couponApplied": "{{code}} applied",
     "removeCoupon": "Remove",
+    "couponEmailRequired": "Please enter your email to apply a coupon.",
     "verifying": "Verifying...",
     "confirmLocation": "I confirm the delivery location is",
     "riderCall": "You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location.",
