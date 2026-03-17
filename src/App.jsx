@@ -126,7 +126,8 @@ function AppContent() {
       key = `${item.id}::${JSON.stringify(sortedGroups)}`
     } else {
       const sortedExtraIds = (item.extraIds || []).slice().sort((a, b) => a - b)
-      key = `${item.id}::${JSON.stringify(item.options || {})}::${JSON.stringify(sortedExtraIds)}`
+      const sortedRemoved = (item.removedIngredientNames || []).slice().sort((a, b) => a.localeCompare(b))
+      key = `${item.id}::${JSON.stringify(item.options || {})}::${JSON.stringify(sortedExtraIds)}::${JSON.stringify(sortedRemoved)}`
     }
     
     setCart((prev) => {
@@ -145,7 +146,8 @@ function AppContent() {
         qty: item.qty,
         options: item.options || {},
         extraIds: item.extraIds || [],
-        extraNames: item.extraNames || [], // Store extra names for display
+        extraNames: item.extraNames || [],
+        removedIngredientNames: item.removedIngredientNames || [],
         isOffer: item.isOffer || false,
         offerId: item.offerId,
         selectedGroups: item.selectedGroups || [],

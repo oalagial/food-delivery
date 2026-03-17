@@ -9,6 +9,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
+  const [removedIngredientNames, setRemovedIngredientNames] = useState([]) // names to remove from this product
   const [extrasModalOpen, setExtrasModalOpen] = useState(false)
   const [draftExtras, setDraftExtras] = useState({}) // draft όταν ανοιχτό το modal
   const optionGroups = product.optionGroups || []
@@ -223,30 +224,50 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               </p>
             )}
 
-            {/* Ingredients */}
-            {(product.ingredients || product._original?.ingredients) && (
-              <div className="mb-4">
-                <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.ingredients')}</div>
-                <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
-                  {(() => {
-                    const ingredients = product.ingredients || product._original?.ingredients
-                    if (Array.isArray(ingredients)) {
-                      return ingredients.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
-                      ))
-                    } else if (typeof ingredients === 'string') {
-                      // If it's a comma-separated string, split it
-                      const ingredientList = ingredients.split(',').map(i => i.trim()).filter(i => i)
-                      return ingredientList.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
-                      ))
-                    } else {
-                      return <li>{ingredients}</li>
-                    }
-                  })()}
-                </ul>
-              </div>
-            )}
+            {/* Ingredients — optional removal */}
+            {(() => {
+              const raw = product.ingredients || product._original?.ingredients
+              if (!raw) return null
+              const ingredientsList = Array.isArray(raw)
+                ? raw.map((i) => (i != null ? String(i).trim() : '')).filter(Boolean)
+                : typeof raw === 'string'
+                  ? raw.split(',').map((i) => i.trim()).filter(Boolean)
+                  : []
+              if (ingredientsList.length === 0) return null
+              return (
+                <div className="mb-4">
+                  <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.ingredients')}</div>
+                  <p className="text-xs text-slate-500 mb-2">{t('product.removeIngredientsHint')}</p>
+                  <ul className="space-y-1.5">
+                    {ingredientsList.map((ingredient, index) => {
+                      const isRemoved = removedIngredientNames.includes(ingredient)
+                      const isIncluded = !isRemoved
+                      return (
+                        <li key={index} className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                            <input
+                              type="checkbox"
+                              checked={isIncluded}
+                              onChange={() => {
+                                setRemovedIngredientNames((prev) =>
+                                  isRemoved
+                                    ? prev.filter((n) => n !== ingredient)
+                                    : [...prev, ingredient]
+                                )
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                            />
+                            <span className={`text-sm ${isRemoved ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                              {ingredient}
+                            </span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )
+            })()}
 
             {/* Allergens */}
             {(product.allergies || product._original?.allergies) && (
@@ -404,6 +425,14 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                 })
 
                 const effectiveQty = maxQty != null ? Math.min(qty, maxQty) : qty
+                const productIngredients = (product.ingredients || product._original?.ingredients)
+                  ? (Array.isArray(product.ingredients || product._original?.ingredients)
+                      ? (product.ingredients || product._original?.ingredients).map((i) => String(i).trim()).filter(Boolean)
+                      : String(product.ingredients || product._original?.ingredients).split(',').map((i) => i.trim()).filter(Boolean))
+                  : []
+                const validRemoved = (removedIngredientNames || []).filter((name) =>
+                  productIngredients.some((p) => p.toLowerCase() === name.toLowerCase())
+                )
                 const item = {
                   id: product.id,
                   name: product.name,
@@ -412,6 +441,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                   options,
                   extraIds,
                   extraNames,
+                  removedIngredientNames: validRemoved.length > 0 ? validRemoved : undefined,
                 }
                 onAdd(item)
               }}

@@ -335,6 +335,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           productId: item.id,
           quantity: item.qty,
           extraIds: item.extraIds || [],
+          ...(item.removedIngredientNames?.length ? { removedIngredientNames: item.removedIngredientNames } : {}),
         })),
         offers: offers,
         ...(coupon?.code ? { couponCode: coupon.code } : {}),
@@ -669,6 +670,11 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                         {(it.extraNames && it.extraNames.length > 0) && (
                           <div className="text-xs sm:text-sm text-orange-600 mt-1">
                             {t('common.extras')}: {it.extraNames.join(', ')}
+                          </div>
+                        )}
+                        {(it.removedIngredientNames && it.removedIngredientNames.length > 0) && (
+                          <div className="text-xs sm:text-sm text-slate-500 mt-1">
+                            {t('cart.without')}: {it.removedIngredientNames.join(', ')}
                           </div>
                         )}
                         {it.options && Object.keys(it.options).length > 0 && (

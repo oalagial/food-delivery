@@ -42,7 +42,8 @@
     "title": "Carrello",
     "empty": "Il carrello è vuoto",
     "checkout": "Vai al pagamento",
-    "closeCart": "Chiudi carrello"
+    "closeCart": "Chiudi carrello",
+    "without": "Senza"
   },
   "checkout": {
     "yourOrder": "Il tuo ordine",
@@ -118,6 +119,7 @@
     "outOfStock": "Esaurito",
     "maxAvailable": "Disponibilità massima: {{n}}.",
     "ingredients": "Ingredienti:",
+    "removeIngredientsHint": "Deseleziona gli ingredienti che non vuoi in questo prodotto.",
     "allergens": "Allergeni:",
     "pleaseChooseOption": "Scegli un'opzione per {{option}}.",
     "locationClosedNoAdd": "Punto temporaneamente chiuso - Impossibile aggiungere al carrello",

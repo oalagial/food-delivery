@@ -42,7 +42,8 @@
     "title": "Cart",
     "empty": "Your cart is empty",
     "checkout": "Checkout",
-    "closeCart": "Close cart"
+    "closeCart": "Close cart",
+    "without": "Without"
   },
   "checkout": {
     "yourOrder": "Your order",
@@ -118,6 +119,7 @@
     "outOfStock": "Out of stock",
     "maxAvailable": "Maximum available: {{n}}.",
     "ingredients": "Ingredients:",
+    "removeIngredientsHint": "Uncheck any ingredients you don't want in this item.",
     "allergens": "Allergens:",
     "pleaseChooseOption": "Please choose a {{option}} option.",
     "locationClosedNoAdd": "Location Temporarily Closed - Cannot add items to cart",
