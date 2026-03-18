@@ -55,6 +55,11 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
                       {t('common.extras')}: {it.extraNames.join(', ')}
                     </div>
                   )}
+                  {(it.removedIngredientNames && it.removedIngredientNames.length > 0) && (
+                    <div className="text-xs text-slate-500 mb-1">
+                      {t('cart.without')}: {it.removedIngredientNames.join(', ')}
+                    </div>
+                  )}
                   {it.options && Object.keys(it.options).length > 0 && (
                     <div className="text-xs text-slate-500 mb-1">
                       {Object.values(it.options).filter(v => v).join(', ')}
@@ -140,6 +145,11 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
                   {(it.extraNames && it.extraNames.length > 0) && (
                     <div className="text-xs text-orange-600 mb-0.5">
                       {t('common.extras')}: {it.extraNames.join(', ')}
+                    </div>
+                  )}
+                  {(it.removedIngredientNames && it.removedIngredientNames.length > 0) && (
+                    <div className="text-xs text-slate-500 mb-0.5">
+                      {t('cart.without')}: {it.removedIngredientNames.join(', ')}
                     </div>
                   )}
                   {it.options && Object.keys(it.options).length > 0 && (

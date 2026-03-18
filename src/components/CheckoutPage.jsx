@@ -91,12 +91,24 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const handleVerifyCoupon = async () => {
     const code = promo.trim()
     if (!code || !restaurant?.id) return
+
+    const emailTrimmed = customerEmail.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailTrimmed) {
+      setCouponError(t('checkout.couponEmailRequired'))
+      return
+    }
+    if (!emailRegex.test(emailTrimmed)) {
+      setCouponError(t('checkout.errorEmailInvalid'))
+      return
+    }
+
     setCouponLoading(true)
     setCouponError(null)
     setCoupon(null)
     try {
       const API_BASE = import.meta.env.VITE_API_BASE
-      const url = `${API_BASE}/public/verify-coupon?code=${encodeURIComponent(code)}&restaurantId=${restaurant.id}`
+      const url = `${API_BASE}/public/verify-coupon?code=${encodeURIComponent(code)}&restaurantId=${restaurant.id}&email=${encodeURIComponent(emailTrimmed)}`
       const response = await fetch(url)
       const data = await response.json().catch(() => ({}))
       if (response.ok && data?.code && data?.type != null && data?.value != null) {
@@ -335,6 +347,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
           productId: item.id,
           quantity: item.qty,
           extraIds: item.extraIds || [],
+          ...(item.removedIngredientNames?.length ? { removedIngredientNames: item.removedIngredientNames } : {}),
         })),
         offers: offers,
         ...(coupon?.code ? { couponCode: coupon.code } : {}),
@@ -671,6 +684,11 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                             {t('common.extras')}: {it.extraNames.join(', ')}
                           </div>
                         )}
+                        {(it.removedIngredientNames && it.removedIngredientNames.length > 0) && (
+                          <div className="text-xs sm:text-sm text-slate-500 mt-1">
+                            {t('cart.without')}: {it.removedIngredientNames.join(', ')}
+                          </div>
+                        )}
                         {it.options && Object.keys(it.options).length > 0 && (
                           <div className="text-xs sm:text-sm text-slate-500 mt-1">{Object.values(it.options).filter(v => v).join(', ')}</div>
                         )}
@@ -741,15 +759,15 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                     <button
                       type="button"
                       onClick={handleVerifyCoupon}
-                      disabled={!promo.trim() || couponLoading}
+                      disabled={!promo.trim() || !customerEmail.trim() || couponLoading}
                       className="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-orange-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {couponLoading ? t('checkout.verifying') : t('common.verify')}
                     </button>
                   </div>
                 )}
-                {couponError && (
-                  <p className="text-xs text-red-600 mt-1.5">{couponError}</p>
+                {(couponError || (promo.trim() && !customerEmail.trim())) && (
+                  <p className="text-xs text-red-600 mt-1.5">{couponError || t('checkout.couponEmailRequired')}</p>
                 )}
               </div>
 

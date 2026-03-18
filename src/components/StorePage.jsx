@@ -335,6 +335,11 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                             {t('store.outOfStock')}
                           </span>
                         )}
+                        {!isInactive && !isOutOfStock && (item.hasDiscount || item.priceAfterDiscount) && (
+                          <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide">
+                            {t('common.offer')}
+                          </span>
+                        )}
                     </div>
                     <button
                         type="button"

@@ -42,7 +42,8 @@
     "title": "Cart",
     "empty": "Your cart is empty",
     "checkout": "Checkout",
-    "closeCart": "Close cart"
+    "closeCart": "Close cart",
+    "without": "Without"
   },
   "checkout": {
     "yourOrder": "Your order",
@@ -73,6 +74,7 @@
     "couponInvalid": "Invalid or expired coupon code.",
     "couponApplied": "{{code}} applied",
     "removeCoupon": "Remove",
+    "couponEmailRequired": "Please enter your email to apply a coupon.",
     "verifying": "Verifying...",
     "confirmLocation": "I confirm the delivery location is",
     "riderCall": "You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location.",
@@ -118,6 +120,7 @@
     "outOfStock": "Out of stock",
     "maxAvailable": "Maximum available: {{n}}.",
     "ingredients": "Ingredients:",
+    "removeIngredientsHint": "Uncheck any ingredients you don't want in this item.",
     "allergens": "Allergens:",
     "pleaseChooseOption": "Please choose a {{option}} option.",
     "locationClosedNoAdd": "Location Temporarily Closed - Cannot add items to cart",

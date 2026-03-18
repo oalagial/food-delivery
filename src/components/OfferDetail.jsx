@@ -158,7 +158,9 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                     {group.offerGroupProducts.map((ogp) => {
                       const product = ogp.product
                       const isSelected = selected.includes(ogp.id)
-                      const isDisabled = !isSelected && selected.length >= group.maxItems
+                      const isOutOfStock = product.stockQuantity != null && Number(product.stockQuantity) === 0
+                      const isDisabledByMax = !isSelected && selected.length >= group.maxItems
+                      const isDisabled = isOutOfStock || isDisabledByMax
                       
                       let imageUrl = product.image
                       if (imageUrl && !imageUrl.startsWith('http')) {
@@ -173,8 +175,8 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                             isSelected
                               ? 'border-orange-500 bg-orange-50'
                               : isDisabled
-                              ? 'border-slate-200 bg-slate-50 opacity-50'
-                              : 'border-slate-200 active:border-orange-300 active:bg-slate-50'
+                              ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                              : 'border-slate-200 active:border-orange-300 active:bg-slate-50 cursor-pointer'
                           }`}
                         >
                           <input
@@ -188,7 +190,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                             <img 
                               src={imageUrl} 
                               alt={product.name} 
-                              className="w-14 h-14 object-cover rounded flex-shrink-0" 
+                              className={`w-14 h-14 object-cover rounded flex-shrink-0 ${isOutOfStock ? 'grayscale' : ''}`}
                             />
                           )}
                           <div className="flex-1 min-w-0">
@@ -197,6 +199,11 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                               <div className="text-xs text-slate-600 line-clamp-1 mt-0.5">
                                 {product.description}
                               </div>
+                            )}
+                            {isOutOfStock && (
+                              <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide mt-1">
+                                {t('product.outOfStock')}
+                              </span>
                             )}
                           </div>
                         </div>
