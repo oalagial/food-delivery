@@ -23,3 +23,18 @@ code {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* iOS Safari: native date inputs use a wide intrinsic min-width; keep inside modals */
+[data-checkout-schedule-modal] input[type='date'] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+[data-checkout-schedule-modal] input[type='date']::-webkit-datetime-edit-fields-wrapper {
+  max-width: 100%;
+}
+[data-checkout-schedule-modal] input[type='date']::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
+}

@@ -1189,40 +1189,40 @@ export default function CheckoutPage({
           role="presentation"
         >
           <div
-            className="flex max-h-[min(92dvh,calc(100vh-env(safe-area-inset-bottom,0px)-1rem))] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[min(85vh,32rem)] sm:rounded-xl"
+            className="flex max-h-[min(92dvh,calc(100vh-env(safe-area-inset-bottom,0px)-1rem))] w-full min-w-0 max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[min(85vh,32rem)] sm:rounded-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="checkout-schedule-modal-title"
           >
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-2 pt-5 sm:p-6 sm:pb-2">
+            <div
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-5 pb-2 pt-5 sm:p-6 sm:pb-2"
+              data-checkout-schedule-modal=""
+            >
               <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
                 {t('checkout.scheduleDeliveryModalTitle')}
               </h3>
               <p className="mb-4 text-xs text-slate-500">
-                {[
-                  formatYmdDisplay(timeslotsPayload?.localDate || deliveryDate),
-                  timeslotsPayload?.timezone,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
+                {formatYmdDisplay(timeslotsPayload?.localDate || deliveryDate)}
               </p>
 
               <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
                 {t('checkout.deliveryDate')}
               </label>
-              <input
-                id="checkout-schedule-date"
-                type="date"
-                min={timeslotMinDate}
-                max={timeslotMaxDate}
-                value={deliveryDate}
-                onChange={(e) => {
-                  const v = e.target.value
-                  if (v) setDeliveryDate(v)
-                }}
-                className="mb-4 min-h-[48px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
-              />
+              <div className="mb-4 w-full min-w-0 max-w-full overflow-hidden">
+                <input
+                  id="checkout-schedule-date"
+                  type="date"
+                  min={timeslotMinDate}
+                  max={timeslotMaxDate}
+                  value={deliveryDate}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v) setDeliveryDate(v)
+                  }}
+                  className="box-border block min-h-[48px] w-full min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
+                />
+              </div>
 
               <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
                 {t('checkout.selectTimeslotLabel')}
