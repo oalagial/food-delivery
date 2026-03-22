@@ -24,17 +24,33 @@ code {
   display: none;  /* Chrome, Safari and Opera */
 }
 
-/* iOS Safari: native date inputs use a wide intrinsic min-width; keep inside modals */
-[data-checkout-schedule-modal] input[type='date'] {
+/*
+ * Schedule modal: date + select must share one column width (iOS Safari date
+ * inputs ignore flex min-width unless grid minmax(0,1fr) + forced width).
+ */
+.checkout-schedule-field {
   width: 100%;
-  max-width: 100%;
   min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
+  contain: inline-size;
 }
-[data-checkout-schedule-modal] input[type='date']::-webkit-datetime-edit-fields-wrapper {
+
+.checkout-schedule-field > input[type='date'],
+.checkout-schedule-field > select {
+  display: block;
+  margin: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-fields-wrapper {
   max-width: 100%;
 }
-[data-checkout-schedule-modal] input[type='date']::-webkit-datetime-edit {
+
+.checkout-schedule-field > input[type='date']::-webkit-datetime-edit {
   min-width: 0;
   padding: 0;
 }

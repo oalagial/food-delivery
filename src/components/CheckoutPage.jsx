@@ -1195,10 +1195,7 @@ export default function CheckoutPage({
             aria-modal="true"
             aria-labelledby="checkout-schedule-modal-title"
           >
-            <div
-              className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-5 pb-2 pt-5 sm:p-6 sm:pb-2"
-              data-checkout-schedule-modal=""
-            >
+            <div className="checkout-schedule-modal min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-5 pb-2 pt-5 sm:p-6 sm:pb-2">
               <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
                 {t('checkout.scheduleDeliveryModalTitle')}
               </h3>
@@ -1206,65 +1203,73 @@ export default function CheckoutPage({
                 {formatYmdDisplay(timeslotsPayload?.localDate || deliveryDate)}
               </p>
 
-              <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
-                {t('checkout.deliveryDate')}
-              </label>
-              <div className="mb-4 w-full min-w-0 max-w-full overflow-hidden">
-                <input
-                  id="checkout-schedule-date"
-                  type="date"
-                  min={timeslotMinDate}
-                  max={timeslotMaxDate}
-                  value={deliveryDate}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    if (v) setDeliveryDate(v)
-                  }}
-                  className="box-border block min-h-[48px] w-full min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
-                />
-              </div>
+              <div className="grid w-full min-w-0 gap-4 [grid-template-columns:minmax(0,1fr)]">
+                <div className="min-w-0">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
+                    {t('checkout.deliveryDate')}
+                  </label>
+                  <div className="checkout-schedule-field">
+                    <input
+                      id="checkout-schedule-date"
+                      type="date"
+                      min={timeslotMinDate}
+                      max={timeslotMaxDate}
+                      value={deliveryDate}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (v) setDeliveryDate(v)
+                      }}
+                      className="min-h-[48px] rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
+                    />
+                  </div>
+                </div>
 
-              <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
-                {t('checkout.selectTimeslotLabel')}
-              </label>
-              {timeslotsLoading ? (
-                <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingTimeslots')}</p>
-              ) : timeslotsError ? (
-                <p className="py-2 text-sm text-red-600">{timeslotsError}</p>
-              ) : !timeslotsPayload?.timeslots?.length ? (
-                <p className="py-4 text-sm text-slate-600">{t('checkout.noTimeslots')}</p>
-              ) : (
-                <select
-                  id="checkout-timeslot-select"
-                  value={
-                    timeslotsPayload.timeslots.some((s) => s.end === selectedSlotEnd) ? selectedSlotEnd : ''
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value
-                    if (!v) return
-                    setSelectedSlotEnd(v)
-                    setCustomSchedule(v !== quickSlot?.end)
-                  }}
-                  className="mb-1 min-h-[48px] w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 0.75rem center',
-                    backgroundSize: '1.25rem',
-                  }}
-                >
-                  <option value="">{t('checkout.selectTimeslotPlaceholder')}</option>
-                  {timeslotsPayload.timeslots.map((slot) => {
-                    const slotForDisplay = { start: new Date(slot.start), end: new Date(slot.end) }
-                    const label = `${formatTimeslotDisplay(slotForDisplay)}${slot.available ? '' : ` — ${t('checkout.slotUnavailable')}`}`
-                    return (
-                      <option key={slot.end} value={slot.end} disabled={!slot.available}>
-                        {label}
-                      </option>
-                    )
-                  })}
-                </select>
-              )}
+                <div className="min-w-0">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
+                    {t('checkout.selectTimeslotLabel')}
+                  </label>
+                  {timeslotsLoading ? (
+                    <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingTimeslots')}</p>
+                  ) : timeslotsError ? (
+                    <p className="py-2 text-sm text-red-600">{timeslotsError}</p>
+                  ) : !timeslotsPayload?.timeslots?.length ? (
+                    <p className="py-4 text-sm text-slate-600">{t('checkout.noTimeslots')}</p>
+                  ) : (
+                    <div className="checkout-schedule-field">
+                      <select
+                        id="checkout-timeslot-select"
+                        value={
+                          timeslotsPayload.timeslots.some((s) => s.end === selectedSlotEnd) ? selectedSlotEnd : ''
+                        }
+                        onChange={(e) => {
+                          const v = e.target.value
+                          if (!v) return
+                          setSelectedSlotEnd(v)
+                          setCustomSchedule(v !== quickSlot?.end)
+                        }}
+                        className="min-h-[48px] appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 0.75rem center',
+                          backgroundSize: '1.25rem',
+                        }}
+                      >
+                        <option value="">{t('checkout.selectTimeslotPlaceholder')}</option>
+                        {timeslotsPayload.timeslots.map((slot) => {
+                          const slotForDisplay = { start: new Date(slot.start), end: new Date(slot.end) }
+                          const label = `${formatTimeslotDisplay(slotForDisplay)}${slot.available ? '' : ` — ${t('checkout.slotUnavailable')}`}`
+                          return (
+                            <option key={slot.end} value={slot.end} disabled={!slot.available}>
+                              {label}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-100 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 sm:px-6">
