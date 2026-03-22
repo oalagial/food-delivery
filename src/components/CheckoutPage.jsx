@@ -42,6 +42,17 @@ function addDaysToYmd(ymd, days) {
   return formatYmdLocal(dt)
 }
 
+/** Localized calendar date for subtitles (avoids raw YYYY-MM-DD on mobile). */
+function formatYmdDisplay(ymd) {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd
+  const [yy, mm, dd] = ymd.split('-').map(Number)
+  return new Date(yy, mm - 1, dd).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 const KNOWN_PAYMENT_METHODS = ['CASH', 'CARD', 'ONLINE']
 
 const PAYMENT_METHOD_LABEL_KEY = {
@@ -1173,95 +1184,102 @@ export default function CheckoutPage({
 
       {schedulePickerOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
           onClick={() => setSchedulePickerOpen(false)}
           role="presentation"
         >
           <div
-            className="flex max-h-[min(85vh,32rem)] w-full max-w-md flex-col rounded-xl bg-white p-5 shadow-xl sm:p-6"
+            className="flex max-h-[min(92dvh,calc(100vh-env(safe-area-inset-bottom,0px)-1rem))] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[min(85vh,32rem)] sm:rounded-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="checkout-schedule-modal-title"
           >
-            <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
-              {t('checkout.scheduleDeliveryModalTitle')}
-            </h3>
-            <p className="mb-4 text-xs text-slate-500">
-              {[timeslotsPayload?.localDate || deliveryDate, timeslotsPayload?.timezone].filter(Boolean).join(' · ')}
-            </p>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-2 pt-5 sm:p-6 sm:pb-2">
+              <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
+                {t('checkout.scheduleDeliveryModalTitle')}
+              </h3>
+              <p className="mb-4 text-xs text-slate-500">
+                {[
+                  formatYmdDisplay(timeslotsPayload?.localDate || deliveryDate),
+                  timeslotsPayload?.timezone,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
 
-            <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
-              {t('checkout.deliveryDate')}
-            </label>
-            <input
-              id="checkout-schedule-date"
-              type="date"
-              min={timeslotMinDate}
-              max={timeslotMaxDate}
-              value={deliveryDate}
-              onChange={(e) => {
-                const v = e.target.value
-                if (v) setDeliveryDate(v)
-              }}
-              className="mb-4 w-full border border-slate-300 px-3 py-2.5 rounded-lg text-base sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-
-            <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
-              {t('checkout.selectTimeslotLabel')}
-            </label>
-            {timeslotsLoading ? (
-              <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingTimeslots')}</p>
-            ) : timeslotsError ? (
-              <p className="py-2 text-sm text-red-600">{timeslotsError}</p>
-            ) : !timeslotsPayload?.timeslots?.length ? (
-              <p className="py-4 text-sm text-slate-600">{t('checkout.noTimeslots')}</p>
-            ) : (
-              <select
-                id="checkout-timeslot-select"
-                value={
-                  timeslotsPayload.timeslots.some((s) => s.end === selectedSlotEnd) ? selectedSlotEnd : ''
-                }
+              <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
+                {t('checkout.deliveryDate')}
+              </label>
+              <input
+                id="checkout-schedule-date"
+                type="date"
+                min={timeslotMinDate}
+                max={timeslotMaxDate}
+                value={deliveryDate}
                 onChange={(e) => {
                   const v = e.target.value
-                  if (!v) return
-                  setSelectedSlotEnd(v)
-                  setCustomSchedule(v !== quickSlot?.end)
+                  if (v) setDeliveryDate(v)
                 }}
-                className="mb-5 w-full appearance-none border border-slate-300 bg-white px-3 py-3 pr-10 text-base sm:text-sm font-medium text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.75rem center',
-                  backgroundSize: '1.25rem',
-                }}
-              >
-                <option value="">{t('checkout.selectTimeslotPlaceholder')}</option>
-                {timeslotsPayload.timeslots.map((slot) => {
-                  const slotForDisplay = { start: new Date(slot.start), end: new Date(slot.end) }
-                  const label = `${formatTimeslotDisplay(slotForDisplay)}${slot.available ? '' : ` — ${t('checkout.slotUnavailable')}`}`
-                  return (
-                    <option key={slot.end} value={slot.end} disabled={!slot.available}>
-                      {label}
-                    </option>
-                  )
-                })}
-              </select>
-            )}
+                className="mb-4 min-h-[48px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
+              />
 
-            <div className="mt-auto flex flex-col gap-2 border-t border-slate-100 pt-4">
+              <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
+                {t('checkout.selectTimeslotLabel')}
+              </label>
+              {timeslotsLoading ? (
+                <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingTimeslots')}</p>
+              ) : timeslotsError ? (
+                <p className="py-2 text-sm text-red-600">{timeslotsError}</p>
+              ) : !timeslotsPayload?.timeslots?.length ? (
+                <p className="py-4 text-sm text-slate-600">{t('checkout.noTimeslots')}</p>
+              ) : (
+                <select
+                  id="checkout-timeslot-select"
+                  value={
+                    timeslotsPayload.timeslots.some((s) => s.end === selectedSlotEnd) ? selectedSlotEnd : ''
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (!v) return
+                    setSelectedSlotEnd(v)
+                    setCustomSchedule(v !== quickSlot?.end)
+                  }}
+                  className="mb-1 min-h-[48px] w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.75rem center',
+                    backgroundSize: '1.25rem',
+                  }}
+                >
+                  <option value="">{t('checkout.selectTimeslotPlaceholder')}</option>
+                  {timeslotsPayload.timeslots.map((slot) => {
+                    const slotForDisplay = { start: new Date(slot.start), end: new Date(slot.end) }
+                    const label = `${formatTimeslotDisplay(slotForDisplay)}${slot.available ? '' : ` — ${t('checkout.slotUnavailable')}`}`
+                    return (
+                      <option key={slot.end} value={slot.end} disabled={!slot.available}>
+                        {label}
+                      </option>
+                    )
+                  })}
+                </select>
+              )}
+            </div>
+
+            <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-100 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 sm:px-6">
               <button
                 type="button"
                 onClick={() => setSchedulePickerOpen(false)}
-                className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-semibold text-white active:bg-orange-600"
+                className="min-h-[48px] w-full touch-manipulation rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white active:bg-orange-600"
               >
                 {t('common.confirm')}
               </button>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setSchedulePickerOpen(false)}
-                  className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
+                  className="min-h-[48px] w-full touch-manipulation rounded-lg border border-slate-300 py-3 text-sm font-semibold text-slate-700 active:bg-slate-100 sm:flex-1 sm:py-2.5"
                 >
                   {t('common.cancel')}
                 </button>
@@ -1271,7 +1289,7 @@ export default function CheckoutPage({
                     setCustomSchedule(false)
                     setSchedulePickerOpen(false)
                   }}
-                  className="flex-1 rounded-lg border border-orange-300 bg-white py-2.5 text-sm font-semibold text-orange-700 active:bg-orange-50"
+                  className="min-h-[48px] w-full touch-manipulation rounded-lg border border-orange-300 bg-white py-3 text-sm font-semibold text-orange-700 active:bg-orange-50 sm:flex-1 sm:py-2.5"
                 >
                   {t('checkout.useSoonestDelivery')}
                 </button>
