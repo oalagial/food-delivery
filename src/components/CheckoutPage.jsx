@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import PhoneInputModule from 'react-phone-input-2'
 import 'react-phone-input-2/lib/style.css'
 import { formatPrice } from '../utils/price'
 import { useAlert } from '../context/AlertContext'
-import { orderService } from '../services'
+import { orderService, restaurantService } from '../services'
 
 const PhoneInput = PhoneInputModule.default || PhoneInputModule
 
@@ -28,7 +28,57 @@ function getStoredCheckoutForm() {
   return { name: '', phone: '', email: '', notes: '' }
 }
 
-export default function CheckoutPage({ restaurant, deliveryLocation, cart, total, onClose, updateQty, removeItem, onConfirm }) {
+function formatYmdLocal(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function addDaysToYmd(ymd, days) {
+  const [yy, mm, dd] = ymd.split('-').map(Number)
+  const dt = new Date(yy, mm - 1, dd)
+  dt.setDate(dt.getDate() + days)
+  return formatYmdLocal(dt)
+}
+
+const KNOWN_PAYMENT_METHODS = ['CASH', 'CARD', 'ONLINE']
+
+const PAYMENT_METHOD_LABEL_KEY = {
+  CASH: 'checkout.cash',
+  CARD: 'checkout.card',
+  ONLINE: 'checkout.online',
+}
+
+const PAYMENT_METHOD_EMOJI = {
+  CASH: '💵',
+  CARD: '💳',
+  ONLINE: '🌐',
+}
+
+function paymentMethodsFromRestaurantConfig(restaurant) {
+  const raw = restaurant?.config?.paymentMethods
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  const out = []
+  for (const m of raw) {
+    if (typeof m !== 'string') continue
+    const code = m.trim().toUpperCase()
+    if (KNOWN_PAYMENT_METHODS.includes(code) && !out.includes(code)) out.push(code)
+  }
+  return out.length > 0 ? out : null
+}
+
+export default function CheckoutPage({
+  restaurant,
+  deliveryLocation,
+  cart,
+  total,
+  onClose,
+  updateQty,
+  removeItem,
+  onConfirm,
+  onChangeDeliveryLocation,
+}) {
   const { t } = useTranslation()
   const [promo, setPromo] = useState('')
   const [coupon, setCoupon] = useState(null) // { code, type, value, restaurantId } when valid
@@ -38,17 +88,46 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState(() => getStoredCheckoutForm().name)
   const [customerPhone, setCustomerPhone] = useState(() => getStoredCheckoutForm().phone)
+  const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState('')
   const [customerEmail, setCustomerEmail] = useState(() => getStoredCheckoutForm().email)
   const [notes, setNotes] = useState(() => getStoredCheckoutForm().notes)
-  const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState(null)
-  const [deliveryTimeError, setDeliveryTimeError] = useState(null)
-  const [deliveryTimeLoading, setDeliveryTimeLoading] = useState(false)
-  const [timeChangedConfirm, setTimeChangedConfirm] = useState(null) // { newTimeslot }
+  const [deliveryDate, setDeliveryDate] = useState(() => formatYmdLocal(new Date()))
+  const [timeslotsPayload, setTimeslotsPayload] = useState(null)
+  const [timeslotsLoading, setTimeslotsLoading] = useState(false)
+  const [timeslotsError, setTimeslotsError] = useState(null)
+  const [selectedSlotEnd, setSelectedSlotEnd] = useState(null)
+  /** Next slot from GET /public/delivery-time (default choice) */
+  const [quickSlot, setQuickSlot] = useState(null)
+  const [quickLoading, setQuickLoading] = useState(false)
+  const [quickError, setQuickError] = useState(null)
+  const [customSchedule, setCustomSchedule] = useState(false)
+  const [schedulePickerOpen, setSchedulePickerOpen] = useState(false)
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
-  const [paymentMethod, setPaymentMethod] = useState('CASH') // 'CASH' | 'CARD' | 'ONLINE'
-  const [touched, setTouched] = useState({ name: false, phone: false, email: false, notes: false })
-  const [dirty, setDirty] = useState({ name: false, phone: false, email: false, notes: false })
+  const [paymentMethod, setPaymentMethod] = useState(null) // null | 'CASH' | 'CARD' | 'ONLINE'
+  const [touched, setTouched] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false, paymentMethod: false })
+  const [dirty, setDirty] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false })
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false)
+  const [checkoutLocations, setCheckoutLocations] = useState([])
+  const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
+  const [checkoutLocationsError, setCheckoutLocationsError] = useState(null)
   const { showAlert } = useAlert()
+
+  const configPaymentMethods = restaurant?.config?.paymentMethods
+
+  const availablePaymentMethods = useMemo(() => {
+    const fromConfig = paymentMethodsFromRestaurantConfig({
+      config: { paymentMethods: configPaymentMethods },
+    })
+    return fromConfig ?? [...KNOWN_PAYMENT_METHODS]
+  }, [configPaymentMethods])
+
+  useEffect(() => {
+    setPaymentMethod(null)
+  }, [restaurant?.id])
+
+  useEffect(() => {
+    setPaymentMethod((prev) => (prev && availablePaymentMethods.includes(prev) ? prev : null))
+  }, [availablePaymentMethods])
 
   const setFieldTouched = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }))
   const setFieldDirty = (field) => () => setDirty((prev) => ({ ...prev, [field]: true }))
@@ -57,11 +136,27 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const errors = {
     name: !customerName.trim() ? t('checkout.errorName') : null,
     phone: !customerPhone.trim() ? t('checkout.errorPhone') : null,
+    phoneConfirm: !customerPhoneConfirm
+      ? t('checkout.errorPhoneConfirmRequired')
+      : customerPhoneConfirm !== customerPhone
+        ? t('checkout.errorPhoneMismatch')
+        : null,
     email: !customerEmail.trim() ? t('checkout.errorEmail') : !emailRegex.test(customerEmail.trim()) ? t('checkout.errorEmailInvalid') : null,
     notes: null,
   }
   const showError = (field) => touched[field] && errors[field]
-  const formValid = Boolean(customerName.trim() && customerPhone.trim() && customerEmail.trim() && emailRegex.test(customerEmail.trim()))
+  const formValid = Boolean(
+    customerName.trim() &&
+      customerPhone.trim() &&
+      customerPhoneConfirm &&
+      customerPhoneConfirm === customerPhone &&
+      customerEmail.trim() &&
+      emailRegex.test(customerEmail.trim())
+  )
+
+  useEffect(() => {
+    setCustomerPhoneConfirm('')
+  }, [customerPhone])
 
   useEffect(() => {
     if (!customerPhone.trim()) {
@@ -131,36 +226,6 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     setCouponError(null)
   }
 
-  const fetchDeliveryTimeFromApi = async () => {
-    if (!restaurant?.id || !deliveryLocation?.id) return null
-    const API_BASE = import.meta.env.VITE_API_BASE
-    const response = await fetch(
-      `${API_BASE}/public/delivery-time?restaurantId=${restaurant.id}&deliveryLocationId=${deliveryLocation.id}`
-    )
-    if (!response.ok) throw new Error('Failed to fetch delivery time')
-    return response.json()
-  }
-
-  const parseTimeslot = (data) => {
-    if (!data?.timeslot?.start) return null
-    const startDate = new Date(data.timeslot.start)
-    const endDate = data.timeslot.end ? new Date(data.timeslot.end) : null
-    return {
-      start: startDate,
-      end: endDate,
-      timezone: data.timeslot.timezone || 'Europe/Athens'
-    }
-  }
-
-  const areTimeslotsEqual = (a, b) => {
-    if (!a || !b) return false
-    const aStart = a.start?.getTime?.()
-    const bStart = b.start?.getTime?.()
-    const aEnd = a.end?.getTime?.()
-    const bEnd = b.end?.getTime?.()
-    return aStart === bStart && (aEnd == null && bEnd == null ? true : aEnd === bEnd)
-  }
-
   // Calculate delivery costs based on selected delivery location
   const itemsTotal = total || 0
   const itemCount = cart.reduce((sum, item) => sum + Math.max(0, Number(item?.qty) || 0), 0)
@@ -173,6 +238,32 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
   const totalBeforeCoupon = itemsTotal + deliveryCost
 
+  const displayDeliveryWindow = useMemo(() => {
+    if (customSchedule && selectedSlotEnd && timeslotsPayload?.timeslots) {
+      const s = timeslotsPayload.timeslots.find((x) => x.end === selectedSlotEnd)
+      if (s) return { start: new Date(s.start), end: new Date(s.end) }
+    }
+    if (!customSchedule && quickSlot?.start && quickSlot?.end) {
+      return { start: new Date(quickSlot.start), end: new Date(quickSlot.end) }
+    }
+    if (customSchedule && selectedSlotEnd) {
+      const endD = new Date(selectedSlotEnd)
+      return { start: endD, end: endD }
+    }
+    return null
+  }, [customSchedule, selectedSlotEnd, timeslotsPayload, quickSlot])
+
+  const deliveryReady = customSchedule
+    ? Boolean(
+        selectedSlotEnd &&
+          !timeslotsLoading &&
+          !timeslotsError &&
+          timeslotsPayload?.timeslots?.some((s) => s.end === selectedSlotEnd && s.available)
+      )
+    : Boolean(selectedSlotEnd && !quickLoading && !quickError && quickSlot?.end)
+  const timeslotMinDate = formatYmdLocal(new Date())
+  const timeslotMaxDate = addDaysToYmd(timeslotMinDate, 14)
+
   // Coupon discount (apply to items only; value from API is string)
   const couponDiscountAmount = (() => {
     if (!coupon?.type || !coupon?.value) return 0
@@ -183,83 +274,126 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
   })()
   const finalTotal = Math.max(0, totalBeforeCoupon - couponDiscountAmount)
 
-  // Fetch estimated delivery time when restaurant and delivery location are available
   useEffect(() => {
-    const fetchDeliveryTime = async () => {
+    setCustomSchedule(false)
+    setSchedulePickerOpen(false)
+    setSelectedSlotEnd(null)
+    setDeliveryDate(formatYmdLocal(new Date()))
+    setQuickSlot(null)
+    setQuickError(null)
+    setTimeslotsPayload(null)
+    setTimeslotsError(null)
+  }, [restaurant?.id, deliveryLocation?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadQuick = async () => {
       if (!restaurant?.id || !deliveryLocation?.id) {
+        setQuickSlot(null)
+        setQuickError(null)
+        setQuickLoading(false)
         return
       }
-
-      setDeliveryTimeLoading(true)
-      setDeliveryTimeError(null)
-      setEstimatedDeliveryTime(null)
-      
+      setQuickLoading(true)
+      setQuickError(null)
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE
-        const response = await fetch(
-          `${API_BASE}/public/delivery-time?restaurantId=${restaurant.id}&deliveryLocationId=${deliveryLocation.id}`
-        )
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch delivery time')
-        }
-        
-        const data = await response.json()
-        
-        // Handle restaurant closed error
-        if (data.error) {
-          setDeliveryTimeError(data.error)
-          setEstimatedDeliveryTime(null)
+        const data = await restaurantService.getDeliveryTimeEstimate({
+          restaurantId: restaurant.id,
+          deliveryLocationId: deliveryLocation.id,
+        })
+        if (cancelled) return
+        if (data?.error) {
+          setQuickError(typeof data.error === 'string' ? data.error : t('checkout.noTimeslots'))
+          setQuickSlot(null)
           return
         }
-        
-        // Handle successful response with timeslot
-        if (data.timeslot && data.timeslot.start) {
-          const startDate = new Date(data.timeslot.start)
-          const endDate = data.timeslot.end ? new Date(data.timeslot.end) : null
-          const now = new Date()
-          
-          let minutesUntilDelivery = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60))
-          
-          // If start time has passed, check if we're still within the timeslot
-          if (minutesUntilDelivery < 0) {
-            if (endDate && now < endDate) {
-              // We're within the delivery window, show 0 minutes
-              minutesUntilDelivery = 0
-            } else if (endDate) {
-              // Start and end have passed, calculate from now to end (shouldn't happen but handle it)
-              minutesUntilDelivery = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60))
-              if (minutesUntilDelivery < 0) {
-                minutesUntilDelivery = 0
-              }
-            } else {
-              // No end time, just set to 0 if start has passed
-              minutesUntilDelivery = 0
-            }
-          }
-          
-          // Store the timeslot information with timezone for locale-aware display
-          setEstimatedDeliveryTime({
-            start: startDate,
-            end: endDate,
-            minutes: minutesUntilDelivery,
-            timezone: data.timeslot.timezone || 'Europe/Athens'
+        if (data?.timeslot?.end) {
+          setQuickSlot({
+            start: data.timeslot.start,
+            end: data.timeslot.end,
+            timezone: data.timeslot.timezone || 'Europe/Athens',
           })
-          setDeliveryTimeError(null)
+          setQuickError(null)
         } else {
-          setEstimatedDeliveryTime(null)
+          setQuickSlot(null)
         }
-      } catch (error) {
-        console.error('Error fetching delivery time:', error)
-        setEstimatedDeliveryTime(null)
-        setDeliveryTimeError(null)
+      } catch (e) {
+        if (cancelled) return
+        console.error('Error fetching delivery time estimate:', e)
+        setQuickError(t('checkout.failedToVerifyTime'))
+        setQuickSlot(null)
       } finally {
-        setDeliveryTimeLoading(false)
+        if (!cancelled) setQuickLoading(false)
       }
     }
+    loadQuick()
+    return () => {
+      cancelled = true
+    }
+  }, [restaurant?.id, deliveryLocation?.id, t])
 
-    fetchDeliveryTime()
-  }, [restaurant?.id, deliveryLocation?.id])
+  useEffect(() => {
+    if (!customSchedule) {
+      if (quickSlot?.end) setSelectedSlotEnd(quickSlot.end)
+      else setSelectedSlotEnd(null)
+    }
+  }, [customSchedule, quickSlot?.end])
+
+  useEffect(() => {
+    if (!schedulePickerOpen && !customSchedule) {
+      setTimeslotsPayload(null)
+      setTimeslotsError(null)
+      setTimeslotsLoading(false)
+    }
+  }, [schedulePickerOpen, customSchedule])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!schedulePickerOpen || !restaurant?.id || !deliveryLocation?.id) {
+        return
+      }
+      setTimeslotsLoading(true)
+      setTimeslotsError(null)
+      try {
+        const data = await restaurantService.getDeliveryTimeslots({
+          restaurantId: restaurant.id,
+          deliveryLocationId: deliveryLocation.id,
+          date: deliveryDate,
+        })
+        if (cancelled) return
+        if (data?.error) {
+          setTimeslotsError(typeof data.error === 'string' ? data.error : t('checkout.noTimeslots'))
+          setTimeslotsPayload(null)
+          return
+        }
+        const list = Array.isArray(data?.timeslots) ? data.timeslots : []
+        setTimeslotsPayload({
+          timezone: data?.timezone || 'Europe/Athens',
+          localDate: data?.localDate || deliveryDate,
+          timeslots: list,
+        })
+        setTimeslotsError(null)
+      } catch (e) {
+        if (cancelled) return
+        console.error('Error fetching delivery timeslots:', e)
+        setTimeslotsError(t('checkout.failedToVerifyTime'))
+        setTimeslotsPayload(null)
+      } finally {
+        if (!cancelled) setTimeslotsLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [schedulePickerOpen, restaurant?.id, deliveryLocation?.id, deliveryDate, t])
+
+  useEffect(() => {
+    if (!timeslotsPayload?.timeslots?.length || !customSchedule || !selectedSlotEnd) return
+    const s = timeslotsPayload.timeslots.find((x) => x.end === selectedSlotEnd)
+    if (!s?.available) setSelectedSlotEnd(null)
+  }, [timeslotsPayload, customSchedule, selectedSlotEnd])
 
   const offerSelectionSummary = (it) => {
     if (!it?.isOffer) return null
@@ -351,6 +485,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         })),
         offers: offers,
         ...(coupon?.code ? { couponCode: coupon.code } : {}),
+        ...(selectedSlotEnd ? { preferredDeliveryTime: selectedSlotEnd } : {}),
       }
 
       const response = await orderService.create(orderData)
@@ -411,6 +546,16 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       showAlert('error', t('checkout.validationError'), t('checkout.errorPhone'), 5000)
       return
     }
+    if (!customerPhoneConfirm || customerPhoneConfirm !== customerPhone) {
+      setTouched((prev) => ({ ...prev, phoneConfirm: true }))
+      showAlert(
+        'error',
+        t('checkout.validationError'),
+        customerPhoneConfirm && customerPhoneConfirm !== customerPhone ? t('checkout.errorPhoneMismatch') : t('checkout.errorPhoneConfirmRequired'),
+        5000
+      )
+      return
+    }
     if (!customerEmail.trim()) {
       showAlert('error', t('checkout.validationError'), t('checkout.errorEmail'), 5000)
       return
@@ -421,6 +566,24 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
       showAlert('error', t('checkout.validationError'), t('checkout.errorEmailInvalid'), 5000)
       return
     }
+    if (!paymentMethod || !availablePaymentMethods.includes(paymentMethod)) {
+      setTouched((prev) => ({ ...prev, paymentMethod: true }))
+      showAlert('error', t('checkout.validationError'), t('checkout.errorPaymentMethod'), 5000)
+      return
+    }
+    if (!selectedSlotEnd) {
+      showAlert('error', t('checkout.validationError'), t('checkout.selectSlotRequired'), 5000)
+      return
+    }
+    if (!deliveryReady) {
+      showAlert(
+        'error',
+        t('checkout.deliveryTime'),
+        customSchedule ? timeslotsError || t('checkout.noTimeslots') : quickError || t('checkout.couldNotGetTime'),
+        5000
+      )
+      return
+    }
     setIsSubmitting(true)
     try {
       if (paymentMethod === 'CASH' || paymentMethod === 'CARD') {
@@ -428,27 +591,61 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         return
       }
 
-      // ONLINE: verify delivery time then redirect to Stripe
-      const data = await fetchDeliveryTimeFromApi()
-
-      if (data?.error) {
-        showAlert('error', t('checkout.deliveryTime'), data.error, 5000)
-        setIsSubmitting(false)
-        return
-      }
-
-      const newTimeslot = parseTimeslot(data)
-      if (!newTimeslot) {
-        showAlert('error', t('checkout.deliveryTime'), t('checkout.couldNotGetTime'), 5000)
-        setIsSubmitting(false)
-        return
-      }
-
-      const currentSlot = estimatedDeliveryTime ? { start: estimatedDeliveryTime.start, end: estimatedDeliveryTime.end } : null
-      if (!areTimeslotsEqual(currentSlot, newTimeslot)) {
-        setTimeChangedConfirm(newTimeslot)
-        setIsSubmitting(false)
-        return
+      // ONLINE: re-verify chosen window
+      if (customSchedule) {
+        const fresh = await restaurantService.getDeliveryTimeslots({
+          restaurantId: restaurant.id,
+          deliveryLocationId: deliveryLocation.id,
+          date: deliveryDate,
+        })
+        if (fresh?.error) {
+          showAlert(
+            'error',
+            t('checkout.deliveryTime'),
+            typeof fresh.error === 'string' ? fresh.error : t('checkout.couldNotGetTime'),
+            5000
+          )
+          setIsSubmitting(false)
+          return
+        }
+        const list = Array.isArray(fresh?.timeslots) ? fresh.timeslots : []
+        const slot = list.find((s) => s.end === selectedSlotEnd)
+        if (!slot?.available) {
+          showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
+          setTimeslotsPayload({
+            timezone: fresh?.timezone || timeslotsPayload?.timezone || 'Europe/Athens',
+            localDate: fresh?.localDate || deliveryDate,
+            timeslots: list,
+          })
+          setSelectedSlotEnd(null)
+          setIsSubmitting(false)
+          return
+        }
+      } else {
+        const data = await restaurantService.getDeliveryTimeEstimate({
+          restaurantId: restaurant.id,
+          deliveryLocationId: deliveryLocation.id,
+        })
+        if (data?.error) {
+          showAlert('error', t('checkout.deliveryTime'), typeof data.error === 'string' ? data.error : t('checkout.couldNotGetTime'), 5000)
+          setIsSubmitting(false)
+          return
+        }
+        const newEnd = data?.timeslot?.end
+        if (!newEnd || newEnd !== selectedSlotEnd) {
+          showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
+          if (newEnd && data?.timeslot) {
+            setQuickSlot({
+              start: data.timeslot.start,
+              end: data.timeslot.end,
+              timezone: data.timeslot.timezone || 'Europe/Athens',
+            })
+            setCustomSchedule(false)
+            setSelectedSlotEnd(newEnd)
+          }
+          setIsSubmitting(false)
+          return
+        }
       }
 
       await submitOrder()
@@ -458,15 +655,37 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
     }
   }
 
-  const handleConfirmTimeChanged = async () => {
-    if (!timeChangedConfirm) return
-    setEstimatedDeliveryTime({
-      ...timeChangedConfirm,
-      minutes: 0
-    })
-    setTimeChangedConfirm(null)
-    setIsSubmitting(true)
-    await submitOrder()
+  const loadCheckoutLocations = async () => {
+    if (!restaurant?.id) return
+    setCheckoutLocationsLoading(true)
+    setCheckoutLocationsError(null)
+    try {
+      const rows = await restaurantService.getCheckoutLocations(restaurant.id)
+      const normalized = (rows || [])
+        .map((r) => ({
+          id: r.locationId ?? r.id,
+          name: typeof r.name === 'string' ? r.name : '',
+        }))
+        .filter((r) => r.id != null)
+      setCheckoutLocations(normalized)
+    } catch {
+      setCheckoutLocationsError(t('checkout.locationsLoadError'))
+      setCheckoutLocations([])
+    } finally {
+      setCheckoutLocationsLoading(false)
+    }
+  }
+
+  const openCheckoutLocationPicker = () => {
+    setLocationPickerOpen(true)
+    loadCheckoutLocations()
+  }
+
+  const applyCheckoutLocation = (loc) => {
+    if (!loc?.id || !onChangeDeliveryLocation) return
+    onChangeDeliveryLocation({ id: loc.id, name: loc.name })
+    setAgree(false)
+    setLocationPickerOpen(false)
   }
 
   // Display in user's browser timezone (backend sends UTC)
@@ -507,17 +726,46 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             <div className="text-center mb-4 sm:mb-5">
               <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || t('common.restaurant')}</div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('checkout.deliveryTo')} {deliveryLocation?.name || t('common.location')}</div>
-              {deliveryTimeLoading ? (
+              {!customSchedule && quickLoading ? (
                 <div className="text-xs sm:text-sm text-slate-500 mt-2">{t('checkout.calculatingTime')}</div>
-              ) : deliveryTimeError ? (
-                <div className="text-xs sm:text-sm text-red-600 font-semibold mt-2">
-                  ⚠️ {deliveryTimeError}
-                </div>
-              ) : estimatedDeliveryTime ? (
+              ) : !customSchedule && quickError ? (
+                <div className="text-xs sm:text-sm text-red-600 font-semibold mt-2">⚠️ {quickError}</div>
+              ) : displayDeliveryWindow ? (
                 <div className="text-xs sm:text-sm text-orange-600 font-semibold mt-2">
-                  ⏱️ {formatTimeslotDisplay(estimatedDeliveryTime)}
+                  ⏱️ {formatTimeslotDisplay(displayDeliveryWindow)}
                 </div>
+              ) : customSchedule && schedulePickerOpen && timeslotsLoading ? (
+                <div className="text-xs sm:text-sm text-slate-500 mt-2">{t('checkout.loadingTimeslots')}</div>
               ) : null}
+            </div>
+
+            {/* Delivery time: default = soonest; schedule opens modal with dropdown */}
+            <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
+              <div className="text-sm sm:text-base font-semibold mb-2 text-slate-900">{t('checkout.deliveryTimeSlot')}</div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchedulePickerOpen(true)
+                    setDeliveryDate(formatYmdLocal(new Date()))
+                  }}
+                  className="w-full sm:w-auto rounded-lg border-2 border-orange-400 bg-white px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100"
+                >
+                  {t('checkout.scheduleForLater')}
+                </button>
+                {customSchedule ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomSchedule(false)
+                      setSchedulePickerOpen(false)
+                    }}
+                    className="w-full sm:w-auto rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    {t('checkout.useSoonestDelivery')}
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {/* Customer Information Form */}
@@ -551,6 +799,7 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                     onBlur={setFieldTouched('phone')}
                     inputProps={{
                       name: 'customerPhone',
+                      autoComplete: 'tel',
                       required: true,
                     }}
                     containerStyle={{ width: '100%' }}
@@ -570,6 +819,52 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                     placeholder={t('checkout.enterPhone')}
                   />
                   {showError('phone') && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                </div>
+                <div
+                  onPaste={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
+                >
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.phoneConfirmRequired')}</label>
+                  <PhoneInput
+                    country="it"
+                    preferredCountries={['it', 'gr']}
+                    countryCodeEditable={false}
+                    value={customerPhoneConfirm}
+                    onChange={(value) => {
+                      setCustomerPhoneConfirm(value || '')
+                      setFieldDirty('phoneConfirm')()
+                    }}
+                    onBlur={setFieldTouched('phoneConfirm')}
+                    inputProps={{
+                      name: 'checkout_phone_reenter',
+                      id: 'checkout-phone-confirm',
+                      required: true,
+                      autoComplete: 'off',
+                      'data-lpignore': 'true',
+                      'data-1p-ignore': 'true',
+                      'data-form-type': 'other',
+                      spellCheck: false,
+                      onPaste: (e) => e.preventDefault(),
+                      onCopy: (e) => e.preventDefault(),
+                      onCut: (e) => e.preventDefault(),
+                    }}
+                    containerStyle={{ width: '100%' }}
+                    inputStyle={{
+                      width: '100%',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      minHeight: '42px',
+                      borderColor: showError('phoneConfirm') ? '#ef4444' : '#cbd5e1',
+                    }}
+                    buttonStyle={{
+                      borderTopLeftRadius: '0.5rem',
+                      borderBottomLeftRadius: '0.5rem',
+                      borderColor: showError('phoneConfirm') ? '#ef4444' : '#cbd5e1',
+                    }}
+                    inputClass={showError('phoneConfirm') ? 'focus:!ring-red-500' : 'focus:!ring-orange-500'}
+                    placeholder={t('checkout.enterPhoneConfirm')}
+                  />
+                  {showError('phoneConfirm') && <p className="text-xs text-red-600 mt-1">{errors.phoneConfirm}</p>}
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.emailRequired')}</label>
@@ -602,62 +897,39 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
             {/* Payment Method */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
               <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.paymentMethod')}</div>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                <label
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'CASH'
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="CASH"
-                    checked={paymentMethod === 'CASH'}
-                    onChange={() => setPaymentMethod('CASH')}
-                    className="sr-only"
-                  />
-                  <span className="text-lg">💵</span>
-                  <span className="font-medium text-xs sm:text-base">{t('checkout.cash')}</span>
-                </label>
-                <label
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'CARD'
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="CARD"
-                    checked={paymentMethod === 'CARD'}
-                    onChange={() => setPaymentMethod('CARD')}
-                    className="sr-only"
-                  />
-                  <span className="text-lg">💳</span>
-                  <span className="font-medium text-xs sm:text-base">{t('checkout.card')}</span>
-                </label>
-                <label
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'ONLINE'
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="ONLINE"
-                    checked={paymentMethod === 'ONLINE'}
-                    onChange={() => setPaymentMethod('ONLINE')}
-                    className="sr-only"
-                  />
-                  <span className="text-lg">🌐</span>
-                  <span className="font-medium text-xs sm:text-base">{t('checkout.online')}</span>
-                </label>
-              </div>
+              {availablePaymentMethods.length === 0 ? (
+                <p className="text-sm text-red-600">{t('checkout.noPaymentMethods')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  {availablePaymentMethods.map((method) => (
+                    <label
+                      key={method}
+                      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        paymentMethod === method
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method}
+                        checked={paymentMethod === method}
+                        onChange={() => {
+                          setPaymentMethod(method)
+                          setTouched((prev) => ({ ...prev, paymentMethod: true }))
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="text-lg">{PAYMENT_METHOD_EMOJI[method] || '💰'}</span>
+                      <span className="font-medium text-xs sm:text-base">{t(PAYMENT_METHOD_LABEL_KEY[method] || 'checkout.paymentMethod')}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {touched.paymentMethod && !paymentMethod && availablePaymentMethods.length > 0 && (
+                <p className="text-xs text-red-600 mt-2">{t('checkout.errorPaymentMethod')}</p>
+              )}
             </div>
 
             {/* Cart Items */}
@@ -785,17 +1057,28 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
                 </div>
               </div>
 
-              <label className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agree} 
-                  onChange={(e) => setAgree(e.target.checked)} 
-                  className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 accent-orange-500" 
-                />
-                <span>
-                  {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
-                </span>
-              </label>
+              <div className="flex flex-wrap items-start gap-2 sm:items-center sm:justify-between sm:gap-3">
+                <label className="flex min-w-0 flex-1 items-start gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agree}
+                    onChange={(e) => setAgree(e.target.checked)}
+                    className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 accent-orange-500"
+                  />
+                  <span>
+                    {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
+                  </span>
+                </label>
+                {onChangeDeliveryLocation && restaurant?.id ? (
+                  <button
+                    type="button"
+                    onClick={openCheckoutLocationPicker}
+                    className="flex-shrink-0 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100 sm:text-sm"
+                  >
+                    {t('checkout.changeLocation')}
+                  </button>
+                ) : null}
+              </div>
 
               <p className="mt-3 text-[10px] sm:text-xs text-slate-500 leading-relaxed">
                 {t('checkout.riderCall')}
@@ -807,10 +1090,26 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         {/* Sticky Footer Button */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           <button 
-            disabled={!hasOrderItems || !formValid || !agree || isSubmitting || !estimatedDeliveryTime || deliveryTimeLoading || !!deliveryTimeError || !!timeChangedConfirm || !!insufficientStock} 
+            disabled={
+              !hasOrderItems ||
+              !formValid ||
+              !agree ||
+              !paymentMethod ||
+              availablePaymentMethods.length === 0 ||
+              isSubmitting ||
+              !deliveryReady ||
+              !!insufficientStock
+            }
             onClick={handleContinue} 
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              hasOrderItems && formValid && agree && !isSubmitting && estimatedDeliveryTime && !deliveryTimeLoading && !deliveryTimeError && !timeChangedConfirm && !insufficientStock
+              hasOrderItems &&
+              formValid &&
+              agree &&
+              paymentMethod &&
+              availablePaymentMethods.length > 0 &&
+              !isSubmitting &&
+              deliveryReady &&
+              !insufficientStock
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
@@ -820,27 +1119,163 @@ export default function CheckoutPage({ restaurant, deliveryLocation, cart, total
         </div>
       </div>
 
-      {/* Time changed confirmation modal */}
-      {timeChangedConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('checkout.timeChangedTitle')}</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              {t('checkout.timeChangedMessage', { time: formatTimeslotDisplay(timeChangedConfirm) })}
+      {locationPickerOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setLocationPickerOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="flex max-h-[min(80vh,28rem)] w-full max-w-md flex-col rounded-xl bg-white p-5 shadow-xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-location-picker-title"
+          >
+            <h3 id="checkout-location-picker-title" className="mb-3 text-lg font-bold text-slate-900">
+              {t('checkout.chooseDeliveryLocation')}
+            </h3>
+            {checkoutLocationsLoading ? (
+              <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingCheckoutLocations')}</p>
+            ) : checkoutLocationsError ? (
+              <p className="py-2 text-sm text-red-600">{checkoutLocationsError}</p>
+            ) : checkoutLocations.length === 0 ? (
+              <p className="py-4 text-sm text-slate-600">{t('checkout.noLocationsForRestaurant')}</p>
+            ) : (
+              <ul className="mb-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
+                {checkoutLocations.map((loc) => (
+                  <li key={loc.id}>
+                    <button
+                      type="button"
+                      onClick={() => applyCheckoutLocation(loc)}
+                      className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-medium transition-colors ${
+                        String(deliveryLocation?.id) === String(loc.id)
+                          ? 'border-orange-500 bg-orange-50 text-orange-800'
+                          : 'border-slate-200 text-slate-800 hover:border-orange-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {loc.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => setLocationPickerOpen(false)}
+              className="w-full rounded-lg border border-slate-300 py-2.5 font-semibold text-slate-700 active:bg-slate-100"
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {schedulePickerOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSchedulePickerOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="flex max-h-[min(85vh,32rem)] w-full max-w-md flex-col rounded-xl bg-white p-5 shadow-xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-schedule-modal-title"
+          >
+            <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
+              {t('checkout.scheduleDeliveryModalTitle')}
+            </h3>
+            <p className="mb-4 text-xs text-slate-500">
+              {[timeslotsPayload?.localDate || deliveryDate, timeslotsPayload?.timezone].filter(Boolean).join(' · ')}
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setTimeChangedConfirm(null)}
-                className="flex-1 py-2.5 rounded-lg font-semibold border border-slate-300 text-slate-700 active:bg-slate-100"
+
+            <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
+              {t('checkout.deliveryDate')}
+            </label>
+            <input
+              id="checkout-schedule-date"
+              type="date"
+              min={timeslotMinDate}
+              max={timeslotMaxDate}
+              value={deliveryDate}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v) setDeliveryDate(v)
+              }}
+              className="mb-4 w-full border border-slate-300 px-3 py-2.5 rounded-lg text-base sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+
+            <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
+              {t('checkout.selectTimeslotLabel')}
+            </label>
+            {timeslotsLoading ? (
+              <p className="py-6 text-center text-sm text-slate-600">{t('checkout.loadingTimeslots')}</p>
+            ) : timeslotsError ? (
+              <p className="py-2 text-sm text-red-600">{timeslotsError}</p>
+            ) : !timeslotsPayload?.timeslots?.length ? (
+              <p className="py-4 text-sm text-slate-600">{t('checkout.noTimeslots')}</p>
+            ) : (
+              <select
+                id="checkout-timeslot-select"
+                value={
+                  timeslotsPayload.timeslots.some((s) => s.end === selectedSlotEnd) ? selectedSlotEnd : ''
+                }
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (!v) return
+                  setSelectedSlotEnd(v)
+                  setCustomSchedule(v !== quickSlot?.end)
+                }}
+                className="mb-5 w-full appearance-none border border-slate-300 bg-white px-3 py-3 pr-10 text-base sm:text-sm font-medium text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '1.25rem',
+                }}
               >
-                {t('common.cancel')}
-              </button>
+                <option value="">{t('checkout.selectTimeslotPlaceholder')}</option>
+                {timeslotsPayload.timeslots.map((slot) => {
+                  const slotForDisplay = { start: new Date(slot.start), end: new Date(slot.end) }
+                  const label = `${formatTimeslotDisplay(slotForDisplay)}${slot.available ? '' : ` — ${t('checkout.slotUnavailable')}`}`
+                  return (
+                    <option key={slot.end} value={slot.end} disabled={!slot.available}>
+                      {label}
+                    </option>
+                  )
+                })}
+              </select>
+            )}
+
+            <div className="mt-auto flex flex-col gap-2 border-t border-slate-100 pt-4">
               <button
-                onClick={handleConfirmTimeChanged}
-                className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
+                type="button"
+                onClick={() => setSchedulePickerOpen(false)}
+                className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-semibold text-white active:bg-orange-600"
               >
                 {t('common.confirm')}
               </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSchedulePickerOpen(false)}
+                  className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomSchedule(false)
+                    setSchedulePickerOpen(false)
+                  }}
+                  className="flex-1 rounded-lg border border-orange-300 bg-white py-2.5 text-sm font-semibold text-orange-700 active:bg-orange-50"
+                >
+                  {t('checkout.useSoonestDelivery')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

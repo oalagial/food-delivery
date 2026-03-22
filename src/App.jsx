@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import DeliveryPointCard from './components/DeliveryPointCard'
 import StorePage from './components/StorePage'
@@ -13,6 +13,14 @@ import { AlertProvider, useAlert } from './context/AlertContext'
 import { restaurantService, orderService, deliveryLocationService } from './services'
 import { initializeAuth } from './services/authInit'
 import logo from './assets/logo.png'
+
+function pointDeliversRestaurantId(point, restaurantId) {
+  if (restaurantId == null) return false
+  const list = point?.deliveredBy
+  if (!Array.isArray(list)) return false
+  return list.some((r) => String(r.id) === String(restaurantId))
+}
+
 function AppContent() {
   const { t } = useTranslation()
   const { alert, closeAlert, showAlert } = useAlert()
@@ -108,11 +116,14 @@ function AppContent() {
     }
   }, [cart])
 
+  const [cartRestaurantId, setCartRestaurantId] = useState(null)
+
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [cartBump, setCartBump] = useState(false)
   const [lastAddedKey, setLastAddedKey] = useState(null)
   const bumpTimerRef = useRef(null)
+  const selectedRestaurantIdRef = useRef(null)
 
   function addToCart(item) {
     // For offers, include selectedGroups in the key
@@ -167,6 +178,10 @@ function AppContent() {
       setCartBump(false)
       setLastAddedKey(null)
     }, 700)
+
+    if (selectedRestaurantIdRef.current != null) {
+      setCartRestaurantId(selectedRestaurantIdRef.current)
+    }
   }
 
   function updateCartItem(key, qty) {
@@ -222,8 +237,14 @@ function AppContent() {
   function handleSelect(point) {
     setSelectedPoint(point)
     setActiveCategory(null)
-    // Clear cart when changing delivery location
-    setCart([])
+    const keepCart =
+      cart.length > 0 &&
+      cartRestaurantId != null &&
+      pointDeliversRestaurantId(point, cartRestaurantId)
+    if (!keepCart) {
+      setCart([])
+      setCartRestaurantId(null)
+    }
     try {
       localStorage.setItem(STORAGE_KEYS.location, String(point.id))
     } catch {
@@ -264,6 +285,27 @@ function AppContent() {
     }
   }
   const [selectedRestaurant, setSelectedRestaurant] = useState(null)
+
+  useEffect(() => {
+    selectedRestaurantIdRef.current = selectedRestaurant?.id ?? null
+  }, [selectedRestaurant?.id])
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      setCartRestaurantId(null)
+      return
+    }
+    if (selectedRestaurant?.id != null && cartRestaurantId == null) {
+      setCartRestaurantId(selectedRestaurant.id)
+    }
+  }, [cart, selectedRestaurant?.id, cartRestaurantId])
+
+  const menuApiRestaurant = fetchedMenu?.data?.[0]
+  const checkoutRestaurant = useMemo(() => {
+    if (!selectedRestaurant) return null
+    if (!menuApiRestaurant) return selectedRestaurant
+    return { ...selectedRestaurant, config: menuApiRestaurant.config ?? selectedRestaurant.config }
+  }, [selectedRestaurant, menuApiRestaurant])
 
   function handleBack() {
     setSelectedPoint(null)
@@ -620,6 +662,20 @@ function AppContent() {
     // optionally show a success toast / navigate away
   }
 
+  function handleChangeDeliveryLocationFromCheckout(loc) {
+    const fromPoints = points.find((pt) => String(pt.id) === String(loc.id))
+    setSelectedPoint((prev) => {
+      if (fromPoints) return fromPoints
+      if (prev) return { ...prev, id: loc.id, name: loc.name }
+      return { id: loc.id, name: loc.name }
+    })
+    try {
+      localStorage.setItem(STORAGE_KEYS.location, String(loc.id))
+    } catch {
+      /* ignore */
+    }
+  }
+
   if (selectedPoint) {
     if (selectedRestaurant) {
       // 
@@ -855,7 +911,7 @@ function AppContent() {
 
           {checkoutOpen && (
             <CheckoutPage
-              restaurant={selectedRestaurant}
+              restaurant={checkoutRestaurant}
               deliveryLocation={selectedPoint}
               cart={cart}
               total={cartTotal()}
@@ -863,6 +919,7 @@ function AppContent() {
               updateQty={updateCartItem}
               removeItem={removeCartItem}
               onConfirm={handleConfirmOrder}
+              onChangeDeliveryLocation={handleChangeDeliveryLocationFromCheckout}
             />
           )}
         </>
@@ -892,11 +949,27 @@ function AppContent() {
             {restaurants.length > 0 ? (
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
                 {restaurants.map((r) => (
-                  <DeliveryPointCard key={r.id} point={r} onSelect={() => {
-                  setSelectedRestaurant(r)
-                  try { localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id)) } catch { /* ignore */ }
-                  fetchRestaurantMenu(r.id)
-                }} />
+                  <DeliveryPointCard
+                    key={r.id}
+                    point={r}
+                    onSelect={() => {
+                      if (
+                        cart.length > 0 &&
+                        cartRestaurantId != null &&
+                        String(r.id) !== String(cartRestaurantId)
+                      ) {
+                        setCart([])
+                        setCartRestaurantId(null)
+                      }
+                      setSelectedRestaurant(r)
+                      try {
+                        localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id))
+                      } catch {
+                        /* ignore */
+                      }
+                      fetchRestaurantMenu(r.id)
+                    }}
+                  />
                 ))}
               </section>
             ) : (
