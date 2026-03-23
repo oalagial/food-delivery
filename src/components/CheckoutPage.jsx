@@ -1343,7 +1343,7 @@ export default function CheckoutPage({
                   <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
                     {t('checkout.deliveryDate')}
                   </label>
-                  <div className="checkout-schedule-field">
+                  <div className="checkout-schedule-field checkout-schedule-field--date">
                     <input
                       id="checkout-schedule-date"
                       type="date"
@@ -1354,7 +1354,7 @@ export default function CheckoutPage({
                         const v = e.target.value
                         if (v) setDeliveryDate(v)
                       }}
-                      className="min-h-[48px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
+                      className="min-h-[48px] w-full max-w-full min-w-0 shrink rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
                     />
                   </div>
                 </div>
