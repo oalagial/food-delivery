@@ -17,6 +17,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const isLocationInactive = deliveryLocation?.isActive === false
   const isRestaurantClosed = point?.isOpen === false
   const cannotAddToCart = isLocationInactive || isRestaurantClosed
+  const removeProductIngredients = point?.config?.removeProductIngredients === true
 
   const deliveryFee = parseFloat(point?.deliveryFee || 0).toFixed(2)
   const minOrder = parseFloat(point?.minOrder || 0).toFixed(2)
@@ -394,6 +395,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         <ProductDetail
           key={selectedProductDetail.id}
           product={selectedProductDetail}
+          removeProductIngredients={removeProductIngredients}
           isLocationInactive={cannotAddToCart}
           onClose={() => setSelectedProductDetail(null)}
           onAdd={(item) => {

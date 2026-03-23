@@ -50,6 +50,10 @@
     "deliveryTo": "Delivery to:",
     "calculatingTime": "Calculating delivery time...",
     "deliveryTimeSlot": "Delivery time",
+    "when": "When?",
+    "earliestDelivery": "Earliest delivery",
+    "scheduleOption": "Schedule",
+    "scheduleSubtext": "Choose a delivery time",
     "deliveryDate": "Date",
     "loadingTimeslots": "Loading available times…",
     "noTimeslots": "No delivery slots for this date.",
@@ -64,7 +68,7 @@
     "slotNoLongerAvailable": "That time slot is no longer available. Please pick another.",
     "selectSlotRequired": "Please select a delivery time.",
     "customerInfo": "Customer Information",
-    "nameRequired": "Name *",
+    "nameRequired": "Full name *",
     "phoneRequired": "WhatsApp phone *",
     "phoneConfirmRequired": "Confirm WhatsApp phone *",
     "enterPhoneConfirm": "Re-enter the same WhatsApp number",
@@ -120,7 +124,12 @@
     "increaseQty": "Increase quantity",
     "removeItem": "Remove item",
     "errorPaymentMethod": "Please select a payment method.",
-    "noPaymentMethods": "No payment methods are available for this restaurant."
+    "noPaymentMethods": "No payment methods are available for this restaurant.",
+    "blockerTitle": "To place your order",
+    "blockerSubmitting": "Please wait — processing your order…",
+    "blockerEmptyCart": "Add at least one item to your cart.",
+    "blockerConfirmLocation": "Tick the box to confirm your delivery location.",
+    "blockerInsufficientStock": "Adjust quantities in your cart — some items are out of stock."
   },
   "store": {
     "goBack": "Go back",

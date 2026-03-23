@@ -853,7 +853,7 @@ function AppContent() {
               
               return (
                 <StorePage
-                  point={selectedRestaurant}
+                  point={checkoutRestaurant}
                   deliveryLocation={selectedPoint}
                   menu={menuByCategory}
                   categories={categoriesArr}

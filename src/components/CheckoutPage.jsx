@@ -285,6 +285,77 @@ export default function CheckoutPage({
   })()
   const finalTotal = Math.max(0, totalBeforeCoupon - couponDiscountAmount)
 
+  const orderConfirmEnabled =
+    hasOrderItems &&
+    formValid &&
+    agree &&
+    paymentMethod &&
+    availablePaymentMethods.length > 0 &&
+    !isSubmitting &&
+    deliveryReady &&
+    !insufficientStock
+
+  const orderConfirmBlockers = useMemo(() => {
+    if (orderConfirmEnabled) return []
+    const list = []
+    if (isSubmitting) {
+      list.push(t('checkout.blockerSubmitting'))
+      return list
+    }
+    if (insufficientStock) list.push(t('checkout.blockerInsufficientStock'))
+    if (!hasOrderItems) list.push(t('checkout.blockerEmptyCart'))
+    if (availablePaymentMethods.length === 0) list.push(t('checkout.noPaymentMethods'))
+    else if (!paymentMethod) list.push(t('checkout.errorPaymentMethod'))
+    if (!agree) list.push(t('checkout.blockerConfirmLocation'))
+    if (!formValid) {
+      if (errors.name) list.push(errors.name)
+      if (errors.phone) list.push(errors.phone)
+      if (errors.phoneConfirm) list.push(errors.phoneConfirm)
+      if (errors.email) list.push(errors.email)
+    }
+    if (!deliveryReady) {
+      if (customSchedule) {
+        if (timeslotsLoading) list.push(t('checkout.loadingTimeslots'))
+        else if (timeslotsError) list.push(timeslotsError)
+        else if (
+          !selectedSlotEnd ||
+          !timeslotsPayload?.timeslots?.some((s) => s.end === selectedSlotEnd && s.available)
+        ) {
+          list.push(t('checkout.selectSlotRequired'))
+        }
+      } else if (quickLoading) {
+        list.push(t('checkout.calculatingTime'))
+      } else if (quickError) {
+        list.push(quickError)
+      } else {
+        list.push(t('checkout.couldNotGetTime'))
+      }
+    }
+    return list
+  }, [
+    orderConfirmEnabled,
+    isSubmitting,
+    insufficientStock,
+    hasOrderItems,
+    availablePaymentMethods.length,
+    paymentMethod,
+    agree,
+    formValid,
+    errors.name,
+    errors.phone,
+    errors.phoneConfirm,
+    errors.email,
+    deliveryReady,
+    customSchedule,
+    timeslotsLoading,
+    timeslotsError,
+    selectedSlotEnd,
+    timeslotsPayload,
+    quickLoading,
+    quickError,
+    t,
+  ])
+
   useEffect(() => {
     setCustomSchedule(false)
     setSchedulePickerOpen(false)
@@ -351,12 +422,12 @@ export default function CheckoutPage({
   }, [customSchedule, quickSlot?.end])
 
   useEffect(() => {
-    if (!schedulePickerOpen && !customSchedule) {
+    if (!customSchedule) {
       setTimeslotsPayload(null)
       setTimeslotsError(null)
       setTimeslotsLoading(false)
     }
-  }, [schedulePickerOpen, customSchedule])
+  }, [customSchedule])
 
   useEffect(() => {
     let cancelled = false
@@ -708,6 +779,30 @@ export default function CheckoutPage({
     return endStr ? `${startStr} - ${endStr}` : startStr
   }
 
+  const asapTimeSubtitle = (() => {
+    if (quickLoading) return t('checkout.calculatingTime')
+    if (quickError) return quickError
+    if (quickSlot?.start && quickSlot?.end) {
+      return formatTimeslotDisplay({
+        start: new Date(quickSlot.start),
+        end: new Date(quickSlot.end),
+      })
+    }
+    return ''
+  })()
+
+  const scheduleCardSubtitle =
+    customSchedule && displayDeliveryWindow
+      ? formatTimeslotDisplay(displayDeliveryWindow)
+      : t('checkout.scheduleSubtext')
+
+  const timeOptionCardClass = (selected) =>
+    `w-full rounded-xl border-2 px-4 py-3 text-left transition-all flex gap-3 items-start touch-manipulation ${
+      selected
+        ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200/80'
+        : 'border-slate-200 bg-white hover:border-slate-300 active:bg-slate-50'
+    }`
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="absolute inset-0 bg-black/50" aria-hidden="true" onClick={onClose} />
@@ -737,45 +832,65 @@ export default function CheckoutPage({
             <div className="text-center mb-4 sm:mb-5">
               <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || t('common.restaurant')}</div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('checkout.deliveryTo')} {deliveryLocation?.name || t('common.location')}</div>
-              {!customSchedule && quickLoading ? (
-                <div className="text-xs sm:text-sm text-slate-500 mt-2">{t('checkout.calculatingTime')}</div>
-              ) : !customSchedule && quickError ? (
-                <div className="text-xs sm:text-sm text-red-600 font-semibold mt-2">⚠️ {quickError}</div>
-              ) : displayDeliveryWindow ? (
-                <div className="text-xs sm:text-sm text-orange-600 font-semibold mt-2">
-                  ⏱️ {formatTimeslotDisplay(displayDeliveryWindow)}
-                </div>
-              ) : customSchedule && schedulePickerOpen && timeslotsLoading ? (
-                <div className="text-xs sm:text-sm text-slate-500 mt-2">{t('checkout.loadingTimeslots')}</div>
-              ) : null}
             </div>
 
-            {/* Delivery time: default = soonest; schedule opens modal with dropdown */}
+            {/* When? — earliest slot vs schedule (modal for date & slot) */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
-              <div className="text-sm sm:text-base font-semibold mb-2 text-slate-900">{t('checkout.deliveryTimeSlot')}</div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="text-sm sm:text-base font-semibold mb-3 text-slate-900">{t('checkout.when')}</div>
+              <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={t('checkout.when')}>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={!customSchedule}
                   onClick={() => {
-                    setSchedulePickerOpen(true)
-                    setDeliveryDate(formatYmdLocal(new Date()))
+                    setCustomSchedule(false)
+                    setSchedulePickerOpen(false)
                   }}
-                  className="w-full sm:w-auto rounded-lg border-2 border-orange-400 bg-white px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100"
+                  className={timeOptionCardClass(!customSchedule)}
                 >
-                  {t('checkout.scheduleForLater')}
-                </button>
-                {customSchedule ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomSchedule(false)
-                      setSchedulePickerOpen(false)
-                    }}
-                    className="w-full sm:w-auto rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                      !customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                    }`}
+                    aria-hidden
                   >
-                    {t('checkout.useSoonestDelivery')}
-                  </button>
-                ) : null}
+                    {!customSchedule ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm sm:text-base font-semibold text-slate-900">{t('checkout.earliestDelivery')}</div>
+                    <div
+                      className={`mt-0.5 text-xs sm:text-sm ${
+                        quickError ? 'text-red-600 font-medium' : 'text-slate-500'
+                      }`}
+                    >
+                      {asapTimeSubtitle || '\u00a0'}
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={customSchedule}
+                  onClick={() => {
+                    setCustomSchedule(true)
+                    setSchedulePickerOpen(true)
+                    if (!customSchedule) setDeliveryDate(formatYmdLocal(new Date()))
+                  }}
+                  className={timeOptionCardClass(customSchedule)}
+                >
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                      customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                    }`}
+                    aria-hidden
+                  >
+                    {customSchedule ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm sm:text-base font-semibold text-slate-900">{t('checkout.scheduleOption')}</div>
+                    <div className="mt-0.5 text-xs sm:text-sm text-slate-500">{scheduleCardSubtitle}</div>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -1069,14 +1184,14 @@ export default function CheckoutPage({
               </div>
 
               <div className="flex flex-wrap items-start gap-2 sm:items-center sm:justify-between sm:gap-3">
-                <label className="flex min-w-0 flex-1 items-start gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">
+                <label className="flex min-w-0 flex-1 items-start gap-3 text-sm sm:text-base text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={agree}
                     onChange={(e) => setAgree(e.target.checked)}
-                    className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 accent-orange-500"
+                    className="mt-0.5 h-6 w-6 min-h-[1.5rem] min-w-[1.5rem] shrink-0 cursor-pointer rounded-md border-2 border-slate-300 text-orange-500 focus:ring-2 focus:ring-orange-400 focus:ring-offset-0 sm:h-7 sm:w-7 sm:min-h-[1.75rem] sm:min-w-[1.75rem] accent-orange-500"
                   />
-                  <span>
+                  <span className="leading-snug pt-0.5">
                     {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
                   </span>
                 </label>
@@ -1098,30 +1213,50 @@ export default function CheckoutPage({
           </div>
         </div>
 
-        {/* Sticky Footer Button */}
+        {/* Sticky Footer — blockers explain disabled Confirm */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
-          <button 
-            disabled={
-              !hasOrderItems ||
-              !formValid ||
-              !agree ||
-              !paymentMethod ||
-              availablePaymentMethods.length === 0 ||
-              isSubmitting ||
-              !deliveryReady ||
-              !!insufficientStock
-            }
-            onClick={handleContinue} 
+          {orderConfirmBlockers.length > 0 && (
+            <div
+              className="mb-3 overflow-hidden rounded-2xl border border-orange-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/60 px-4 py-3.5 shadow-md shadow-orange-900/[0.06] ring-1 ring-orange-100/80 sm:px-5 sm:py-4"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex gap-3 sm:gap-4">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-orange-500 shadow-sm ring-1 ring-orange-100"
+                  aria-hidden
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="text-sm font-semibold tracking-tight text-slate-800">{t('checkout.blockerTitle')}</p>
+                  <ul className="mt-2.5 space-y-2 text-sm leading-snug text-slate-700">
+                    {orderConfirmBlockers.map((msg, i) => (
+                      <li key={`${i}-${msg}`} className="flex gap-2.5">
+                        <span
+                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400"
+                          aria-hidden
+                        />
+                        <span>{msg}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+          <button
+            disabled={!orderConfirmEnabled}
+            onClick={handleContinue}
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              hasOrderItems &&
-              formValid &&
-              agree &&
-              paymentMethod &&
-              availablePaymentMethods.length > 0 &&
-              !isSubmitting &&
-              deliveryReady &&
-              !insufficientStock
-                ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' 
+              orderConfirmEnabled
+                ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
           >
@@ -1219,7 +1354,7 @@ export default function CheckoutPage({
                         const v = e.target.value
                         if (v) setDeliveryDate(v)
                       }}
-                      className="min-h-[48px] rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
+                      className="min-h-[48px] w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -1247,7 +1382,7 @@ export default function CheckoutPage({
                           setSelectedSlotEnd(v)
                           setCustomSchedule(v !== quickSlot?.end)
                         }}
-                        className="min-h-[48px] appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
+                        className="min-h-[48px] w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
                         style={{
                           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                           backgroundRepeat: 'no-repeat',

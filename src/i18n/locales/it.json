@@ -50,6 +50,10 @@
     "deliveryTo": "Consegna a:",
     "calculatingTime": "Calcolo orario di consegna...",
     "deliveryTimeSlot": "Orario di consegna",
+    "when": "Quando?",
+    "earliestDelivery": "Consegna al più presto",
+    "scheduleOption": "Programma",
+    "scheduleSubtext": "Scegli un orario di consegna",
     "deliveryDate": "Data",
     "loadingTimeslots": "Caricamento orari disponibili…",
     "noTimeslots": "Nessuna fascia oraria per questa data.",
@@ -64,7 +68,7 @@
     "slotNoLongerAvailable": "Quella fascia non è più disponibile. Scegline un'altra.",
     "selectSlotRequired": "Seleziona un orario di consegna.",
     "customerInfo": "Dati cliente",
-    "nameRequired": "Nome *",
+    "nameRequired": "Nome e cognome *",
     "phoneRequired": "Telefono WhatsApp *",
     "phoneConfirmRequired": "Conferma telefono WhatsApp *",
     "enterPhoneConfirm": "Reinserisci lo stesso numero WhatsApp",
@@ -120,7 +124,12 @@
     "increaseQty": "Aumenta quantità",
     "removeItem": "Rimuovi articolo",
     "errorPaymentMethod": "Seleziona un metodo di pagamento.",
-    "noPaymentMethods": "Nessun metodo di pagamento disponibile per questo ristorante."
+    "noPaymentMethods": "Nessun metodo di pagamento disponibile per questo ristorante.",
+    "blockerTitle": "Per completare l'ordine",
+    "blockerSubmitting": "Attendere — elaborazione in corso…",
+    "blockerEmptyCart": "Aggiungi almeno un articolo al carrello.",
+    "blockerConfirmLocation": "Spunta la casella per confermare l'indirizzo di consegna.",
+    "blockerInsufficientStock": "Modifica le quantità nel carrello — alcuni prodotti non sono disponibili."
   },
   "store": {
     "goBack": "Indietro",
