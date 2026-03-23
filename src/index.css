@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 /* small app-level helpers */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
@@ -17,11 +20,15 @@ code {
 
 /* Hide scrollbar for mobile categories */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /*
@@ -44,8 +51,8 @@ code {
   border-radius: 0.5rem;
 }
 
-.checkout-schedule-field > input[type='date'],
-.checkout-schedule-field > select {
+.checkout-schedule-field>input[type='date'],
+.checkout-schedule-field>select {
   display: block;
   margin: 0;
   width: 100% !important;
@@ -54,14 +61,14 @@ code {
   box-sizing: border-box !important;
 }
 
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-fields-wrapper {
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-fields-wrapper {
   max-width: 100%;
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
 }
 
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit {
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit {
   min-width: 0 !important;
   max-width: 100%;
   width: 100%;
@@ -69,16 +76,16 @@ code {
   box-sizing: border-box;
 }
 
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-text,
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-month-field,
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-day-field,
-.checkout-schedule-field > input[type='date']::-webkit-datetime-edit-year-field {
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-text,
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-month-field,
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-day-field,
+.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-year-field {
   min-width: 0;
   padding: 0 0.15em;
 }
 
 /* iOS / WebKit: keep calendar control inside the input box */
-.checkout-schedule-field > input[type='date']::-webkit-calendar-picker-indicator {
+.checkout-schedule-field>input[type='date']::-webkit-calendar-picker-indicator {
   margin-left: 0;
   flex-shrink: 0;
 }

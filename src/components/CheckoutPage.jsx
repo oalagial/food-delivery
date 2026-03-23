@@ -158,11 +158,11 @@ export default function CheckoutPage({
   const showError = (field) => touched[field] && errors[field]
   const formValid = Boolean(
     customerName.trim() &&
-      customerPhone.trim() &&
-      customerPhoneConfirm &&
-      customerPhoneConfirm === customerPhone &&
-      customerEmail.trim() &&
-      emailRegex.test(customerEmail.trim())
+    customerPhone.trim() &&
+    customerPhoneConfirm &&
+    customerPhoneConfirm === customerPhone &&
+    customerEmail.trim() &&
+    emailRegex.test(customerEmail.trim())
   )
 
   useEffect(() => {
@@ -266,11 +266,11 @@ export default function CheckoutPage({
 
   const deliveryReady = customSchedule
     ? Boolean(
-        selectedSlotEnd &&
-          !timeslotsLoading &&
-          !timeslotsError &&
-          timeslotsPayload?.timeslots?.some((s) => s.end === selectedSlotEnd && s.available)
-      )
+      selectedSlotEnd &&
+      !timeslotsLoading &&
+      !timeslotsError &&
+      timeslotsPayload?.timeslots?.some((s) => s.end === selectedSlotEnd && s.available)
+    )
     : Boolean(selectedSlotEnd && !quickLoading && !quickError && quickSlot?.end)
   const timeslotMinDate = formatYmdLocal(new Date())
   const timeslotMaxDate = addDaysToYmd(timeslotMinDate, 14)
@@ -527,19 +527,19 @@ export default function CheckoutPage({
       // CASH / CARD: create order (pay on delivery)
       const offerItems = cart.filter(item => item.isOffer)
       const offers = offerItems.map((item) => {
-        const selectedGroups = Array.isArray(item.selectedGroups) 
+        const selectedGroups = Array.isArray(item.selectedGroups)
           ? item.selectedGroups
-              .filter(group => 
-                group && 
-                typeof group.groupId !== 'undefined' && 
-                typeof group.selectedItemId !== 'undefined'
-              )
-              .map(group => ({
-                groupId: parseInt(group.groupId) || group.groupId,
-                groupName: group.groupName || null,
-                selectedItemId: parseInt(group.selectedItemId) || group.selectedItemId,
-                selectedItemName: group.selectedItemName || null,
-              }))
+            .filter(group =>
+              group &&
+              typeof group.groupId !== 'undefined' &&
+              typeof group.selectedItemId !== 'undefined'
+            )
+            .map(group => ({
+              groupId: parseInt(group.groupId) || group.groupId,
+              groupName: group.groupName || null,
+              selectedItemId: parseInt(group.selectedItemId) || group.selectedItemId,
+              selectedItemName: group.selectedItemName || null,
+            }))
           : []
         return {
           offerId: item.offerId,
@@ -797,10 +797,9 @@ export default function CheckoutPage({
       : t('checkout.scheduleSubtext')
 
   const timeOptionCardClass = (selected) =>
-    `w-full rounded-xl border-2 px-4 py-3 text-left transition-all flex gap-3 items-start touch-manipulation ${
-      selected
-        ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200/80'
-        : 'border-slate-200 bg-white hover:border-slate-300 active:bg-slate-50'
+    `w-full rounded-xl border-2 px-4 py-3 text-left transition-all flex gap-3 items-start touch-manipulation ${selected
+      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200/80'
+      : 'border-slate-200 bg-white hover:border-slate-300 active:bg-slate-50'
     }`
 
   return (
@@ -849,9 +848,8 @@ export default function CheckoutPage({
                   className={timeOptionCardClass(!customSchedule)}
                 >
                   <span
-                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
-                      !customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
-                    }`}
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${!customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                      }`}
                     aria-hidden
                   >
                     {!customSchedule ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
@@ -859,9 +857,8 @@ export default function CheckoutPage({
                   <div className="min-w-0 flex-1">
                     <div className="text-sm sm:text-base font-semibold text-slate-900">{t('checkout.earliestDelivery')}</div>
                     <div
-                      className={`mt-0.5 text-xs sm:text-sm ${
-                        quickError ? 'text-red-600 font-medium' : 'text-slate-500'
-                      }`}
+                      className={`mt-0.5 text-xs sm:text-sm ${quickError ? 'text-red-600 font-medium' : 'text-slate-500'
+                        }`}
                     >
                       {asapTimeSubtitle || '\u00a0'}
                     </div>
@@ -879,9 +876,8 @@ export default function CheckoutPage({
                   className={timeOptionCardClass(customSchedule)}
                 >
                   <span
-                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
-                      customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
-                    }`}
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                      }`}
                     aria-hidden
                   >
                     {customSchedule ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
@@ -1030,11 +1026,10 @@ export default function CheckoutPage({
                   {availablePaymentMethods.map((method) => (
                     <label
                       key={method}
-                      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        paymentMethod === method
+                      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === method
                           ? 'border-orange-500 bg-orange-50 text-orange-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
@@ -1092,16 +1087,16 @@ export default function CheckoutPage({
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                        <button 
-                          onClick={() => updateQty(it.key, Math.max(1, it.qty - 1))} 
+                        <button
+                          onClick={() => updateQty(it.key, Math.max(1, it.qty - 1))}
                           className="w-7 h-7 sm:w-8 sm:h-8 text-sm sm:text-base rounded-full bg-slate-100 text-slate-700 active:bg-slate-200 transition-colors flex items-center justify-center font-semibold"
                           aria-label={t('checkout.decreaseQty')}
                         >
                           −
                         </button>
                         <div className="w-5 sm:w-6 text-center text-sm sm:text-base font-semibold">{it.qty}</div>
-                        <button 
-                          onClick={() => updateQty(it.key, it.qty + 1)} 
+                        <button
+                          onClick={() => updateQty(it.key, it.qty + 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 text-sm sm:text-base rounded-full bg-slate-100 text-slate-700 active:bg-slate-200 transition-colors flex items-center justify-center font-semibold"
                           aria-label={t('checkout.increaseQty')}
                         >
@@ -1110,8 +1105,8 @@ export default function CheckoutPage({
                         <div className="ml-2 sm:ml-3 text-sm sm:text-base font-semibold text-slate-900 min-w-[60px] sm:min-w-[70px] text-right">
                           {formatPrice(it.total)}
                         </div>
-                        <button 
-                          onClick={() => removeItem(it.key)} 
+                        <button
+                          onClick={() => removeItem(it.key)}
                           className="ml-1 sm:ml-2 text-base sm:text-lg text-red-500 active:opacity-70 transition-opacity"
                           aria-label={t('checkout.removeItem')}
                         >
@@ -1254,11 +1249,10 @@ export default function CheckoutPage({
           <button
             disabled={!orderConfirmEnabled}
             onClick={handleContinue}
-            className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${
-              orderConfirmEnabled
+            className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${orderConfirmEnabled
                 ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
+              }`}
           >
             {isSubmitting ? t('checkout.processing') : t('checkout.confirmOrder')}
           </button>
@@ -1294,11 +1288,10 @@ export default function CheckoutPage({
                     <button
                       type="button"
                       onClick={() => applyCheckoutLocation(loc)}
-                      className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-medium transition-colors ${
-                        String(deliveryLocation?.id) === String(loc.id)
+                      className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-medium transition-colors ${String(deliveryLocation?.id) === String(loc.id)
                           ? 'border-orange-500 bg-orange-50 text-orange-800'
                           : 'border-slate-200 text-slate-800 hover:border-orange-300 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       {loc.name}
                     </button>
