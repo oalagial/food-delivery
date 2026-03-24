@@ -304,7 +304,12 @@ function AppContent() {
   const checkoutRestaurant = useMemo(() => {
     if (!selectedRestaurant) return null
     if (!menuApiRestaurant) return selectedRestaurant
-    return { ...selectedRestaurant, config: menuApiRestaurant.config ?? selectedRestaurant.config }
+    return {
+      ...selectedRestaurant,
+      config: menuApiRestaurant.config ?? selectedRestaurant.config,
+      image: menuApiRestaurant.image ?? selectedRestaurant.image,
+      logo: menuApiRestaurant.logo ?? selectedRestaurant.logo,
+    }
   }, [selectedRestaurant, menuApiRestaurant])
 
   function handleBack() {
