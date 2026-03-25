@@ -36,7 +36,9 @@
         "loadingLocations": "Φόρτωση σημείων παράδοσης...",
         "noLocations": "Δεν υπάρχουν διαθέσιμες τοποθεσίες παράδοσης. Δοκιμάστε αργότερα.",
         "openCart": "Άνοιγμα καλαθιού",
-        "cart": "Καλάθι"
+        "cart": "Καλάθι",
+        "invalidQrLinkTitle": "Μη έγκυρος σύνδεσμος",
+        "invalidQrLinkMessage": "Αυτός ο σύνδεσμος μενού δεν είναι έγκυρος ή δεν είναι πλέον διαθέσιμος. Επιλέξτε τοποθεσία παράδοσης για να συνεχίσετε."
     },
     "cart": {
         "title": "Καλάθι",
@@ -138,9 +140,7 @@
         "currentlyClosed": "Προς το παρόν κλειστό",
         "openNow": "Ανοιχτό τώρα",
         "deliveryFee": "Παράδοση {{fee}} €",
-        "freeDeliveryOver": "Δωρεάν παράδοση άνω των {{min}} €",
-        "minOrder": "Ελάχιστη παραγγελία 0 €",
-        "minOrderAmount": "Ελάχ. παραγγελία {{min}} €",
+        "freeDeliveryOver": "Δωρεάν παράδοση για παραγγελίες άνω των {{amount}} €",
         "deliveryFeeShort": "{{fee}} €",
         "more": "Περισσότερα",
         "less": "Λιγότερα",
@@ -181,8 +181,8 @@
         "temporarilyClosed": "Προσωρινά κλειστό",
         "fastDelivery": "Γρήγορη παράδοση",
         "choose": "Επιλογή",
-        "minOrder": "Ελάχιστη παραγγελία",
         "deliveryFee": "Κόστος διανομής",
+        "freeDeliveryOver": "Δωρεάν παράδοση άνω των {{amount}} €",
         "closesAt": "Κλείνει στις {{time}}"
     },
     "orderStatus": {

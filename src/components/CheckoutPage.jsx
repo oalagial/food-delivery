@@ -241,11 +241,10 @@ export default function CheckoutPage({
   const itemsTotal = total || 0
   const itemCount = cart.reduce((sum, item) => sum + Math.max(0, Number(item?.qty) || 0), 0)
   const hasOrderItems = itemCount > 0
-  // Use same fields as in StorePage header (restaurant delivery settings)
   const rawDeliveryFee = parseFloat(restaurant?.deliveryFee ?? 0) || 0
-  const minOrderForFree = parseFloat(restaurant?.minOrder ?? 0) || 0
+  const freeDeliveryFrom = parseFloat(restaurant?.minOrder ?? 0) || 0
   const shouldChargeDelivery =
-    rawDeliveryFee > 0 && (minOrderForFree === 0 || itemsTotal < minOrderForFree)
+    rawDeliveryFee > 0 && (freeDeliveryFrom === 0 || itemsTotal < freeDeliveryFrom)
   const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
   const totalBeforeCoupon = itemsTotal + deliveryCost
 

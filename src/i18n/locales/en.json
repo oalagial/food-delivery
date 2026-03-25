@@ -36,7 +36,9 @@
     "loadingLocations": "Loading delivery locations...",
     "noLocations": "No delivery locations available. Please try again later.",
     "openCart": "Open cart",
-    "cart": "Cart"
+    "cart": "Cart",
+    "invalidQrLinkTitle": "Invalid link",
+    "invalidQrLinkMessage": "This menu link is not valid or is no longer available. Choose a delivery location to continue."
   },
   "cart": {
     "title": "Cart",
@@ -139,9 +141,7 @@
     "currentlyClosed": "Currently closed",
     "openNow": "Open now",
     "deliveryFee": "Delivery {{fee}} €",
-    "freeDeliveryOver": "Free delivery over {{min}} €",
-    "minOrder": "Min order 0 €",
-    "minOrderAmount": "Min. order {{min}} €",
+    "freeDeliveryOver": "Free delivery on orders over {{amount}} €",
     "deliveryFeeShort": "{{fee}} €",
     "more": "More",
     "less": "Less",
@@ -183,8 +183,8 @@
     "temporarilyClosed": "Temporarily Closed",
     "fastDelivery": "Fast Delivery",
     "choose": "Choose",
-    "minOrder": "Min. order",
     "deliveryFee": "Delivery fee",
+    "freeDeliveryOver": "Free delivery on orders over {{amount}} €",
     "closesAt": "Closes at {{time}}"
   },
   "orderStatus": {

@@ -6,6 +6,8 @@ import restaurantImage from '../assets/restaurant-image.png'
 import logo from '../assets/logo.png'
 import { getProductLabelIcons } from '../utils/productLabels'
 import GeneralCouponsStrip from './GeneralCouponsStrip'
+import LanguageSwitcher from './LanguageSwitcher'
+import { useFloatingLanguageControl } from '../context/FloatingLanguageContext'
 
 function resolveRestaurantMediaUrl(raw, fallback) {
   if (raw == null || (typeof raw === 'string' && !raw.trim())) return fallback
@@ -22,7 +24,14 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
   const categoryRefs = useRef({})
   const productsContainerRef = useRef(null)
+  const tabsRowRef = useRef(null)
+  const heroImageRef = useRef(null)
   const scrollTargetRef = useRef(null) // όταν πατήθηκε pill, αγνοούμε scroll μέχρι να σταματήσει
+  /** Ύψος sticky γραμμής κατηγοριών (για scroll-spy & scrollToCategory) */
+  const STICKY_TABS_OFFSET = 52
+  /** Έξτρα offset όταν η μπάρα πίσω/γλώσσα είναι fixed — ταιριάζει με ύψος toolbar (pt + h-9 + pb / sm:h-10) */
+  const DOCKED_TOOLBAR_OFFSET = 52
+  const [toolbarDocked, setToolbarDocked] = useState(false)
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
   const isLocationInactive = deliveryLocation?.isActive === false
   const isRestaurantClosed = point?.isOpen === false
@@ -41,6 +50,18 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   useEffect(() => {
     setLogoLoadFailed(false)
   }, [point?.id, restaurantLogoUrl])
+
+  useEffect(() => {
+    setToolbarDocked(false)
+  }, [point?.id])
+
+  const floatingLang = useFloatingLanguageControl()
+  const setFloatingLanguageHidden = floatingLang?.setFloatingLanguageHidden
+  useEffect(() => {
+    if (!setFloatingLanguageHidden) return
+    setFloatingLanguageHidden(true)
+    return () => setFloatingLanguageHidden(false)
+  }, [setFloatingLanguageHidden])
 
   const [generalCoupons, setGeneralCoupons] = useState([])
 
@@ -92,8 +113,11 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     return () => ac.abort()
   }, [point?.id])
 
-  const deliveryFee = parseFloat(point?.deliveryFee || 0).toFixed(2)
-  const minOrder = parseFloat(point?.minOrder || 0).toFixed(2)
+  const rawDeliveryFeeNum = parseFloat(point?.deliveryFee || 0) || 0
+  const deliveryFee = rawDeliveryFeeNum.toFixed(2)
+  const freeDeliveryFrom = parseFloat(point?.minOrder || 0) || 0
+  const freeDeliveryFromDisplay = freeDeliveryFrom.toFixed(2)
+  const showFreeDeliveryHint = rawDeliveryFeeNum > 0 && freeDeliveryFrom > 0
 
   // Derive today's opening / closing from deliveredBy.openingHours (point.openingHours)
   const todayHours = (() => {
@@ -145,23 +169,51 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const ratingText =
     ratingDisplay != null && !Number.isNaN(ratingDisplay) ? ratingDisplay.toFixed(1) : null
 
+  const sectionTopInScrollContainer = (el) => {
+    const container = productsContainerRef.current
+    if (!container || !el) return 0
+    return el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+  }
+
+  // Κρατά την ενεργή καρτέλα ορατή στο οριζόντιο scroll (Wolt-style)
+  useEffect(() => {
+    const root = tabsRowRef.current
+    if (!root) return
+    const btn = root.querySelector(`[data-store-category="${CSS.escape(String(visibleCategory))}"]`)
+    btn?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+  }, [visibleCategory])
+
+  const computeToolbarDocked = (scrollTop) => {
+    const heroEl = heroImageRef.current
+    if (!heroEl) return false
+    const threshold = Math.max(0, heroEl.offsetHeight - 40)
+    return scrollTop > threshold
+  }
+
+  const stickyStackOffset = (docked) => STICKY_TABS_OFFSET + (docked ? DOCKED_TOOLBAR_OFFSET : 0)
+
   // Detect which category is in view as user scrolls
   const handleProductsScroll = () => {
     const container = productsContainerRef.current
     if (!container) return
-    if (scrollTargetRef.current) return
 
     const scrollTop = container.scrollTop
+    const docked = computeToolbarDocked(scrollTop)
+    setToolbarDocked((prev) => (prev !== docked ? docked : prev))
+
+    if (scrollTargetRef.current) return
+
     const orderedKeys = [
       ...(offers.length > 0 ? ['Offers'] : []),
       ...categories,
     ]
     let currentVisible = orderedKeys[0]
+    const spyPad = stickyStackOffset(docked)
     for (const key of orderedKeys) {
       const ref = categoryRefs.current[key]
       if (!ref) continue
-      if (ref.offsetTop <= scrollTop + 70) currentVisible = key
-      else break
+      const top = sectionTopInScrollContainer(ref)
+      if (top <= scrollTop + spyPad) currentVisible = key
     }
     if (currentVisible && currentVisible !== visibleCategory) {
       setVisibleCategory(currentVisible)
@@ -173,9 +225,8 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     const container = productsContainerRef.current
     const element = categoryRefs.current[category]
     if (!container || !element) return
-    const containerRect = container.getBoundingClientRect()
-    const elementRect = element.getBoundingClientRect()
-    const targetScrollTop = Math.max(elementRect.top - containerRect.top + container.scrollTop - 8, 0)
+    const docked = computeToolbarDocked(container.scrollTop)
+    const targetScrollTop = Math.max(0, sectionTopInScrollContainer(element) - stickyStackOffset(docked))
     setVisibleCategory(category)
     setActiveCategory(category)
     scrollTargetRef.current = category
@@ -185,117 +236,149 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
-      {/* Hero cover + overlapping square logo + info (Wolt-style) */}
-      <div className="relative flex-shrink-0 w-full bg-white">
-        {/* Hero: πιο ψηλό, στρογγυλό κάτω, ήπια κλίση — χωρίς επίπεδο κόψιμο */}
-        <div
-          className="relative min-h-[138px] h-[min(23vh,182px)] max-h-[200px] w-full overflow-hidden shadow-[0_4px_24px_rgba(15,23,42,0.08)] sm:min-h-[152px] sm:h-[min(22vh,198px)] sm:max-h-[220px]"
-          style={{
-            borderBottomLeftRadius: '50% 2%',
-            borderBottomRightRadius: '50% 2%',
-          }}
-        >
-          <div
-            className="absolute inset-0 scale-105 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-black/5"
-            aria-hidden="true"
-          />
-          <button
-            type="button"
-            onClick={onBack}
-            className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-base text-slate-800 shadow-sm ring-1 ring-slate-200/80 transition-colors active:bg-white sm:left-4 sm:top-4 sm:h-10 sm:w-10 sm:text-lg"
-            aria-label={t('store.goBack')}
-          >
-            ←
-          </button>
-        </div>
-
-        <div className="relative z-20 mx-auto flex max-w-lg flex-col items-center px-4 pb-3 pt-0">
-          <div className="relative z-30 -mt-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100/90 bg-white shadow-[0_10px_40px_-4px_rgba(15,23,42,0.18)] sm:-mt-11 sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-[1.125rem]">
-            <img
-              src={logoLoadFailed ? logo : restaurantLogoUrl}
-              alt=""
-              className="max-h-[78%] max-w-[78%] object-contain object-center"
-              loading="eager"
-              decoding="async"
-              onError={() => setLogoLoadFailed(true)}
-            />
-          </div>
-          <h1 className="mt-3 max-w-[min(100%,18rem)] text-center text-base font-semibold leading-tight tracking-tight text-slate-900 sm:mt-3.5 sm:max-w-[22rem] sm:text-lg">
-            {point?.name}
-          </h1>
-          <div className="mt-2 w-full max-w-sm space-y-1 text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
-            <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-              {ratingText != null && (
-                <>
-                  <span className="inline-flex items-center gap-0.5 font-medium text-slate-600">
-                    <span aria-hidden>😊</span>
-                    {ratingText}
-                  </span>
-                  <span className="text-slate-300" aria-hidden>
-                    ·
-                  </span>
-                </>
-              )}
-              <span>{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
-              <span className="text-slate-300" aria-hidden>
-                ·
-              </span>
-              <span>{t('store.minOrderAmount', { min: minOrder })}</span>
-            </p>
-            <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-              <span className="inline-flex items-center gap-1">
-                <span aria-hidden className="opacity-90">
-                  🚴
-                </span>
-                <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
-              </span>
-              <span className="text-slate-300" aria-hidden>
-                ·
-              </span>
-              <span>{t('store.freeDeliveryOver', { min: minOrder })}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Σταθερά section buttons */}
-      <div className="flex-shrink-0 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide">
-        {offers.length > 0 && (
-          <button
-            onClick={() => scrollToCategory('Offers')}
-            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === 'Offers'
-              ? 'text-orange-600 border-orange-500'
-              : 'text-slate-600 border-transparent hover:text-slate-900'
-              }`}
-          >
-            {t('store.offers')}
-          </button>
-        )}
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => scrollToCategory(c)}
-            className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === c
-              ? 'text-orange-600 border-orange-500'
-              : 'text-slate-600 border-transparent hover:text-slate-900'
-              }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      {/* Μόνο το περιεχόμενο κάνει scroll */}
       <div
         ref={productsContainerRef}
         onScroll={handleProductsScroll}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
+        {/* Hero: φωτο + πίσω/γλώσσα από πάνω· με scroll κάτω η μπάρα γίνεται fixed */}
+        <div className="relative w-full bg-white">
+          <div
+            ref={heroImageRef}
+            className="relative min-h-[138px] h-[min(23vh,182px)] max-h-[200px] w-full overflow-hidden shadow-[0_4px_24px_rgba(15,23,42,0.08)] sm:min-h-[152px] sm:h-[min(22vh,198px)] sm:max-h-[220px]"
+            style={{
+              borderBottomLeftRadius: '50% 2%',
+              borderBottomRightRadius: '50% 2%',
+            }}
+          >
+            <div
+              className="absolute inset-0 scale-105 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-black/5"
+              aria-hidden="true"
+            />
+          </div>
+
+          <div
+            className={`left-0 right-0 z-40 flex items-center justify-between gap-3 px-3 transition-[background-color,box-shadow,border-color] duration-200 ${
+              toolbarDocked
+                ? 'fixed top-0 border-b border-slate-200 bg-white pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] shadow-sm [isolation:isolate]'
+                : 'absolute top-0 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={onBack}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-1 transition-colors sm:h-10 sm:w-10 sm:text-lg ${
+                toolbarDocked
+                  ? 'bg-slate-100 text-slate-800 ring-slate-200/80 active:bg-slate-200'
+                  : 'bg-white/95 text-slate-800 ring-slate-200/80 active:bg-white'
+              }`}
+              aria-label={t('store.goBack')}
+            >
+              ←
+            </button>
+            <div className={toolbarDocked ? '' : 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]'}>
+              <LanguageSwitcher />
+            </div>
+          </div>
+
+          <div className="relative z-20 mx-auto flex max-w-lg flex-col items-center px-4 pb-3 pt-0">
+            <div className="relative z-30 -mt-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100/90 bg-white shadow-[0_10px_40px_-4px_rgba(15,23,42,0.18)] sm:-mt-11 sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-[1.125rem]">
+              <img
+                src={logoLoadFailed ? logo : restaurantLogoUrl}
+                alt=""
+                className="max-h-[78%] max-w-[78%] object-contain object-center"
+                loading="eager"
+                decoding="async"
+                onError={() => setLogoLoadFailed(true)}
+              />
+            </div>
+            <h1 className="mt-3 max-w-[min(100%,18rem)] text-center text-base font-semibold leading-tight tracking-tight text-slate-900 sm:mt-3.5 sm:max-w-[22rem] sm:text-lg">
+              {point?.name}
+            </h1>
+            {deliveryLocation?.name ? (
+              <p className="mt-1.5 max-w-[min(100%,22rem)] text-center text-[11px] leading-snug text-slate-500 sm:text-xs">
+                <span className="text-slate-400">{t('checkout.deliveryTo')}</span>{' '}
+                <span className="font-medium text-slate-600">{deliveryLocation.name}</span>
+              </p>
+            ) : null}
+            <div className="mt-2 w-full max-w-sm space-y-1 text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+              <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                {ratingText != null && (
+                  <>
+                    <span className="inline-flex items-center gap-0.5 font-medium text-slate-600">
+                      <span aria-hidden>😊</span>
+                      {ratingText}
+                    </span>
+                    <span className="text-slate-300" aria-hidden>
+                      ·
+                    </span>
+                  </>
+                )}
+                <span>{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
+              </p>
+              <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden className="opacity-90">
+                    🚴
+                  </span>
+                  <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
+                </span>
+                {showFreeDeliveryHint ? (
+                  <>
+                    <span className="text-slate-300" aria-hidden>
+                      ·
+                    </span>
+                    <span>{t('store.freeDeliveryOver', { amount: freeDeliveryFromDisplay })}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky κατηγορίες — κάτω από fixed μπάρα όταν έχει κουμπώσει */}
+        <div
+          ref={tabsRowRef}
+          className={`sticky z-30 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-white/95 supports-[backdrop-filter]:backdrop-blur-sm ${
+            toolbarDocked
+              ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
+              : 'top-0'
+          }`}
+        >
+          {offers.length > 0 && (
+            <button
+              type="button"
+              data-store-category="Offers"
+              onClick={() => scrollToCategory('Offers')}
+              className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === 'Offers'
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
+                }`}
+            >
+              {t('store.offers')}
+            </button>
+          )}
+          {categories.map((c) => (
+            <button
+              type="button"
+              key={c}
+              data-store-category={c}
+              onClick={() => scrollToCategory(c)}
+              className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === c
+                ? 'text-orange-600 border-orange-500'
+                : 'text-slate-600 border-transparent hover:text-slate-900'
+                }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
         <div className="pb-20">
           <GeneralCouponsStrip coupons={generalCoupons} />
 
