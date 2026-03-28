@@ -10,7 +10,7 @@ import PaymentCancelPage from './components/PaymentCancelPage'
 import AlertDialog from './components/AlertDialog'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
-import { restaurantService, orderService, deliveryLocationService } from './services'
+import { deliveryLocationService } from './services'
 import { initializeAuth } from './services/authInit'
 import logo from './assets/logo.png'
 
