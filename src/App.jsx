@@ -30,7 +30,6 @@ function AppContent() {
 
   const [selectedPoint, setSelectedPoint] = useState(null)
   const [restaurants, setRestaurants] = useState([])
-  const [restaurantLoading, setRestaurantLoading] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
 
   const STORAGE_KEYS = { location: 'delivery_location_id', restaurant: 'delivery_restaurant_id' }
