@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import DeliveryPointCard from './components/DeliveryPointCard'
 import StorePage from './components/StorePage'
@@ -10,9 +10,53 @@ import PaymentCancelPage from './components/PaymentCancelPage'
 import AlertDialog from './components/AlertDialog'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
+import { FloatingLanguageContext } from './context/FloatingLanguageContext'
 import { restaurantService, orderService, deliveryLocationService } from './services'
 import { initializeAuth } from './services/authInit'
 import logo from './assets/logo.png'
+
+function pointDeliversRestaurantId(point, restaurantId) {
+  if (restaurantId == null) return false
+  const list = point?.deliveredBy
+  if (!Array.isArray(list)) return false
+  return list.some((r) => String(r.id) === String(restaurantId))
+}
+
+/** URL share params: `?loc=<deliveryLocation.token>&res=<restaurant.token>` */
+function tokenSearchParamValue(token) {
+  if (token == null) return null
+  const s = String(token).trim()
+  return s !== '' ? s : null
+}
+
+function readLocResParamsFromUrl() {
+  if (typeof window === 'undefined') return { loc: null, res: null }
+  const params = new URLSearchParams(window.location.search)
+  const loc = params.get('loc')?.trim() || null
+  const res = params.get('res')?.trim() || null
+  return { loc, res }
+}
+
+function syncDeepLinkParamsToUrl(locToken, resToken) {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  const loc = tokenSearchParamValue(locToken)
+  const res = tokenSearchParamValue(resToken)
+  if (loc != null) url.searchParams.set('loc', loc)
+  else url.searchParams.delete('loc')
+  if (res != null) url.searchParams.set('res', res)
+  else url.searchParams.delete('res')
+  const q = url.searchParams.toString()
+  window.history.replaceState({}, '', `${url.pathname}${q ? `?${q}` : ''}${url.hash}`)
+}
+
+function syncUrlToSelection(point, restaurant) {
+  syncDeepLinkParamsToUrl(
+    point ? tokenSearchParamValue(point.token) : null,
+    restaurant ? tokenSearchParamValue(restaurant.token) : null
+  )
+}
+
 function AppContent() {
   const { t } = useTranslation()
   const { alert, closeAlert, showAlert } = useAlert()
@@ -51,46 +95,6 @@ function AppContent() {
     initAndFetch()
   }, [showAlert, t])
 
-  // Restore last selected location + restaurant on load (e.g. after refresh) — keep cart
-  useEffect(() => {
-    if (loading || points.length === 0 || hasRestoredSession.current) return
-    const locId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.location) : null
-    if (!locId) return
-    const point = points.find((p) => String(p.id) === String(locId))
-    if (!point) {
-      try {
-        localStorage.removeItem(STORAGE_KEYS.location)
-        localStorage.removeItem(STORAGE_KEYS.restaurant)
-      } catch {
-        /* ignore */
-      }
-      return
-    }
-    hasRestoredSession.current = true
-    setSelectedPoint(point)
-    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length > 0) {
-      if (point.deliveredBy.length === 1) {
-        const rest = point.deliveredBy[0]
-        setRestaurants([])
-        setSelectedRestaurant(rest)
-        fetchRestaurantMenu(rest.id)
-      } else {
-        setRestaurants(point.deliveredBy)
-        const restId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.restaurant) : null
-        const rest = restId ? point.deliveredBy.find((r) => String(r.id) === String(restId)) : null
-        if (rest) {
-          setSelectedRestaurant(rest)
-          fetchRestaurantMenu(rest.id)
-        } else {
-          setSelectedRestaurant(null)
-        }
-      }
-    } else {
-      setRestaurants([])
-      setSelectedRestaurant(null)
-    }
-  }, [loading, points])
-
   // cart persisted in localStorage
   const [cart, setCart] = useState(() => {
     try {
@@ -108,11 +112,14 @@ function AppContent() {
     }
   }, [cart])
 
+  const [cartRestaurantId, setCartRestaurantId] = useState(null)
+
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [cartBump, setCartBump] = useState(false)
   const [lastAddedKey, setLastAddedKey] = useState(null)
   const bumpTimerRef = useRef(null)
+  const selectedRestaurantIdRef = useRef(null)
 
   function addToCart(item) {
     // For offers, include selectedGroups in the key
@@ -167,6 +174,10 @@ function AppContent() {
       setCartBump(false)
       setLastAddedKey(null)
     }, 700)
+
+    if (selectedRestaurantIdRef.current != null) {
+      setCartRestaurantId(selectedRestaurantIdRef.current)
+    }
   }
 
   function updateCartItem(key, qty) {
@@ -201,7 +212,7 @@ function AppContent() {
   const [fetchedMenu, setFetchedMenu] = useState(null)
   const [menuLoading, setMenuLoading] = useState(false)
 
-  async function fetchRestaurantMenu(restaurantId) {
+  const fetchRestaurantMenu = useCallback(async (restaurantId) => {
     setMenuLoading(true)
     setFetchedMenu(null)
     try {
@@ -209,21 +220,25 @@ function AppContent() {
       const response = await fetch(`${API_BASE}/public/restaurants?id=${restaurantId}`)
       if (!response.ok) throw new Error('Failed to fetch menu')
       const menuData = await response.json()
-    console.log('menuData', menuData)
-      // Expecting menuData to have .data[0].menu
       setFetchedMenu(menuData)
     } catch (err) {
       setFetchedMenu({ error: err.message })
     } finally {
       setMenuLoading(false)
     }
-  }
+  }, [])
 
   function handleSelect(point) {
     setSelectedPoint(point)
     setActiveCategory(null)
-    // Clear cart when changing delivery location
-    setCart([])
+    const keepCart =
+      cart.length > 0 &&
+      cartRestaurantId != null &&
+      pointDeliversRestaurantId(point, cartRestaurantId)
+    if (!keepCart) {
+      setCart([])
+      setCartRestaurantId(null)
+    }
     try {
       localStorage.setItem(STORAGE_KEYS.location, String(point.id))
     } catch {
@@ -242,6 +257,7 @@ function AppContent() {
           /* ignore */
         }
         fetchRestaurantMenu(rest.id)
+        syncUrlToSelection(point, rest)
       } else {
         // Multiple restaurants, show selection
         setRestaurants(point.deliveredBy)
@@ -251,6 +267,7 @@ function AppContent() {
         } catch {
           /* ignore */
         }
+        syncUrlToSelection(point, null)
       }
     } else {
       // Fallback: no deliveredBy or not array
@@ -261,9 +278,126 @@ function AppContent() {
       } catch {
         /* ignore */
       }
+      syncUrlToSelection(point, null)
     }
   }
   const [selectedRestaurant, setSelectedRestaurant] = useState(null)
+
+  useEffect(() => {
+    selectedRestaurantIdRef.current = selectedRestaurant?.id ?? null
+  }, [selectedRestaurant?.id])
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      setCartRestaurantId(null)
+      return
+    }
+    if (selectedRestaurant?.id != null && cartRestaurantId == null) {
+      setCartRestaurantId(selectedRestaurant.id)
+    }
+  }, [cart, selectedRestaurant?.id, cartRestaurantId])
+
+  // Initial URL (?loc=&res=) or restore location + restaurant from localStorage
+  useEffect(() => {
+    if (loading || points.length === 0 || hasRestoredSession.current) return
+
+    const { loc: locToken, res: resToken } = readLocResParamsFromUrl()
+
+    if (locToken && resToken) {
+      const point = points.find((p) => String(p.token ?? '') === String(locToken))
+      const rest =
+        point && Array.isArray(point.deliveredBy)
+          ? point.deliveredBy.find((r) => String(r.token ?? '') === String(resToken))
+          : null
+
+      hasRestoredSession.current = true
+
+      if (point && rest && pointDeliversRestaurantId(point, rest.id)) {
+        setSelectedPoint(point)
+        setActiveCategory(null)
+        const keepCart =
+          cart.length > 0 &&
+          cartRestaurantId != null &&
+          String(cartRestaurantId) === String(rest.id) &&
+          pointDeliversRestaurantId(point, cartRestaurantId)
+        if (!keepCart) {
+          setCart([])
+          setCartRestaurantId(null)
+        }
+        try {
+          localStorage.setItem(STORAGE_KEYS.location, String(point.id))
+          localStorage.setItem(STORAGE_KEYS.restaurant, String(rest.id))
+        } catch {
+          /* ignore */
+        }
+        if (point.deliveredBy.length === 1) {
+          setRestaurants([])
+        } else {
+          setRestaurants(point.deliveredBy)
+        }
+        setSelectedRestaurant(rest)
+        fetchRestaurantMenu(rest.id)
+        syncUrlToSelection(point, rest)
+        return
+      }
+
+      syncDeepLinkParamsToUrl(null, null)
+      showAlert('error', t('app.invalidQrLinkTitle'), t('app.invalidQrLinkMessage'), 5000)
+      return
+    }
+
+    const locId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.location) : null
+    if (!locId) return
+    const point = points.find((p) => String(p.id) === String(locId))
+    if (!point) {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.location)
+        localStorage.removeItem(STORAGE_KEYS.restaurant)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    hasRestoredSession.current = true
+    setSelectedPoint(point)
+    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length > 0) {
+      if (point.deliveredBy.length === 1) {
+        const rest = point.deliveredBy[0]
+        setRestaurants([])
+        setSelectedRestaurant(rest)
+        fetchRestaurantMenu(rest.id)
+        syncUrlToSelection(point, rest)
+      } else {
+        setRestaurants(point.deliveredBy)
+        const restId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.restaurant) : null
+        const rest = restId ? point.deliveredBy.find((r) => String(r.id) === String(restId)) : null
+        if (rest) {
+          setSelectedRestaurant(rest)
+          fetchRestaurantMenu(rest.id)
+          syncUrlToSelection(point, rest)
+        } else {
+          setSelectedRestaurant(null)
+          syncUrlToSelection(point, null)
+        }
+      }
+    } else {
+      setRestaurants([])
+      setSelectedRestaurant(null)
+      syncUrlToSelection(point, null)
+    }
+  }, [loading, points, cart, cartRestaurantId, fetchRestaurantMenu, showAlert, t])
+
+  const menuApiRestaurant = fetchedMenu?.data?.[0]
+  const checkoutRestaurant = useMemo(() => {
+    if (!selectedRestaurant) return null
+    if (!menuApiRestaurant) return selectedRestaurant
+    return {
+      ...selectedRestaurant,
+      config: menuApiRestaurant.config ?? selectedRestaurant.config,
+      image: menuApiRestaurant.image ?? selectedRestaurant.image,
+      logo: menuApiRestaurant.logo ?? selectedRestaurant.logo,
+    }
+  }, [selectedRestaurant, menuApiRestaurant])
 
   function handleBack() {
     setSelectedPoint(null)
@@ -271,6 +405,7 @@ function AppContent() {
     setSelectedRestaurant(null)
     setFetchedMenu(null)
     setActiveCategory(null)
+    syncUrlToSelection(null, null)
     try {
       localStorage.removeItem(STORAGE_KEYS.location)
       localStorage.removeItem(STORAGE_KEYS.restaurant)
@@ -620,6 +755,29 @@ function AppContent() {
     // optionally show a success toast / navigate away
   }
 
+  function handleChangeDeliveryLocationFromCheckout(loc) {
+    const fromPoints = points.find((pt) => String(pt.id) === String(loc.id))
+    setSelectedPoint((prev) => {
+      if (fromPoints) return fromPoints
+      if (prev) return { ...prev, id: loc.id, name: loc.name }
+      return { id: loc.id, name: loc.name }
+    })
+    try {
+      localStorage.setItem(STORAGE_KEYS.location, String(loc.id))
+    } catch {
+      /* ignore */
+    }
+    const pt = fromPoints
+    const keepRes =
+      selectedRestaurant != null &&
+      pt &&
+      pointDeliversRestaurantId(pt, selectedRestaurant.id)
+    syncDeepLinkParamsToUrl(
+      tokenSearchParamValue(pt?.token ?? loc.token),
+      keepRes ? tokenSearchParamValue(selectedRestaurant.token) : null
+    )
+  }
+
   if (selectedPoint) {
     if (selectedRestaurant) {
       // 
@@ -648,6 +806,7 @@ function AppContent() {
                       setSelectedRestaurant(null)
                       setFetchedMenu(null)
                       try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
+                      syncUrlToSelection(selectedPoint, null)
                     } else {
                       handleBack()
                     }
@@ -797,7 +956,7 @@ function AppContent() {
               
               return (
                 <StorePage
-                  point={selectedRestaurant}
+                  point={checkoutRestaurant}
                   deliveryLocation={selectedPoint}
                   menu={menuByCategory}
                   categories={categoriesArr}
@@ -811,6 +970,7 @@ function AppContent() {
                       setSelectedRestaurant(null)
                       setFetchedMenu(null)
                       try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
+                      syncUrlToSelection(selectedPoint, null)
                     } else {
                       handleBack()
                     }
@@ -855,7 +1015,7 @@ function AppContent() {
 
           {checkoutOpen && (
             <CheckoutPage
-              restaurant={selectedRestaurant}
+              restaurant={checkoutRestaurant}
               deliveryLocation={selectedPoint}
               cart={cart}
               total={cartTotal()}
@@ -863,6 +1023,7 @@ function AppContent() {
               updateQty={updateCartItem}
               removeItem={removeCartItem}
               onConfirm={handleConfirmOrder}
+              onChangeDeliveryLocation={handleChangeDeliveryLocationFromCheckout}
             />
           )}
         </>
@@ -892,11 +1053,28 @@ function AppContent() {
             {restaurants.length > 0 ? (
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
                 {restaurants.map((r) => (
-                  <DeliveryPointCard key={r.id} point={r} onSelect={() => {
-                  setSelectedRestaurant(r)
-                  try { localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id)) } catch { /* ignore */ }
-                  fetchRestaurantMenu(r.id)
-                }} />
+                  <DeliveryPointCard
+                    key={r.id}
+                    point={r}
+                    onSelect={() => {
+                      if (
+                        cart.length > 0 &&
+                        cartRestaurantId != null &&
+                        String(r.id) !== String(cartRestaurantId)
+                      ) {
+                        setCart([])
+                        setCartRestaurantId(null)
+                      }
+                      setSelectedRestaurant(r)
+                      try {
+                        localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id))
+                      } catch {
+                        /* ignore */
+                      }
+                      fetchRestaurantMenu(r.id)
+                      syncUrlToSelection(selectedPoint, r)
+                    }}
+                  />
                 ))}
               </section>
             ) : (
@@ -965,6 +1143,11 @@ function AppWithAlert() {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
   const orderStatusMatch = pathname.match(/^\/orders\/status\/([^/]+)$/)
   const orderToken = orderStatusMatch ? orderStatusMatch[1] : null
+  const [hideFloatingLanguageSwitcher, setHideFloatingLanguageSwitcher] = useState(false)
+  const floatingLanguageCtx = useMemo(
+    () => ({ setFloatingLanguageHidden: setHideFloatingLanguageSwitcher }),
+    []
+  )
 
   const alertDialog = (
     <AlertDialog type={alert.type} title={alert.title} message={alert.message} isOpen={alert.isOpen} onClose={closeAlert} autoCloseDuration={alert.duration} />
@@ -993,12 +1176,14 @@ function AppWithAlert() {
   }
 
   return (
-    <>
-      <div className="fixed top-4 right-4 z-[100]">
-        <LanguageSwitcher />
-      </div>
+    <FloatingLanguageContext.Provider value={floatingLanguageCtx}>
+      {!hideFloatingLanguageSwitcher && (
+        <div className="fixed top-4 right-4 z-[100]">
+          <LanguageSwitcher />
+        </div>
+      )}
       {alertDialog}
       {orderToken ? <OrderStatusPage token={orderToken} /> : <AppContent />}
-    </>
+    </FloatingLanguageContext.Provider>
   )
 }

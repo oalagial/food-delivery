@@ -85,11 +85,20 @@ export default function DeliveryPointCard({ point, onSelect }) {
           <div className="flex flex-col gap-1 text-sm text-slate-600 pt-1.5 mt-0.5 border-t border-slate-300">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <span>
-                {t('deliveryPoint.minOrder')}: <strong className="text-slate-800">{singleRestaurant.minOrder}€</strong>
-              </span>
-              <span>
                 {t('deliveryPoint.deliveryFee')}: <strong className="text-slate-800">{singleRestaurant.deliveryFee}€</strong>
               </span>
+              {(() => {
+                const fee = parseFloat(singleRestaurant.deliveryFee) || 0
+                const from = parseFloat(singleRestaurant.minOrder) || 0
+                if (fee <= 0 || from <= 0) return null
+                return (
+                  <span>
+                    <strong className="text-slate-800">
+                      {t('deliveryPoint.freeDeliveryOver', { amount: from.toFixed(2) })}
+                    </strong>
+                  </span>
+                )
+              })()}
             </div>
             {todayClosesAt != null && (
               <span>
