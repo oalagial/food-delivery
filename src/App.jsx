@@ -23,7 +23,7 @@ function pointDeliversRestaurantId(point, restaurantId) {
 
 function AppContent() {
   const { t } = useTranslation()
-  const { alert, closeAlert, showAlert } = useAlert()
+  const { showAlert } = useAlert()
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
   const [authInitialized, setAuthInitialized] = useState(false)
