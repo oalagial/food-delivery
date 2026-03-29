@@ -65,6 +65,7 @@
         "noTimeslots": "Δεν υπάρχουν διαθέσιμα χρονοδιαγράμματα για αυτή την ημερομηνία.",
         "selectDeliverySlot": "Επιλέξτε παράθυρο παράδοσης",
         "scheduleDeliveryModalTitle": "Προγραμματισμός παράδοσης",
+        "scheduleTodayOnlyHint": "Επιλέξτε χρονικό παράθυρο μόνο για σήμερα.",
         "selectTimeslotLabel": "Ώρα παράδοσης",
         "selectTimeslotPlaceholder": "Επιλέξτε ώρα…",
         "scheduleForLater": "Προγραμματισμός παραγγελίας για αργότερα",

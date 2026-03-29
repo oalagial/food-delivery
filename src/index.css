@@ -31,11 +31,7 @@ code {
   /* Chrome, Safari and Opera */
 }
 
-/*
- * Schedule modal: date + select must stay inside the column. iOS Safari
- * gives native date inputs a large intrinsic width unless WebKit edit parts
- * are constrained + wrapper clips overflow.
- */
+/* Schedule modal: timeslot select stays within column on narrow screens */
 .checkout-schedule-field {
   display: flex;
   flex-direction: column;
@@ -45,47 +41,11 @@ code {
   box-sizing: border-box;
 }
 
-/* Date-only: clip iOS Safari intrinsic overflow; keep select wrapper unclipped */
-.checkout-schedule-field--date {
-  overflow: hidden;
-  border-radius: 0.5rem;
-}
-
-.checkout-schedule-field>input[type='date'],
-.checkout-schedule-field>select {
+.checkout-schedule-field > select {
   display: block;
   margin: 0;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
-}
-
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-fields-wrapper {
-  max-width: 100%;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit {
-  min-width: 0 !important;
-  max-width: 100%;
-  width: 100%;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-text,
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-month-field,
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-day-field,
-.checkout-schedule-field>input[type='date']::-webkit-datetime-edit-year-field {
-  min-width: 0;
-  padding: 0 0.15em;
-}
-
-/* iOS / WebKit: keep calendar control inside the input box */
-.checkout-schedule-field>input[type='date']::-webkit-calendar-picker-indicator {
-  margin-left: 0;
-  flex-shrink: 0;
 }

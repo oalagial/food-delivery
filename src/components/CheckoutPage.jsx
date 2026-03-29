@@ -35,24 +35,6 @@ function formatYmdLocal(d) {
   return `${y}-${m}-${day}`
 }
 
-function addDaysToYmd(ymd, days) {
-  const [yy, mm, dd] = ymd.split('-').map(Number)
-  const dt = new Date(yy, mm - 1, dd)
-  dt.setDate(dt.getDate() + days)
-  return formatYmdLocal(dt)
-}
-
-/** Localized calendar date for subtitles (avoids raw YYYY-MM-DD on mobile). */
-function formatYmdDisplay(ymd) {
-  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd
-  const [yy, mm, dd] = ymd.split('-').map(Number)
-  return new Date(yy, mm - 1, dd).toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
 const KNOWN_PAYMENT_METHODS = ['CASH', 'CARD', 'ONLINE']
 
 const PAYMENT_METHOD_LABEL_KEY = {
@@ -102,7 +84,6 @@ export default function CheckoutPage({
   const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState('')
   const [customerEmail, setCustomerEmail] = useState(() => getStoredCheckoutForm().email)
   const [notes, setNotes] = useState(() => getStoredCheckoutForm().notes)
-  const [deliveryDate, setDeliveryDate] = useState(() => formatYmdLocal(new Date()))
   const [timeslotsPayload, setTimeslotsPayload] = useState(null)
   const [timeslotsLoading, setTimeslotsLoading] = useState(false)
   const [timeslotsError, setTimeslotsError] = useState(null)
@@ -243,10 +224,29 @@ export default function CheckoutPage({
   const hasOrderItems = itemCount > 0
   const rawDeliveryFee = parseFloat(restaurant?.deliveryFee ?? 0) || 0
   const freeDeliveryFrom = parseFloat(restaurant?.minOrder ?? 0) || 0
-  const shouldChargeDelivery =
-    rawDeliveryFee > 0 && (freeDeliveryFrom === 0 || itemsTotal < freeDeliveryFrom)
+
+  const deliveryAppliesForSubtotal = (subtotal) =>
+    rawDeliveryFee > 0 && (freeDeliveryFrom === 0 || subtotal < freeDeliveryFrom)
+
+  // Coupon discount (items only) — must run before delivery so we can re-check free-delivery threshold
+  const couponDiscountAmount = (() => {
+    if (!coupon?.type || !coupon?.value) return 0
+    const val = parseFloat(coupon.value) || 0
+    if (coupon.type === 'PERCENTAGE') return (itemsTotal * val) / 100
+    if (coupon.type === 'FIXED') return Math.min(val, itemsTotal)
+    return 0
+  })()
+
+  const itemsSubtotalAfterCoupon = Math.max(0, itemsTotal - couponDiscountAmount)
+
+  // Delivery before discount (for strikethrough total vs items-only subtotal)
+  const deliveryCostBeforeDiscount = deliveryAppliesForSubtotal(itemsTotal) ? rawDeliveryFee : 0
+  const totalBeforeCoupon = itemsTotal + deliveryCostBeforeDiscount
+
+  // After coupon: re-evaluate free delivery vs net order (minOrder applies to amount after discount)
+  const shouldChargeDelivery = deliveryAppliesForSubtotal(itemsSubtotalAfterCoupon)
   const deliveryCost = shouldChargeDelivery ? rawDeliveryFee : 0
-  const totalBeforeCoupon = itemsTotal + deliveryCost
+  const finalTotal = Math.max(0, itemsSubtotalAfterCoupon + deliveryCost)
 
   const displayDeliveryWindow = useMemo(() => {
     if (customSchedule && selectedSlotEnd && timeslotsPayload?.timeslots) {
@@ -271,19 +271,6 @@ export default function CheckoutPage({
       timeslotsPayload?.timeslots?.some((s) => s.end === selectedSlotEnd && s.available)
     )
     : Boolean(selectedSlotEnd && !quickLoading && !quickError && quickSlot?.end)
-  const timeslotMinDate = formatYmdLocal(new Date())
-  const timeslotMaxDate = addDaysToYmd(timeslotMinDate, 14)
-
-  // Coupon discount (apply to items only; value from API is string)
-  const couponDiscountAmount = (() => {
-    if (!coupon?.type || !coupon?.value) return 0
-    const val = parseFloat(coupon.value) || 0
-    if (coupon.type === 'PERCENTAGE') return (itemsTotal * val) / 100
-    if (coupon.type === 'FIXED') return Math.min(val, itemsTotal)
-    return 0
-  })()
-  const finalTotal = Math.max(0, totalBeforeCoupon - couponDiscountAmount)
-
   const orderConfirmEnabled =
     hasOrderItems &&
     formValid &&
@@ -359,7 +346,6 @@ export default function CheckoutPage({
     setCustomSchedule(false)
     setSchedulePickerOpen(false)
     setSelectedSlotEnd(null)
-    setDeliveryDate(formatYmdLocal(new Date()))
     setQuickSlot(null)
     setQuickError(null)
     setTimeslotsPayload(null)
@@ -437,10 +423,11 @@ export default function CheckoutPage({
       setTimeslotsLoading(true)
       setTimeslotsError(null)
       try {
+        const todayYmd = formatYmdLocal(new Date())
         const data = await restaurantService.getDeliveryTimeslots({
           restaurantId: restaurant.id,
           deliveryLocationId: deliveryLocation.id,
-          date: deliveryDate,
+          date: todayYmd,
         })
         if (cancelled) return
         if (data?.error) {
@@ -451,7 +438,7 @@ export default function CheckoutPage({
         const list = Array.isArray(data?.timeslots) ? data.timeslots : []
         setTimeslotsPayload({
           timezone: data?.timezone || 'Europe/Athens',
-          localDate: data?.localDate || deliveryDate,
+          localDate: data?.localDate || todayYmd,
           timeslots: list,
         })
         setTimeslotsError(null)
@@ -468,7 +455,7 @@ export default function CheckoutPage({
     return () => {
       cancelled = true
     }
-  }, [schedulePickerOpen, restaurant?.id, deliveryLocation?.id, deliveryDate, t])
+  }, [schedulePickerOpen, restaurant?.id, deliveryLocation?.id, t])
 
   useEffect(() => {
     if (!timeslotsPayload?.timeslots?.length || !customSchedule || !selectedSlotEnd) return
@@ -677,7 +664,7 @@ export default function CheckoutPage({
         const fresh = await restaurantService.getDeliveryTimeslots({
           restaurantId: restaurant.id,
           deliveryLocationId: deliveryLocation.id,
-          date: deliveryDate,
+          date: formatYmdLocal(new Date()),
         })
         if (fresh?.error) {
           showAlert(
@@ -695,7 +682,7 @@ export default function CheckoutPage({
           showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
           setTimeslotsPayload({
             timezone: fresh?.timezone || timeslotsPayload?.timezone || 'Europe/Athens',
-            localDate: fresh?.localDate || deliveryDate,
+            localDate: fresh?.localDate || formatYmdLocal(new Date()),
             timeslots: list,
           })
           setSelectedSlotEnd(null)
@@ -832,7 +819,7 @@ export default function CheckoutPage({
               <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('checkout.deliveryTo')} {deliveryLocation?.name || t('common.location')}</div>
             </div>
 
-            {/* When? — earliest slot vs schedule (modal for date & slot) */}
+            {/* When? — earliest slot vs schedule (modal: today’s slots only) */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
               <div className="text-sm sm:text-base font-semibold mb-3 text-slate-900">{t('checkout.when')}</div>
               <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={t('checkout.when')}>
@@ -870,7 +857,6 @@ export default function CheckoutPage({
                   onClick={() => {
                     setCustomSchedule(true)
                     setSchedulePickerOpen(true)
-                    if (!customSchedule) setDeliveryDate(formatYmdLocal(new Date()))
                   }}
                   className={timeOptionCardClass(customSchedule)}
                 >
@@ -1327,31 +1313,9 @@ export default function CheckoutPage({
               <h3 id="checkout-schedule-modal-title" className="mb-1 text-lg font-bold text-slate-900">
                 {t('checkout.scheduleDeliveryModalTitle')}
               </h3>
-              <p className="mb-4 text-xs text-slate-500">
-                {formatYmdDisplay(timeslotsPayload?.localDate || deliveryDate)}
-              </p>
+              <p className="mb-4 text-xs text-slate-500">{t('checkout.scheduleTodayOnlyHint')}</p>
 
               <div className="grid w-full min-w-0 gap-4 [grid-template-columns:minmax(0,1fr)]">
-                <div className="min-w-0">
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-schedule-date">
-                    {t('checkout.deliveryDate')}
-                  </label>
-                  <div className="checkout-schedule-field checkout-schedule-field--date">
-                    <input
-                      id="checkout-schedule-date"
-                      type="date"
-                      min={timeslotMinDate}
-                      max={timeslotMaxDate}
-                      value={deliveryDate}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        if (v) setDeliveryDate(v)
-                      }}
-                      className="min-h-[48px] w-full max-w-full min-w-0 shrink rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent sm:min-h-0 sm:py-2.5 sm:text-sm"
-                    />
-                  </div>
-                </div>
-
                 <div className="min-w-0">
                   <label className="mb-1.5 block text-xs font-medium text-slate-700" htmlFor="checkout-timeslot-select">
                     {t('checkout.selectTimeslotLabel')}

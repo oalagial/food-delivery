@@ -65,6 +65,7 @@
     "noTimeslots": "Nessuna fascia oraria per questa data.",
     "selectDeliverySlot": "Scegli una fascia di consegna",
     "scheduleDeliveryModalTitle": "Programma la consegna",
+    "scheduleTodayOnlyHint": "Scegli una fascia oraria solo per oggi.",
     "selectTimeslotLabel": "Fascia oraria",
     "selectTimeslotPlaceholder": "Scegli un orario…",
     "scheduleForLater": "Programma l'ordine per dopo",

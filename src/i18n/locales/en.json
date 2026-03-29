@@ -65,6 +65,7 @@
     "noTimeslots": "No delivery slots for this date.",
     "selectDeliverySlot": "Choose a delivery window",
     "scheduleDeliveryModalTitle": "Schedule delivery",
+    "scheduleTodayOnlyHint": "Choose a time window for today only.",
     "selectTimeslotLabel": "Time slot",
     "selectTimeslotPlaceholder": "Choose a time…",
     "scheduleForLater": "Schedule order for later",
