@@ -76,7 +76,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
       setGeneralCoupons([])
       return
     }
-    ;(async () => {
+    ; (async () => {
       try {
         const params = new URLSearchParams({
           page: '1',
@@ -175,12 +175,15 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     return el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
   }
 
-  // Κρατά την ενεργή καρτέλα ορατή στο οριζόντιο scroll (Wolt-style)
+  // Οριζόντιο scroll των καρτελών — ΟΧΙ scrollIntoView (scroll-άρει και το vertical container και «τρώει» το scrollTo στο section)
   useEffect(() => {
     const root = tabsRowRef.current
     if (!root) return
     const btn = root.querySelector(`[data-store-category="${CSS.escape(String(visibleCategory))}"]`)
-    btn?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+    if (!btn) return
+    const targetLeft = btn.offsetLeft - root.clientWidth / 2 + btn.offsetWidth / 2
+    const maxLeft = Math.max(0, root.scrollWidth - root.clientWidth)
+    root.scrollTo({ left: Math.max(0, Math.min(targetLeft, maxLeft)), behavior: 'smooth' })
   }, [visibleCategory])
 
   const computeToolbarDocked = (scrollTop) => {
@@ -208,12 +211,16 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
       ...categories,
     ]
     let currentVisible = orderedKeys[0]
-    const spyPad = stickyStackOffset(docked)
+    const spyPad = stickyStackOffset(docked) + 2
     for (const key of orderedKeys) {
       const ref = categoryRefs.current[key]
       if (!ref) continue
       const top = sectionTopInScrollContainer(ref)
       if (top <= scrollTop + spyPad) currentVisible = key
+    }
+    // When scrolled near the bottom, activate the last category
+    if (scrollTop + container.clientHeight >= container.scrollHeight - 20) {
+      currentVisible = orderedKeys[orderedKeys.length - 1]
     }
     if (currentVisible && currentVisible !== visibleCategory) {
       setVisibleCategory(currentVisible)
@@ -221,17 +228,58 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     }
   }
 
+  const findSectionElement = (category) => {
+    const container = productsContainerRef.current
+    if (!container) return null
+    const fromRef = categoryRefs.current[category]
+    if (fromRef && container.contains(fromRef)) return fromRef
+    try {
+      return container.querySelector(`[data-store-section="${CSS.escape(String(category))}"]`)
+    } catch {
+      return null
+    }
+  }
+
   const scrollToCategory = (category) => {
     const container = productsContainerRef.current
-    const element = categoryRefs.current[category]
-    if (!container || !element) return
-    const docked = computeToolbarDocked(container.scrollTop)
-    const targetScrollTop = Math.max(0, sectionTopInScrollContainer(element) - stickyStackOffset(docked))
+    if (!container) return
+    const element = findSectionElement(category)
+    if (!element) return
+
     setVisibleCategory(category)
     setActiveCategory(category)
     scrollTargetRef.current = category
-    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
-    setTimeout(() => { scrollTargetRef.current = null }, 600)
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const c = productsContainerRef.current
+        const el = findSectionElement(category)
+        if (!c || !el) {
+          scrollTargetRef.current = null
+          return
+        }
+        const rawTop = sectionTopInScrollContainer(el)
+        const undockedTarget = Math.max(0, rawTop - stickyStackOffset(false))
+        const willBeDocked = computeToolbarDocked(undockedTarget)
+        const targetScrollTop = Math.max(0, rawTop - stickyStackOffset(willBeDocked))
+        c.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+      })
+    })
+
+    let idleTimer = null
+    const onScrollIdle = () => {
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        scrollTargetRef.current = null
+        container.removeEventListener('scroll', onScrollIdle)
+      }, 80)
+    }
+    container.addEventListener('scroll', onScrollIdle)
+    setTimeout(() => {
+      scrollTargetRef.current = null
+      container.removeEventListener('scroll', onScrollIdle)
+      clearTimeout(idleTimer)
+    }, 1500)
   }
 
   return (
@@ -263,20 +311,18 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
           </div>
 
           <div
-            className={`left-0 right-0 z-40 flex items-center justify-between gap-3 px-3 transition-[background-color,box-shadow,border-color] duration-200 ${
-              toolbarDocked
+            className={`left-0 right-0 z-40 flex items-center justify-between gap-3 px-3 transition-[background-color,box-shadow,border-color] duration-200 ${toolbarDocked
                 ? 'fixed top-0 border-b border-slate-200 bg-white pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] shadow-sm [isolation:isolate]'
                 : 'absolute top-0 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'
-            }`}
+              }`}
           >
             <button
               type="button"
               onClick={onBack}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-1 transition-colors sm:h-10 sm:w-10 sm:text-lg ${
-                toolbarDocked
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-1 transition-colors sm:h-10 sm:w-10 sm:text-lg ${toolbarDocked
                   ? 'bg-slate-100 text-slate-800 ring-slate-200/80 active:bg-slate-200'
                   : 'bg-white/95 text-slate-800 ring-slate-200/80 active:bg-white'
-              }`}
+                }`}
               aria-label={t('store.goBack')}
             >
               ←
@@ -344,11 +390,10 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         {/* Sticky κατηγορίες — κάτω από fixed μπάρα όταν έχει κουμπώσει */}
         <div
           ref={tabsRowRef}
-          className={`sticky z-30 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-white/95 supports-[backdrop-filter]:backdrop-blur-sm ${
-            toolbarDocked
+          className={`sticky z-30 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-white/95 supports-[backdrop-filter]:backdrop-blur-sm ${toolbarDocked
               ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
               : 'top-0'
-          }`}
+            }`}
         >
           {offers.length > 0 && (
             <button
@@ -389,8 +434,11 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 ref={(el) => {
                   if (el) {
                     categoryRefs.current['Offers'] = el
+                  } else {
+                    delete categoryRefs.current['Offers']
                   }
                 }}
+                data-store-section="Offers"
                 id="section-Offers"
                 className="mb-3 pb-2 border-b-2 border-orange-400"
               >
@@ -465,10 +513,13 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
               {menu[category] && menu[category].length > 0 && (
                 <div
                   ref={(el) => {
-                    if (el && menu[category] && menu[category].length > 0) {
+                    if (el) {
                       categoryRefs.current[category] = el
+                    } else {
+                      delete categoryRefs.current[category]
                     }
                   }}
+                  data-store-section={category}
                   id={`section-${category}`}
                   className="mb-3 pb-2 border-b-2 border-orange-400"
                 >
