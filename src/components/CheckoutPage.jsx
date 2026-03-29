@@ -1101,15 +1101,16 @@ export default function CheckoutPage({
                         >
                           +
                         </button>
-                        <div className="ml-2 sm:ml-3 text-sm sm:text-base font-semibold text-slate-900 min-w-[60px] sm:min-w-[70px] text-right">
+                        <div className="ml-2 sm:ml-3 text-sm sm:text-base font-semibold tabular-nums text-slate-900 min-w-[60px] sm:min-w-[70px] text-right">
                           {formatPrice(it.total)}
                         </div>
                         <button
+                          type="button"
                           onClick={() => removeItem(it.key)}
-                          className="ml-1 sm:ml-2 text-base sm:text-lg text-red-500 active:opacity-70 transition-opacity"
+                          className="ml-1 shrink-0 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 sm:ml-2 sm:px-2.5"
                           aria-label={t('checkout.removeItem')}
                         >
-                          🗑
+                          {t('common.remove')}
                         </button>
                       </div>
                     </div>

@@ -45,7 +45,11 @@
     "empty": "Il carrello è vuoto",
     "checkout": "Vai al pagamento",
     "closeCart": "Chiudi carrello",
-    "without": "Senza"
+    "without": "Senza",
+    "itemSummary_one": "1 articolo",
+    "itemSummary_other": "{{count}} articoli",
+    "decreaseQty": "Diminuisci quantità",
+    "increaseQty": "Aumenta quantità"
   },
   "checkout": {
     "yourOrder": "Il tuo ordine",

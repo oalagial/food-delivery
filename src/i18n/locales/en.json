@@ -45,7 +45,11 @@
     "empty": "Your cart is empty",
     "checkout": "Checkout",
     "closeCart": "Close cart",
-    "without": "Without"
+    "without": "Without",
+    "itemSummary_one": "1 item",
+    "itemSummary_other": "{{count}} items",
+    "decreaseQty": "Decrease quantity",
+    "increaseQty": "Increase quantity"
   },
   "checkout": {
     "yourOrder": "Your order",

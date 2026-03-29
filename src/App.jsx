@@ -69,7 +69,11 @@ function AppContent() {
   const [restaurantLoading, setRestaurantLoading] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
 
-  const STORAGE_KEYS = { location: 'delivery_location_id', restaurant: 'delivery_restaurant_id' }
+  const STORAGE_KEYS = {
+    location: 'delivery_location_id',
+    restaurant: 'delivery_restaurant_id',
+    cartRestaurant: 'cart_restaurant_id',
+  }
   const hasRestoredSession = useRef(false)
 
   // Initialize auth and fetch delivery locations on mount
@@ -95,24 +99,42 @@ function AppContent() {
     initAndFetch()
   }, [showAlert, t])
 
-  // cart persisted in localStorage
+  // cart + restaurant id persisted (survives refresh; cartRestaurantId is required for session restore logic)
   const [cart, setCart] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('cart')) || []
+      const raw = localStorage.getItem('cart')
+      const parsed = raw ? JSON.parse(raw) : []
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       return []
+    }
+  })
+
+  const [cartRestaurantId, setCartRestaurantId] = useState(() => {
+    try {
+      const raw = localStorage.getItem('cart')
+      const parsed = raw ? JSON.parse(raw) : []
+      const arr = Array.isArray(parsed) ? parsed : []
+      if (arr.length === 0) return null
+      const rid = localStorage.getItem(STORAGE_KEYS.cartRestaurant)
+      return rid != null && rid !== '' ? rid : null
+    } catch {
+      return null
     }
   })
 
   useEffect(() => {
     try {
       localStorage.setItem('cart', JSON.stringify(cart))
+      if (cart.length === 0) {
+        localStorage.removeItem(STORAGE_KEYS.cartRestaurant)
+      } else if (cartRestaurantId != null) {
+        localStorage.setItem(STORAGE_KEYS.cartRestaurant, String(cartRestaurantId))
+      }
     } catch {
       /* ignore */
     }
-  }, [cart])
-
-  const [cartRestaurantId, setCartRestaurantId] = useState(null)
+  }, [cart, cartRestaurantId])
 
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
@@ -315,14 +337,16 @@ function AppContent() {
       if (point && rest && pointDeliversRestaurantId(point, rest.id)) {
         setSelectedPoint(point)
         setActiveCategory(null)
-        const keepCart =
-          cart.length > 0 &&
-          cartRestaurantId != null &&
-          String(cartRestaurantId) === String(rest.id) &&
-          pointDeliversRestaurantId(point, cartRestaurantId)
-        if (!keepCart) {
-          setCart([])
-          setCartRestaurantId(null)
+        if (cart.length > 0) {
+          const sameRestaurant =
+            cartRestaurantId == null || String(cartRestaurantId) === String(rest.id)
+          const keepCart = sameRestaurant && pointDeliversRestaurantId(point, rest.id)
+          if (!keepCart) {
+            setCart([])
+            setCartRestaurantId(null)
+          } else if (cartRestaurantId == null) {
+            setCartRestaurantId(rest.id)
+          }
         }
         try {
           localStorage.setItem(STORAGE_KEYS.location, String(point.id))
@@ -982,24 +1006,24 @@ function AppContent() {
           )}
 
           <button
+            type="button"
             onClick={() => setCartOpen(true)}
             aria-label={t('app.openCart')}
-            className={`pb-1 fixed right-4 bottom-4 lg:right-8 lg:bottom-8 bg-orange-500 text-white w-20 h-20 rounded-full shadow-lg flex items-center justify-center z-40 transform transition-transform duration-200 ${
-              cartBump ? 'scale-110 ring-4 ring-orange-200/50' : ''
+            className={`group fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:bg-slate-800 hover:shadow-xl lg:bottom-8 lg:right-8 lg:h-[3.75rem] lg:w-[3.75rem] ${
+              cartBump ? 'ring-2 ring-slate-400/40 ring-offset-2 ring-offset-white scale-[1.03]' : ''
             }`}
           >
-            <span className="text-4xl">🛒</span>
+            <svg className="h-6 w-6 lg:h-7 lg:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+            </svg>
             <span className="sr-only">{t('app.cart')}</span>
-            {cart.length > 0 && (
-              <>
-                <span className="absolute -top-4 -right-1 bg-white text-orange-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-orange-500 px-2.5 py-1.5 whitespace-nowrap">
-                  € {cartTotal().toFixed(2)}
-                </span>
-                <span className="absolute -bottom-1 -right-1 bg-white text-orange-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 border-orange-500">
-                  {cartCount()}
-                </span>
-              </>
-            )}
+            {cart.length > 0 ? (
+              <span className="absolute -right-1 -top-1 flex max-w-[5.5rem] items-center gap-1 rounded-lg bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-900 shadow-md ring-1 ring-slate-200/80">
+                <span className="truncate">€{cartTotal().toFixed(2)}</span>
+                <span className="text-slate-400">·</span>
+                <span>{cartCount()}</span>
+              </span>
+            ) : null}
           </button>
 
           <CartPanel

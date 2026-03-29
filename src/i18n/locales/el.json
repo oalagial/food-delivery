@@ -44,7 +44,12 @@
         "title": "Καλάθι",
         "empty": "Το καλάθι σας είναι άδειο",
         "checkout": "Ολοκλήρωση αγοράς",
-        "closeCart": "Κλείσιμο καλαθιού"
+        "closeCart": "Κλείσιμο καλαθιού",
+        "without": "Χωρίς",
+        "itemSummary_one": "1 προϊόν",
+        "itemSummary_other": "{{count}} προϊόντα",
+        "decreaseQty": "Μείωση ποσότητας",
+        "increaseQty": "Αύξηση ποσότητας"
     },
     "checkout": {
         "yourOrder": "Η παραγγελία σας",
