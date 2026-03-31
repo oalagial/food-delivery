@@ -134,6 +134,10 @@ export default function DeliveryPointCard({ point, onSelect }) {
     return t('deliveryPoint.restaurantClosed')
   })()
 
+  const pointImageSrc = point?.image
+    ? `${import.meta.env.VITE_API_BASE}/images/${point.image}`
+    : null
+
   useEffect(() => {
     return () => {
       try {
@@ -170,11 +174,13 @@ export default function DeliveryPointCard({ point, onSelect }) {
       }`}
     >
       <div className="relative w-full aspect-[4/3] bg-slate-100">
-        <img
-          className="absolute inset-0 w-full h-full object-cover"
-          src={`${import.meta.env.VITE_API_BASE}/images/${point.image}`}
-          alt={point.name}
-        />
+        {pointImageSrc ? (
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src={pointImageSrc}
+            alt={point.name}
+          />
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 bg-orange-200 p-3">

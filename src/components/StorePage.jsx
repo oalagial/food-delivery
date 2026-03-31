@@ -34,7 +34,6 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const [toolbarDocked, setToolbarDocked] = useState(false)
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
   const isLocationInactive = deliveryLocation?.isActive === false
-  const cannotAddToCart = isLocationInactive || isRestaurantClosed
   const removeProductIngredients = point?.config?.removeProductIngredients === true
 
   const heroBackgroundUrl = useMemo(() => {
@@ -162,6 +161,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
 
   const todayHours = scheduleState?.activeWindow || scheduleState?.nextTodayWindow || null
   const isRestaurantClosed = scheduleState ? !scheduleState.activeWindow : point?.isOpen === false
+  const cannotAddToCart = isLocationInactive || isRestaurantClosed
 
   const openLabel = (() => {
     if (isRestaurantClosed) {
