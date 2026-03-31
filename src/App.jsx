@@ -1075,7 +1075,7 @@ function AppContent() {
           </div>
           <div className="flex-1 p-4 sm:p-6">
             {restaurants.length > 0 ? (
-              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
+              <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
                 {restaurants.map((r) => (
                   <DeliveryPointCard
                     key={r.id}
@@ -1135,7 +1135,7 @@ function AppContent() {
                 <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
               </div>
             ) : points.length > 0 ? (
-              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center">
+              <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center">
                 {points.map((p) => (
                   <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
                 ))}

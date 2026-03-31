@@ -34,7 +34,6 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const [toolbarDocked, setToolbarDocked] = useState(false)
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
   const isLocationInactive = deliveryLocation?.isActive === false
-  const isRestaurantClosed = point?.isOpen === false
   const cannotAddToCart = isLocationInactive || isRestaurantClosed
   const removeProductIngredients = point?.config?.removeProductIngredients === true
 
@@ -119,30 +118,50 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
   const freeDeliveryFromDisplay = freeDeliveryFrom.toFixed(2)
   const showFreeDeliveryHint = rawDeliveryFeeNum > 0 && freeDeliveryFrom > 0
 
-  // Derive today's opening / closing from deliveredBy.openingHours (point.openingHours)
-  const todayHours = (() => {
-    const hours = point?.openingHours
-    if (!Array.isArray(hours) || hours.length === 0) return null
+  const scheduleState = (() => {
+    const hours = Array.isArray(point?.openingHours) ? point.openingHours : []
+    if (hours.length === 0) return null
 
     const now = new Date()
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
       weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
       timeZone: point?.timezone || 'Europe/Athens',
     })
-    const todayName = formatter.format(now) // e.g. "Monday"
+    const parts = Object.fromEntries(formatter.formatToParts(now).map((part) => [part.type, part.value]))
+    const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute)
+    const todayName = parts.weekday
+    const parseTimeToMinutes = (value) => {
+      if (!value) return null
+      const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+      if (!match) return null
+      return Number(match[1]) * 60 + Number(match[2])
+    }
 
-    const matchToday = hours.find((h) => {
-      if (!h?.day) return false
-      return String(h.day).toLowerCase() === todayName.toLowerCase()
-    })
+    const todayWindows = hours
+      .filter((h) => h?.day && String(h.day).toLowerCase() === String(todayName).toLowerCase())
+      .map((h) => ({
+        opensAt: h.open ?? null,
+        closesAt: h.close ?? null,
+        openMinutes: parseTimeToMinutes(h.open),
+        closeMinutes: parseTimeToMinutes(h.close),
+      }))
+      .filter((h) => h.openMinutes != null && h.closeMinutes != null)
+      .sort((a, b) => a.openMinutes - b.openMinutes)
 
-    if (!matchToday) return null
+    const activeWindow = todayWindows.find((h) => currentMinutes >= h.openMinutes && currentMinutes < h.closeMinutes) || null
+    const nextTodayWindow = todayWindows.find((h) => currentMinutes < h.openMinutes) || null
 
     return {
-      opensAt: matchToday.open,
-      closesAt: matchToday.close,
+      activeWindow,
+      nextTodayWindow,
     }
   })()
+
+  const todayHours = scheduleState?.activeWindow || scheduleState?.nextTodayWindow || null
+  const isRestaurantClosed = scheduleState ? !scheduleState.activeWindow : point?.isOpen === false
 
   const openLabel = (() => {
     if (isRestaurantClosed) {
@@ -312,16 +331,16 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
 
           <div
             className={`left-0 right-0 z-40 flex items-center justify-between gap-3 px-3 transition-[background-color,box-shadow,border-color] duration-200 ${toolbarDocked
-                ? 'fixed top-0 border-b border-slate-200 bg-white pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] shadow-sm [isolation:isolate]'
-                : 'absolute top-0 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'
+              ? 'fixed top-0 border-b border-slate-200 bg-white pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] shadow-sm [isolation:isolate]'
+              : 'absolute top-0 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'
               }`}
           >
             <button
               type="button"
               onClick={onBack}
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-1 transition-colors sm:h-10 sm:w-10 sm:text-lg ${toolbarDocked
-                  ? 'bg-slate-100 text-slate-800 ring-slate-200/80 active:bg-slate-200'
-                  : 'bg-white/95 text-slate-800 ring-slate-200/80 active:bg-white'
+                ? 'bg-slate-100 text-slate-800 ring-slate-200/80 active:bg-slate-200'
+                : 'bg-white/95 text-slate-800 ring-slate-200/80 active:bg-white'
                 }`}
               aria-label={t('store.goBack')}
             >
@@ -352,7 +371,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 <span className="font-medium text-slate-600">{deliveryLocation.name}</span>
               </p>
             ) : null}
-            <div className="mt-2 w-full max-w-sm space-y-1 text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+            <div className="mt-2 w-full max-w-sm space-y-1 text-center text-xs leading-relaxed text-slate-500 sm:text-sm">
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 {ratingText != null && (
                   <>
@@ -365,21 +384,21 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                     </span>
                   </>
                 )}
-                <span>{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
+                <span className="font-semibold text-slate-700">{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
               </p>
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 <span className="inline-flex items-center gap-1">
                   <span aria-hidden className="opacity-90">
                     🚴
                   </span>
-                  <span>{t('store.deliveryFee', { fee: deliveryFee })}</span>
+                  <span className="font-semibold text-slate-700">{t('store.deliveryFee', { fee: deliveryFee })}</span>
                 </span>
                 {showFreeDeliveryHint ? (
                   <>
                     <span className="text-slate-300" aria-hidden>
                       ·
                     </span>
-                    <span>{t('store.freeDeliveryOver', { amount: freeDeliveryFromDisplay })}</span>
+                    <span className="font-semibold text-slate-700">{t('store.freeDeliveryOver', { amount: freeDeliveryFromDisplay })}</span>
                   </>
                 ) : null}
               </p>
@@ -391,8 +410,8 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         <div
           ref={tabsRowRef}
           className={`sticky z-30 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-white/95 supports-[backdrop-filter]:backdrop-blur-sm ${toolbarDocked
-              ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
-              : 'top-0'
+            ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
+            : 'top-0'
             }`}
         >
           {offers.length > 0 && (

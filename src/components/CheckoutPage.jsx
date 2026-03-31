@@ -95,6 +95,7 @@ export default function CheckoutPage({
   const [customSchedule, setCustomSchedule] = useState(false)
   const [schedulePickerOpen, setSchedulePickerOpen] = useState(false)
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
+  const [timeChangePrompt, setTimeChangePrompt] = useState(null) // { slot, useCustomSchedule, retryOnAccept }
   const [paymentMethod, setPaymentMethod] = useState(null) // null | 'CASH' | 'CARD' | 'ONLINE'
   const [touched, setTouched] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false, paymentMethod: false })
   const [dirty, setDirty] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false })
@@ -574,6 +575,20 @@ export default function CheckoutPage({
       const data = error.response?.data
       if (data?.message && Array.isArray(data?.products) && data.products.length > 0) {
         setInsufficientStock({ message: data.message, products: data.products })
+      } else if (
+        typeof data?.message === 'string' &&
+        /selected delivery slot is full/i.test(data.message) &&
+        await handleSlotFullFallback()
+      ) {
+        // fetched fresh slot and opened modal
+      } else if (
+        promptForUpdatedTime({
+          slot: extractSuggestedTimeslot(data),
+          useCustomSchedule: customSchedule,
+          retryOnAccept: true,
+        })
+      ) {
+        // handled by confirmation modal
       } else {
         showAlert('error', t('checkout.orderFailed'), data?.message || error.message || t('checkout.somethingWrong'), 10000)
       }
@@ -596,6 +611,115 @@ export default function CheckoutPage({
     }
     setInsufficientStock(null)
     setIsSubmitting(false)
+  }
+
+  const extractSuggestedTimeslot = (payload) => {
+    const slot = payload?.timeslot || payload?.newTimeslot || payload?.availableTimeslot || payload?.suggestedTimeslot
+    if (slot?.start && slot?.end) return slot
+
+    if (payload?.preferredDeliveryTime) {
+      const end = payload.preferredDeliveryTime
+      return { start: end, end, timezone: payload?.timezone || 'Europe/Athens' }
+    }
+
+    return null
+  }
+
+  const promptForUpdatedTime = ({
+    slot,
+    useCustomSchedule = false,
+    retryOnAccept = false,
+    timeslotsList = null,
+    timezone = null,
+    localDate = null,
+  }) => {
+    if (!slot?.end) return false
+
+    if (useCustomSchedule && Array.isArray(timeslotsList)) {
+      setTimeslotsPayload({
+        timezone: timezone || slot.timezone || timeslotsPayload?.timezone || 'Europe/Athens',
+        localDate: localDate || timeslotsPayload?.localDate || formatYmdLocal(new Date()),
+        timeslots: timeslotsList,
+      })
+    } else if (!useCustomSchedule && slot?.start && slot?.end) {
+      setQuickSlot({
+        start: slot.start,
+        end: slot.end,
+        timezone: slot.timezone || quickSlot?.timezone || 'Europe/Athens',
+      })
+    }
+
+    setTimeChangePrompt({
+      slot,
+      useCustomSchedule,
+      retryOnAccept,
+    })
+    setIsSubmitting(false)
+    return true
+  }
+
+  const handleSlotFullFallback = async () => {
+    if (!restaurant?.id || !deliveryLocation?.id) return false
+
+    if (customSchedule) {
+      const fresh = await restaurantService.getDeliveryTimeslots({
+        restaurantId: restaurant.id,
+        deliveryLocationId: deliveryLocation.id,
+        date: formatYmdLocal(new Date()),
+      })
+      if (fresh?.error) return false
+
+      const list = Array.isArray(fresh?.timeslots) ? fresh.timeslots : []
+      const nextAvailable = list.find((s) => s.available)
+      return promptForUpdatedTime({
+        slot: nextAvailable,
+        useCustomSchedule: true,
+        retryOnAccept: true,
+        timeslotsList: list,
+        timezone: fresh?.timezone,
+        localDate: fresh?.localDate,
+      })
+    }
+
+    const data = await restaurantService.getDeliveryTimeEstimate({
+      restaurantId: restaurant.id,
+      deliveryLocationId: deliveryLocation.id,
+    })
+    if (data?.error) return false
+
+    return promptForUpdatedTime({
+      slot: data?.timeslot,
+      useCustomSchedule: false,
+      retryOnAccept: true,
+    })
+  }
+
+  const handleAcceptTimeChange = async () => {
+    if (!timeChangePrompt?.slot?.end) {
+      setTimeChangePrompt(null)
+      setIsSubmitting(false)
+      return
+    }
+
+    const { slot, useCustomSchedule, retryOnAccept } = timeChangePrompt
+    setSelectedSlotEnd(slot.end)
+    setCustomSchedule(Boolean(useCustomSchedule))
+    if (!useCustomSchedule && slot.start && slot.end) {
+      setQuickSlot({
+        start: slot.start,
+        end: slot.end,
+        timezone: slot.timezone || quickSlot?.timezone || 'Europe/Athens',
+      })
+    }
+    setTimeChangePrompt(null)
+
+    if (!retryOnAccept) {
+      setIsSubmitting(false)
+      return
+    }
+
+    setIsSubmitting(true)
+    await submitOrder()
   }
 
   const handleContinue = async () => {
@@ -679,14 +803,24 @@ export default function CheckoutPage({
         const list = Array.isArray(fresh?.timeslots) ? fresh.timeslots : []
         const slot = list.find((s) => s.end === selectedSlotEnd)
         if (!slot?.available) {
-          showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
-          setTimeslotsPayload({
-            timezone: fresh?.timezone || timeslotsPayload?.timezone || 'Europe/Athens',
-            localDate: fresh?.localDate || formatYmdLocal(new Date()),
-            timeslots: list,
-          })
-          setSelectedSlotEnd(null)
-          setIsSubmitting(false)
+          const nextAvailable = list.find((s) => s.available)
+          if (!promptForUpdatedTime({
+            slot: nextAvailable,
+            useCustomSchedule: true,
+            retryOnAccept: paymentMethod === 'ONLINE',
+            timeslotsList: list,
+            timezone: fresh?.timezone,
+            localDate: fresh?.localDate,
+          })) {
+            showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
+            setTimeslotsPayload({
+              timezone: fresh?.timezone || timeslotsPayload?.timezone || 'Europe/Athens',
+              localDate: fresh?.localDate || formatYmdLocal(new Date()),
+              timeslots: list,
+            })
+            setSelectedSlotEnd(null)
+            setIsSubmitting(false)
+          }
           return
         }
       } else {
@@ -701,17 +835,14 @@ export default function CheckoutPage({
         }
         const newEnd = data?.timeslot?.end
         if (!newEnd || newEnd !== selectedSlotEnd) {
-          showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
-          if (newEnd && data?.timeslot) {
-            setQuickSlot({
-              start: data.timeslot.start,
-              end: data.timeslot.end,
-              timezone: data.timeslot.timezone || 'Europe/Athens',
-            })
-            setCustomSchedule(false)
-            setSelectedSlotEnd(newEnd)
+          if (!promptForUpdatedTime({
+            slot: data?.timeslot,
+            useCustomSchedule: false,
+            retryOnAccept: paymentMethod === 'ONLINE',
+          })) {
+            showAlert('error', t('checkout.deliveryTime'), t('checkout.slotNoLongerAvailable'), 5000)
+            setIsSubmitting(false)
           }
-          setIsSubmitting(false)
           return
         }
       }
@@ -1391,6 +1522,41 @@ export default function CheckoutPage({
                   {t('checkout.useSoonestDelivery')}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {timeChangePrompt?.slot && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-bold text-slate-900">{t('checkout.timeChangedTitle')}</h3>
+            <p className="mb-5 text-sm text-slate-600">
+              {t('checkout.timeChangedMessage', {
+                time: formatTimeslotDisplay({
+                  start: new Date(timeChangePrompt.slot.start || timeChangePrompt.slot.end),
+                  end: timeChangePrompt.slot.end ? new Date(timeChangePrompt.slot.end) : null,
+                }),
+              })}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setTimeChangePrompt(null)
+                  setIsSubmitting(false)
+                }}
+                className="flex-1 rounded-lg border border-slate-300 py-2.5 font-semibold text-slate-700 active:bg-slate-100"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleAcceptTimeChange}
+                className="flex-1 rounded-lg bg-orange-500 py-2.5 font-semibold text-white active:bg-orange-600"
+              >
+                {t('common.accept')}
+              </button>
             </div>
           </div>
         </div>
