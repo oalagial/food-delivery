@@ -11,7 +11,6 @@ export default function DeliveryPointCard({ point, onSelect }) {
   const restaurantTimeZone = singleRestaurant?.timezone || 'Europe/Athens'
   const uiLocale = (() => {
     const lang = String(i18n.resolvedLanguage || i18n.language || 'en').toLowerCase()
-    if (lang.startsWith('el')) return 'el-GR'
     if (lang.startsWith('it')) return 'it-IT'
     return 'en-US'
   })()

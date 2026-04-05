@@ -111,7 +111,6 @@
     "loadingCheckoutLocations": "Loading locations…",
     "locationsLoadError": "Could not load locations. Please try again.",
     "noLocationsForRestaurant": "No delivery locations are available for this restaurant.",
-    "riderCall": "You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location.",
     "processing": "Processing...",
     "confirmOrder": "Confirm Order",
     "timeChangedTitle": "Estimated delivery time has changed",
@@ -225,7 +224,8 @@
     "subtotal": "Subtotal",
     "discount": "Discount",
     "payment": "Payment",
-    "orderAgain": "Order again"
+    "orderAgain": "Order again",
+    "riderCall": "You will receive a call from the rider immediately before delivery, to meet us at the entrance of the location."
   },
   "payment": {
     "successTitle": "Payment completed",

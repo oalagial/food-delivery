@@ -111,7 +111,6 @@
     "loadingCheckoutLocations": "Caricamento luoghi…",
     "locationsLoadError": "Impossibile caricare i luoghi. Riprova.",
     "noLocationsForRestaurant": "Nessun punto di consegna disponibile per questo ristorante.",
-    "riderCall": "Riceverai una chiamata dal rider poco prima della consegna, per incontrarci all'ingresso.",
     "processing": "Elaborazione...",
     "confirmOrder": "Conferma ordine",
     "timeChangedTitle": "L'orario di consegna stimato è cambiato",
@@ -225,7 +224,8 @@
     "subtotal": "Subtotale",
     "discount": "Sconto",
     "payment": "Pagamento",
-    "orderAgain": "Ordina di nuovo"
+    "orderAgain": "Ordina di nuovo",
+    "riderCall": "Riceverai una chiamata dal rider poco prima della consegna, per incontrarci all'ingresso."
   },
   "payment": {
     "successTitle": "Pagamento completato",

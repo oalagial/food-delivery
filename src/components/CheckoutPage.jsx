@@ -1317,17 +1317,13 @@ export default function CheckoutPage({
                   </button>
                 ) : null}
               </div>
-
-              <p className="mt-3 text-[10px] sm:text-xs text-slate-500 leading-relaxed">
-                {t('checkout.riderCall')}
-              </p>
             </div>
           </div>
         </div>
 
         {/* Sticky Footer — blockers explain disabled Confirm */}
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
-          {orderConfirmBlockers.length > 0 && (
+          {/* {orderConfirmBlockers.length > 0 && (
             <div
               className="mb-3 overflow-hidden rounded-2xl border border-orange-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/60 px-4 py-3.5 shadow-md shadow-orange-900/[0.06] ring-1 ring-orange-100/80 sm:px-5 sm:py-4"
               role="status"
@@ -1362,7 +1358,7 @@ export default function CheckoutPage({
                 </div>
               </div>
             </div>
-          )}
+          )} */}
           <button
             disabled={!orderConfirmEnabled}
             onClick={handleContinue}
