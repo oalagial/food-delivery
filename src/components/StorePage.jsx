@@ -583,16 +583,26 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                           </h3>
                           {labelIcons.length > 0 && (
                             <div className="flex items-center gap-1 mb-1.5 flex-wrap">
-                              {labelIcons.map((icon) => (
-                                <img
-                                  key={icon.key}
-                                  src={icon.src}
-                                  alt={icon.alt}
-                                  title={icon.alt}
-                                  className="w-6 h-6"
-                                  loading="lazy"
-                                />
-                              ))}
+                              {labelIcons.map((icon) =>
+                                icon.src ? (
+                                  <img
+                                    key={icon.key}
+                                    src={icon.src}
+                                    alt={icon.alt}
+                                    title={icon.alt}
+                                    className="w-6 h-6"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span
+                                    key={icon.key}
+                                    title={icon.alt}
+                                    className="inline-flex max-w-[9rem] items-center rounded border border-orange-200 bg-orange-50 px-1 py-0.5 text-[10px] font-medium leading-tight text-orange-900"
+                                  >
+                                    {icon.alt}
+                                  </span>
+                                )
+                              )}
                             </div>
                           )}
                           {isInactive && (
