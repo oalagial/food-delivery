@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parsePrice, formatPrice } from '../utils/price'
 import { getProductLabelIcons } from '../utils/productLabels'
+import { getAllergyDisplayList } from '../utils/productAllergies'
 
-export default function ProductDetail({ product, isLocationInactive = false, onClose, onAdd }) {
+export default function ProductDetail({ product, removeProductIngredients = false, isLocationInactive = false, onClose, onAdd }) {
   const { t } = useTranslation()
   const labelIcons = getProductLabelIcons(product.labels || product._original?.labels)
+  const allergyLines = getAllergyDisplayList(product.allergies || product._original?.allergies)
   const [qty, setQty] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
@@ -202,16 +204,26 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
 
             {labelIcons.length > 0 && (
               <div className="mb-4 flex items-center gap-2 flex-wrap" aria-label="Product labels">
-                {labelIcons.map((icon) => (
-                  <img
-                    key={icon.key}
-                    src={icon.src}
-                    alt={icon.alt}
-                    title={icon.alt}
-                    className="w-8 h-8"
-                    loading="lazy"
-                  />
-                ))}
+                {labelIcons.map((icon) =>
+                  icon.src ? (
+                    <img
+                      key={icon.key}
+                      src={icon.src}
+                      alt={icon.alt}
+                      title={icon.alt}
+                      className="w-8 h-8"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span
+                      key={icon.key}
+                      title={icon.alt}
+                      className="inline-flex max-w-[10rem] items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1 text-xs font-medium text-orange-900"
+                    >
+                      {icon.alt}
+                    </span>
+                  )
+                )}
               </div>
             )}
 
@@ -224,7 +236,7 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               </p>
             )}
 
-            {/* Ingredients — optional removal */}
+            {/* Ingredients — removal only when restaurant config allows */}
             {(() => {
               const raw = product.ingredients || product._original?.ingredients
               if (!raw) return null
@@ -237,59 +249,56 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
               return (
                 <div className="mb-4">
                   <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.ingredients')}</div>
-                  <p className="text-xs text-slate-500 mb-2">{t('product.removeIngredientsHint')}</p>
-                  <ul className="space-y-1.5">
-                    {ingredientsList.map((ingredient, index) => {
-                      const isRemoved = removedIngredientNames.includes(ingredient)
-                      const isIncluded = !isRemoved
-                      return (
-                        <li key={index} className="flex items-center gap-2">
-                          <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                            <input
-                              type="checkbox"
-                              checked={isIncluded}
-                              onChange={() => {
-                                setRemovedIngredientNames((prev) =>
-                                  isRemoved
-                                    ? prev.filter((n) => n !== ingredient)
-                                    : [...prev, ingredient]
-                                )
-                              }}
-                              className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
-                            />
-                            <span className={`text-sm ${isRemoved ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                              {ingredient}
-                            </span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  {removeProductIngredients ? (
+                    <>
+                      <p className="text-xs text-slate-500 mb-2">{t('product.removeIngredientsHint')}</p>
+                      <ul className="space-y-1.5">
+                        {ingredientsList.map((ingredient, index) => {
+                          const isRemoved = removedIngredientNames.includes(ingredient)
+                          const isIncluded = !isRemoved
+                          return (
+                            <li key={index} className="flex items-center gap-2">
+                              <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isIncluded}
+                                  onChange={() => {
+                                    setRemovedIngredientNames((prev) =>
+                                      isRemoved
+                                        ? prev.filter((n) => n !== ingredient)
+                                        : [...prev, ingredient]
+                                    )
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                                />
+                                <span className={`text-sm ${isRemoved ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                  {ingredient}
+                                </span>
+                              </label>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </>
+                  ) : (
+                    <ul className="list-disc pl-5 text-sm text-slate-700 space-y-0.5">
+                      {ingredientsList.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )
             })()}
 
             {/* Allergens */}
-            {(product.allergies || product._original?.allergies) && (
+            {allergyLines.length > 0 && (
               <div className="mb-4">
                 <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.allergens')}</div>
                 <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
-                  {(() => {
-                    const allergies = product.allergies || product._original?.allergies
-                    if (Array.isArray(allergies)) {
-                      return allergies.map((allergy, index) => (
-                        <li key={index}>{allergy}</li>
-                      ))
-                    } else if (typeof allergies === 'string') {
-                      // If it's a comma-separated string, split it
-                      const allergyList = allergies.split(',').map(a => a.trim()).filter(a => a)
-                      return allergyList.map((allergy, index) => (
-                        <li key={index}>{allergy}</li>
-                      ))
-                    } else {
-                      return <li>{allergies}</li>
-                    }
-                  })()}
+                  {allergyLines.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -430,9 +439,11 @@ export default function ProductDetail({ product, isLocationInactive = false, onC
                       ? (product.ingredients || product._original?.ingredients).map((i) => String(i).trim()).filter(Boolean)
                       : String(product.ingredients || product._original?.ingredients).split(',').map((i) => i.trim()).filter(Boolean))
                   : []
-                const validRemoved = (removedIngredientNames || []).filter((name) =>
-                  productIngredients.some((p) => p.toLowerCase() === name.toLowerCase())
-                )
+                const validRemoved = removeProductIngredients
+                  ? (removedIngredientNames || []).filter((name) =>
+                      productIngredients.some((p) => p.toLowerCase() === name.toLowerCase())
+                    )
+                  : []
                 const item = {
                   id: product.id,
                   name: product.name,

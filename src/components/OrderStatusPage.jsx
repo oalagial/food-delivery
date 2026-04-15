@@ -174,6 +174,12 @@ export default function OrderStatusPage({ token }) {
           </div>
         </section>
 
+        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+          <div className="rounded-2xl border border-orange-100 bg-gradient-to-br from-amber-50/90 to-orange-50/40 px-4 py-3.5 text-sm text-slate-700 leading-relaxed shadow-sm">
+            {t('orderStatus.riderCall')}
+          </div>
+        )}
+
         {/* Delivery & customer */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 sm:p-5 space-y-4">

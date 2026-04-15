@@ -13,6 +13,38 @@ export const restaurantService = {
     return response.data?.data || []
   },
 
+  /** Checkout: delivery locations for a restaurant ({ locationId, name }[]) */
+  getCheckoutLocations: async (restaurantId) => {
+    const response = await apiClient.get(`/public/restaurants/${restaurantId}/locations`)
+    const raw = response.data
+    if (Array.isArray(raw)) return raw
+    if (Array.isArray(raw?.data)) return raw.data
+    return []
+  },
+
+  /**
+   * Checkout: bookable delivery windows for a day (restaurant TZ).
+   * @param {{ restaurantId: number|string, deliveryLocationId: number|string, date?: string }} params date = YYYY-MM-DD (optional → server "today")
+   */
+  getDeliveryTimeslots: async ({ restaurantId, deliveryLocationId, date }) => {
+    const response = await apiClient.get('/public/delivery-timeslots', {
+      params: {
+        restaurantId,
+        deliveryLocationId,
+        ...(date ? { date } : {}),
+      },
+    })
+    return response.data
+  },
+
+  /** Next bookable window (fast path) — same as legacy checkout default */
+  getDeliveryTimeEstimate: async ({ restaurantId, deliveryLocationId }) => {
+    const response = await apiClient.get('/public/delivery-time', {
+      params: { restaurantId, deliveryLocationId },
+    })
+    return response.data
+  },
+
   // Get single restaurant
   getById: async (id) => {
     const response = await apiClient.get(`/restaurants/${id}`)

@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 /* small app-level helpers */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
@@ -17,9 +20,32 @@ code {
 
 /* Hide scrollbar for mobile categories */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Schedule modal: timeslot select stays within column on narrow screens */
+.checkout-schedule-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.checkout-schedule-field > select {
+  display: block;
+  margin: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
 }
