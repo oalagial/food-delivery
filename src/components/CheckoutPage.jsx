@@ -1138,29 +1138,25 @@ export default function CheckoutPage({
               {availablePaymentMethods.length === 0 ? (
                 <p className="text-sm text-red-600">{t('checkout.noPaymentMethods')}</p>
               ) : (
-                <div className="flex flex-wrap gap-2 sm:gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3" role="radiogroup" aria-label={t('checkout.paymentMethod')}>
                   {availablePaymentMethods.map((method) => (
-                    <label
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={paymentMethod === method}
                       key={method}
                       className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === method
                           ? 'border-orange-500 bg-orange-50 text-orange-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                         }`}
+                      onClick={() => {
+                        setPaymentMethod(method)
+                        setTouched((prev) => ({ ...prev, paymentMethod: true }))
+                      }}
                     >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={method}
-                        checked={paymentMethod === method}
-                        onChange={() => {
-                          setPaymentMethod(method)
-                          setTouched((prev) => ({ ...prev, paymentMethod: true }))
-                        }}
-                        className="sr-only"
-                      />
                       <span className="text-lg">{PAYMENT_METHOD_EMOJI[method] || '💰'}</span>
                       <span className="font-medium text-xs sm:text-base">{t(PAYMENT_METHOD_LABEL_KEY[method] || 'checkout.paymentMethod')}</span>
-                    </label>
+                    </button>
                   ))}
                 </div>
               )}
