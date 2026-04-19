@@ -45,6 +45,17 @@ export const restaurantService = {
     return response.data
   },
 
+  /**
+   * Verify if a previously selected slot end instant is still available.
+   * @param {{ restaurantId: number|string, deliveryLocationId: number|string, preferredDeliveryTime: string }} params
+   */
+  getDeliverySlotAvailability: async ({ restaurantId, deliveryLocationId, preferredDeliveryTime }) => {
+    const response = await apiClient.get('/public/delivery-slot-availability', {
+      params: { restaurantId, deliveryLocationId, preferredDeliveryTime },
+    })
+    return response.data
+  },
+
   // Get single restaurant
   getById: async (id) => {
     const response = await apiClient.get(`/restaurants/${id}`)

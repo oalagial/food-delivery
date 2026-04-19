@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import PhoneInputModule from 'react-phone-input-2'
 import 'react-phone-input-2/lib/style.css'
@@ -20,12 +20,25 @@ function getStoredCheckoutForm() {
         phone: typeof o.phone === 'string' ? o.phone : '',
         email: typeof o.email === 'string' ? o.email : '',
         notes: typeof o.notes === 'string' ? o.notes : '',
+        customSchedule: Boolean(o.customSchedule),
+        selectedSlotEnd: typeof o.selectedSlotEnd === 'string' ? o.selectedSlotEnd : null,
+        scheduleRestaurantId: o.scheduleRestaurantId ?? null,
+        scheduleDeliveryLocationId: o.scheduleDeliveryLocationId ?? null,
       }
     }
   } catch {
     /* ignore */
   }
-  return { name: '', phone: '', email: '', notes: '' }
+  return {
+    name: '',
+    phone: '',
+    email: '',
+    notes: '',
+    customSchedule: false,
+    selectedSlotEnd: null,
+    scheduleRestaurantId: null,
+    scheduleDeliveryLocationId: null,
+  }
 }
 
 function formatYmdLocal(d) {
@@ -73,26 +86,28 @@ export default function CheckoutPage({
   onChangeDeliveryLocation,
 }) {
   const { t } = useTranslation()
+  const storedCheckoutForm = useMemo(() => getStoredCheckoutForm(), [])
+  const restoreSavedSchedule = Boolean(storedCheckoutForm.customSchedule && storedCheckoutForm.selectedSlotEnd)
   const [promo, setPromo] = useState('')
   const [coupon, setCoupon] = useState(null) // { code, type, value, restaurantId } when valid
   const [couponError, setCouponError] = useState(null)
   const [couponLoading, setCouponLoading] = useState(false)
   const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [customerName, setCustomerName] = useState(() => getStoredCheckoutForm().name)
-  const [customerPhone, setCustomerPhone] = useState(() => getStoredCheckoutForm().phone)
+  const [customerName, setCustomerName] = useState(storedCheckoutForm.name)
+  const [customerPhone, setCustomerPhone] = useState(storedCheckoutForm.phone)
   const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState('')
-  const [customerEmail, setCustomerEmail] = useState(() => getStoredCheckoutForm().email)
-  const [notes, setNotes] = useState(() => getStoredCheckoutForm().notes)
+  const [customerEmail, setCustomerEmail] = useState(storedCheckoutForm.email)
+  const [notes, setNotes] = useState(storedCheckoutForm.notes)
   const [timeslotsPayload, setTimeslotsPayload] = useState(null)
   const [timeslotsLoading, setTimeslotsLoading] = useState(false)
   const [timeslotsError, setTimeslotsError] = useState(null)
-  const [selectedSlotEnd, setSelectedSlotEnd] = useState(null)
+  const [selectedSlotEnd, setSelectedSlotEnd] = useState(restoreSavedSchedule ? storedCheckoutForm.selectedSlotEnd : null)
   /** Next slot from GET /public/delivery-time (default choice) */
   const [quickSlot, setQuickSlot] = useState(null)
   const [quickLoading, setQuickLoading] = useState(false)
   const [quickError, setQuickError] = useState(null)
-  const [customSchedule, setCustomSchedule] = useState(false)
+  const [customSchedule, setCustomSchedule] = useState(restoreSavedSchedule)
   const [schedulePickerOpen, setSchedulePickerOpen] = useState(false)
   const [insufficientStock, setInsufficientStock] = useState(null) // { message, products: [{ productId, productName, available, requested }] }
   const [timeChangePrompt, setTimeChangePrompt] = useState(null) // { slot, useCustomSchedule, retryOnAccept }
@@ -103,6 +118,7 @@ export default function CheckoutPage({
   const [checkoutLocations, setCheckoutLocations] = useState([])
   const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
   const [checkoutLocationsError, setCheckoutLocationsError] = useState(null)
+  const lastVerifiedSlotKeyRef = useRef(null)
   const { showAlert } = useAlert()
 
   const configPaymentMethods = restaurant?.config?.paymentMethods
@@ -169,12 +185,16 @@ export default function CheckoutPage({
           phone: customerPhone,
           email: customerEmail,
           notes: notes,
+          customSchedule,
+          selectedSlotEnd: customSchedule ? selectedSlotEnd : null,
+          scheduleRestaurantId: restaurant?.id ?? null,
+          scheduleDeliveryLocationId: deliveryLocation?.id ?? null,
         })
       )
     } catch {
       /* ignore */
     }
-  }, [customerName, customerPhone, customerEmail, notes])
+  }, [customerName, customerPhone, customerEmail, notes, customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id])
 
   const handleVerifyCoupon = async () => {
     const code = promo.trim()
@@ -344,16 +364,6 @@ export default function CheckoutPage({
   ])
 
   useEffect(() => {
-    setCustomSchedule(false)
-    setSchedulePickerOpen(false)
-    setSelectedSlotEnd(null)
-    setQuickSlot(null)
-    setQuickError(null)
-    setTimeslotsPayload(null)
-    setTimeslotsError(null)
-  }, [restaurant?.id, deliveryLocation?.id])
-
-  useEffect(() => {
     let cancelled = false
     const loadQuick = async () => {
       if (!restaurant?.id || !deliveryLocation?.id) {
@@ -418,7 +428,7 @@ export default function CheckoutPage({
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      if (!schedulePickerOpen || !restaurant?.id || !deliveryLocation?.id) {
+      if ((!schedulePickerOpen && !customSchedule) || !restaurant?.id || !deliveryLocation?.id) {
         return
       }
       setTimeslotsLoading(true)
@@ -456,13 +466,53 @@ export default function CheckoutPage({
     return () => {
       cancelled = true
     }
-  }, [schedulePickerOpen, restaurant?.id, deliveryLocation?.id, t])
+  }, [schedulePickerOpen, customSchedule, restaurant?.id, deliveryLocation?.id, t])
 
   useEffect(() => {
     if (!timeslotsPayload?.timeslots?.length || !customSchedule || !selectedSlotEnd) return
     const s = timeslotsPayload.timeslots.find((x) => x.end === selectedSlotEnd)
     if (!s?.available) setSelectedSlotEnd(null)
   }, [timeslotsPayload, customSchedule, selectedSlotEnd])
+
+  useEffect(() => {
+    if (customSchedule && selectedSlotEnd) return
+    lastVerifiedSlotKeyRef.current = null
+  }, [customSchedule, selectedSlotEnd])
+
+  useEffect(() => {
+    if (!customSchedule || !selectedSlotEnd || !restaurant?.id || !deliveryLocation?.id) return
+    const slotKey = `${restaurant.id}:${deliveryLocation.id}:${selectedSlotEnd}`
+    if (lastVerifiedSlotKeyRef.current === slotKey) return
+
+    let cancelled = false
+    const verifySlotAvailability = async () => {
+      try {
+        const data = await restaurantService.getDeliverySlotAvailability({
+          restaurantId: restaurant.id,
+          deliveryLocationId: deliveryLocation.id,
+          preferredDeliveryTime: selectedSlotEnd,
+        })
+        if (cancelled) return
+        lastVerifiedSlotKeyRef.current = slotKey
+        if (data?.available === true) return
+        setSelectedSlotEnd(null)
+        showAlert(
+          'error',
+          t('checkout.deliveryTime'),
+          typeof data?.reason === 'string' && data.reason.trim() ? data.reason : t('checkout.slotNoLongerAvailable'),
+          5000
+        )
+      } catch {
+        if (cancelled) return
+        showAlert('error', t('checkout.deliveryTime'), t('checkout.failedToVerifyTime'), 5000)
+      }
+    }
+
+    verifySlotAvailability()
+    return () => {
+      cancelled = true
+    }
+  }, [customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id, showAlert, t])
 
   const offerSelectionSummary = (it) => {
     if (!it?.isOffer) return null
@@ -944,10 +994,9 @@ export default function CheckoutPage({
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-3 sm:p-4 lg:p-6">
-            {/* Restaurant & Location Info */}
+            {/* Restaurant */}
             <div className="text-center mb-4 sm:mb-5">
               <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || t('common.restaurant')}</div>
-              <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('checkout.deliveryTo')} {deliveryLocation?.name || t('common.location')}</div>
             </div>
 
             {/* When? — earliest slot vs schedule (modal: today’s slots only) */}
@@ -1003,6 +1052,26 @@ export default function CheckoutPage({
                     <div className="mt-0.5 text-xs sm:text-sm text-slate-500">{scheduleCardSubtitle}</div>
                   </div>
                 </button>
+              </div>
+            </div>
+
+            {/* Where? — delivery location */}
+            <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
+              <div className="text-sm sm:text-base font-semibold mb-3 text-slate-900">{t('checkout.where')}</div>
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div className="min-w-0 text-sm sm:text-base text-slate-700">
+                  <span className="text-slate-500">{t('checkout.deliveryTo')}</span>{' '}
+                  <span className="font-semibold text-slate-900">{deliveryLocation?.name || t('common.location')}</span>
+                </div>
+                {onChangeDeliveryLocation && restaurant?.id ? (
+                  <button
+                    type="button"
+                    onClick={openCheckoutLocationPicker}
+                    className="flex-shrink-0 self-start rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100 sm:text-sm sm:self-auto"
+                  >
+                    {t('checkout.changeLocation')}
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -1303,15 +1372,6 @@ export default function CheckoutPage({
                     {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
                   </span>
                 </label>
-                {onChangeDeliveryLocation && restaurant?.id ? (
-                  <button
-                    type="button"
-                    onClick={openCheckoutLocationPicker}
-                    className="flex-shrink-0 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100 sm:text-sm"
-                  >
-                    {t('checkout.changeLocation')}
-                  </button>
-                ) : null}
               </div>
             </div>
           </div>

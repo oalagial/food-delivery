@@ -57,6 +57,7 @@
     "calculatingTime": "Calcolo orario di consegna...",
     "deliveryTimeSlot": "Orario di consegna",
     "when": "Quando?",
+    "where": "Dove?",
     "earliestDelivery": "Consegna al più presto",
     "scheduleOption": "Programma",
     "scheduleSubtext": "Scegli un orario di consegna",
