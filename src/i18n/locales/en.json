@@ -57,6 +57,7 @@
     "calculatingTime": "Calculating delivery time...",
     "deliveryTimeSlot": "Delivery time",
     "when": "When?",
+    "where": "Where?",
     "earliestDelivery": "Earliest delivery",
     "scheduleOption": "Schedule",
     "scheduleSubtext": "Choose a delivery time",
