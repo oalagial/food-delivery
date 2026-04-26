@@ -42,6 +42,29 @@ function getStoredCheckoutForm() {
   }
 }
 
+/** Digits-only phone values: replace the leading dial code so both PhoneInputs keep the same country. */
+function rehomePhoneDigits(phoneDigits, oldDial, newDial) {
+  const a = String(oldDial ?? '')
+  const b = String(newDial ?? '')
+  const p = String(phoneDigits ?? '').replace(/\D/g, '')
+  if (!b) return p
+  if (!p) return b
+  if (p.startsWith(b)) return p
+  if (a && p.startsWith(a)) return b + p.slice(a.length)
+  return b
+}
+
+/** For API: "country code␠national" (digits only, then one space). */
+function formatPhoneForOrder(digits, dialCode) {
+  const d = String(digits ?? '').replace(/\D/g, '')
+  const dial = String(dialCode ?? '').replace(/\D/g, '')
+  if (!d) return ''
+  if (!dial || !d.startsWith(dial)) return d
+  const national = d.slice(dial.length)
+  if (!national) return dial
+  return `${dial} ${national}`
+}
+
 function formatYmdLocal(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -120,6 +143,7 @@ export default function CheckoutPage({
   const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
   const [checkoutLocationsError, setCheckoutLocationsError] = useState(null)
   const lastVerifiedSlotKeyRef = useRef(null)
+  const phoneDialCodeRef = useRef('39')
   const { showAlert } = useAlert()
 
   const configPaymentMethods = restaurant?.config?.paymentMethods
@@ -142,6 +166,34 @@ export default function CheckoutPage({
   const setFieldTouched = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }))
   const setFieldDirty = (field) => () => setDirty((prev) => ({ ...prev, [field]: true }))
 
+  const handlePrimaryPhoneChange = (value, countryData) => {
+    const prevDial = phoneDialCodeRef.current
+    const dial = String(
+      (countryData && 'dialCode' in countryData && countryData.dialCode) || '',
+    )
+    setCustomerPhone(value || '')
+    if (dial && dial !== prevDial) {
+      setCustomerPhoneConfirm((prev) => rehomePhoneDigits(prev, prevDial, dial))
+    } else {
+      setCustomerPhoneConfirm('')
+    }
+    if (dial) phoneDialCodeRef.current = dial
+    setFieldDirty('phone')()
+  }
+
+  const handleConfirmPhoneChange = (value, countryData) => {
+    const prevDial = phoneDialCodeRef.current
+    const dial = String(
+      (countryData && 'dialCode' in countryData && countryData.dialCode) || '',
+    )
+    setCustomerPhoneConfirm(value || '')
+    if (dial && dial !== prevDial) {
+      setCustomerPhone((prev) => rehomePhoneDigits(prev, prevDial, dial))
+    }
+    if (dial) phoneDialCodeRef.current = dial
+    setFieldDirty('phoneConfirm')()
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const errors = {
     name: !customerName.trim() ? t('checkout.errorName') : null,
@@ -163,10 +215,6 @@ export default function CheckoutPage({
     customerEmail.trim() &&
     emailRegex.test(customerEmail.trim())
   )
-
-  useEffect(() => {
-    setCustomerPhoneConfirm('')
-  }, [customerPhone])
 
   useEffect(() => {
     if (!customerPhone.trim()) {
@@ -593,7 +641,7 @@ export default function CheckoutPage({
         paymentStatus: 'UNPAID',
         customer: {
           name: customerName.trim(),
-          phone: customerPhone.trim(),
+          phone: formatPhoneForOrder(customerPhone, phoneDialCodeRef.current),
           email: customerEmail.trim(),
         },
         notes: notes.trim().slice(0, MAX_NOTES_LENGTH) || null,
@@ -1100,9 +1148,11 @@ export default function CheckoutPage({
                     preferredCountries={['it', 'gr']}
                     countryCodeEditable={false}
                     value={customerPhone}
-                    onChange={(value) => {
-                      setCustomerPhone(value || '')
-                      setFieldDirty('phone')()
+                    onChange={handlePrimaryPhoneChange}
+                    onMount={(_v, data) => {
+                      if (data && 'dialCode' in data && data.dialCode != null) {
+                        phoneDialCodeRef.current = String(data.dialCode)
+                      }
                     }}
                     onBlur={setFieldTouched('phone')}
                     inputProps={{
@@ -1138,10 +1188,7 @@ export default function CheckoutPage({
                     preferredCountries={['it', 'gr']}
                     countryCodeEditable={false}
                     value={customerPhoneConfirm}
-                    onChange={(value) => {
-                      setCustomerPhoneConfirm(value || '')
-                      setFieldDirty('phoneConfirm')()
-                    }}
+                    onChange={handleConfirmPhoneChange}
                     onBlur={setFieldTouched('phoneConfirm')}
                     inputProps={{
                       name: 'checkout_phone_reenter',
@@ -1193,14 +1240,24 @@ export default function CheckoutPage({
             {/* Delivery Notes */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
               <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.deliveryNotes')}</div>
-              <textarea
-                value={notes}
-                onChange={(e) => { setNotes(e.target.value); setFieldDirty('notes')() }}
-                maxLength={MAX_NOTES_LENGTH}
-                placeholder={t('checkout.deliveryNotesPlaceholder')}
-                className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                rows="2"
-              />
+              <div className="relative">
+                <textarea
+                  value={notes}
+                  onChange={(e) => { setNotes(e.target.value); setFieldDirty('notes')() }}
+                  maxLength={MAX_NOTES_LENGTH}
+                  placeholder={t('checkout.deliveryNotesPlaceholder')}
+                  className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 pr-12 pb-7 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                  rows="2"
+                  aria-describedby="checkout-notes-char-limit"
+                />
+                <div
+                  id="checkout-notes-char-limit"
+                  className="pointer-events-none absolute bottom-1.5 right-2.5 text-xs text-slate-400 tabular-nums"
+                  aria-live="polite"
+                >
+                  {t('checkout.notesCharCount', { current: notes.length, max: MAX_NOTES_LENGTH })}
+                </div>
+              </div>
             </div>
 
             {/* Payment Method */}
