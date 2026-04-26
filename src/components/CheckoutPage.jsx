@@ -9,6 +9,7 @@ import { orderService, restaurantService } from '../services'
 const PhoneInput = PhoneInputModule.default || PhoneInputModule
 
 const CHECKOUT_FORM_KEY = 'checkout_form'
+const MAX_NOTES_LENGTH = 40
 
 function getStoredCheckoutForm() {
   try {
@@ -19,7 +20,7 @@ function getStoredCheckoutForm() {
         name: typeof o.name === 'string' ? o.name : '',
         phone: typeof o.phone === 'string' ? o.phone : '',
         email: typeof o.email === 'string' ? o.email : '',
-        notes: typeof o.notes === 'string' ? o.notes : '',
+        notes: (typeof o.notes === 'string' ? o.notes : '').slice(0, MAX_NOTES_LENGTH),
         customSchedule: Boolean(o.customSchedule),
         selectedSlotEnd: typeof o.selectedSlotEnd === 'string' ? o.selectedSlotEnd : null,
         scheduleRestaurantId: o.scheduleRestaurantId ?? null,
@@ -595,7 +596,7 @@ export default function CheckoutPage({
           phone: customerPhone.trim(),
           email: customerEmail.trim(),
         },
-        notes: notes.trim() || null,
+        notes: notes.trim().slice(0, MAX_NOTES_LENGTH) || null,
         products: cart.filter(item => !item.isOffer).map((item) => ({
           productId: item.id,
           quantity: item.qty,
@@ -1194,7 +1195,8 @@ export default function CheckoutPage({
               <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.deliveryNotes')}</div>
               <textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => { setNotes(e.target.value); setFieldDirty('notes')() }}
+                maxLength={MAX_NOTES_LENGTH}
                 placeholder={t('checkout.deliveryNotesPlaceholder')}
                 className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
                 rows="2"
