@@ -16,9 +16,11 @@ function getStoredCheckoutForm() {
     const s = localStorage.getItem(CHECKOUT_FORM_KEY)
     if (s) {
       const o = JSON.parse(s)
+      const phone = typeof o.phone === 'string' ? o.phone : ''
       return {
         name: typeof o.name === 'string' ? o.name : '',
-        phone: typeof o.phone === 'string' ? o.phone : '',
+        phone,
+        phoneConfirm: typeof o.phoneConfirm === 'string' ? o.phoneConfirm : phone,
         email: typeof o.email === 'string' ? o.email : '',
         notes: (typeof o.notes === 'string' ? o.notes : '').slice(0, MAX_NOTES_LENGTH),
         customSchedule: Boolean(o.customSchedule),
@@ -33,6 +35,7 @@ function getStoredCheckoutForm() {
   return {
     name: '',
     phone: '',
+    phoneConfirm: '',
     email: '',
     notes: '',
     customSchedule: false,
@@ -120,7 +123,7 @@ export default function CheckoutPage({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState(storedCheckoutForm.name)
   const [customerPhone, setCustomerPhone] = useState(storedCheckoutForm.phone)
-  const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState('')
+  const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState(storedCheckoutForm.phoneConfirm)
   const [customerEmail, setCustomerEmail] = useState(storedCheckoutForm.email)
   const [notes, setNotes] = useState(storedCheckoutForm.notes)
   const [timeslotsPayload, setTimeslotsPayload] = useState(null)
@@ -232,6 +235,7 @@ export default function CheckoutPage({
         JSON.stringify({
           name: customerName,
           phone: customerPhone,
+          phoneConfirm: customerPhoneConfirm,
           email: customerEmail,
           notes: notes,
           customSchedule,
@@ -243,7 +247,7 @@ export default function CheckoutPage({
     } catch {
       /* ignore */
     }
-  }, [customerName, customerPhone, customerEmail, notes, customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id])
+  }, [customerName, customerPhone, customerPhoneConfirm, customerEmail, notes, customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id])
 
   const handleVerifyCoupon = async () => {
     const code = promo.trim()
