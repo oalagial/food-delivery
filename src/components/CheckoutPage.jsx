@@ -9,17 +9,20 @@ import { orderService, restaurantService } from '../services'
 const PhoneInput = PhoneInputModule.default || PhoneInputModule
 
 const CHECKOUT_FORM_KEY = 'checkout_form'
+const MAX_NOTES_LENGTH = 40
 
 function getStoredCheckoutForm() {
   try {
     const s = localStorage.getItem(CHECKOUT_FORM_KEY)
     if (s) {
       const o = JSON.parse(s)
+      const phone = typeof o.phone === 'string' ? o.phone : ''
       return {
         name: typeof o.name === 'string' ? o.name : '',
-        phone: typeof o.phone === 'string' ? o.phone : '',
+        phone,
+        phoneConfirm: typeof o.phoneConfirm === 'string' ? o.phoneConfirm : phone,
         email: typeof o.email === 'string' ? o.email : '',
-        notes: typeof o.notes === 'string' ? o.notes : '',
+        notes: (typeof o.notes === 'string' ? o.notes : '').slice(0, MAX_NOTES_LENGTH),
         customSchedule: Boolean(o.customSchedule),
         selectedSlotEnd: typeof o.selectedSlotEnd === 'string' ? o.selectedSlotEnd : null,
         scheduleRestaurantId: o.scheduleRestaurantId ?? null,
@@ -32,6 +35,7 @@ function getStoredCheckoutForm() {
   return {
     name: '',
     phone: '',
+    phoneConfirm: '',
     email: '',
     notes: '',
     customSchedule: false,
@@ -39,6 +43,29 @@ function getStoredCheckoutForm() {
     scheduleRestaurantId: null,
     scheduleDeliveryLocationId: null,
   }
+}
+
+/** Digits-only phone values: replace the leading dial code so both PhoneInputs keep the same country. */
+function rehomePhoneDigits(phoneDigits, oldDial, newDial) {
+  const a = String(oldDial ?? '')
+  const b = String(newDial ?? '')
+  const p = String(phoneDigits ?? '').replace(/\D/g, '')
+  if (!b) return p
+  if (!p) return b
+  if (p.startsWith(b)) return p
+  if (a && p.startsWith(a)) return b + p.slice(a.length)
+  return b
+}
+
+/** For API: "country code␠national" (digits only, then one space). */
+function formatPhoneForOrder(digits, dialCode) {
+  const d = String(digits ?? '').replace(/\D/g, '')
+  const dial = String(dialCode ?? '').replace(/\D/g, '')
+  if (!d) return ''
+  if (!dial || !d.startsWith(dial)) return d
+  const national = d.slice(dial.length)
+  if (!national) return dial
+  return `${dial} ${national}`
 }
 
 function formatYmdLocal(d) {
@@ -96,7 +123,7 @@ export default function CheckoutPage({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState(storedCheckoutForm.name)
   const [customerPhone, setCustomerPhone] = useState(storedCheckoutForm.phone)
-  const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState('')
+  const [customerPhoneConfirm, setCustomerPhoneConfirm] = useState(storedCheckoutForm.phoneConfirm)
   const [customerEmail, setCustomerEmail] = useState(storedCheckoutForm.email)
   const [notes, setNotes] = useState(storedCheckoutForm.notes)
   const [timeslotsPayload, setTimeslotsPayload] = useState(null)
@@ -119,6 +146,7 @@ export default function CheckoutPage({
   const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
   const [checkoutLocationsError, setCheckoutLocationsError] = useState(null)
   const lastVerifiedSlotKeyRef = useRef(null)
+  const phoneDialCodeRef = useRef('39')
   const { showAlert } = useAlert()
 
   const configPaymentMethods = restaurant?.config?.paymentMethods
@@ -140,6 +168,34 @@ export default function CheckoutPage({
 
   const setFieldTouched = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }))
   const setFieldDirty = (field) => () => setDirty((prev) => ({ ...prev, [field]: true }))
+
+  const handlePrimaryPhoneChange = (value, countryData) => {
+    const prevDial = phoneDialCodeRef.current
+    const dial = String(
+      (countryData && 'dialCode' in countryData && countryData.dialCode) || '',
+    )
+    setCustomerPhone(value || '')
+    if (dial && dial !== prevDial) {
+      setCustomerPhoneConfirm((prev) => rehomePhoneDigits(prev, prevDial, dial))
+    } else {
+      setCustomerPhoneConfirm('')
+    }
+    if (dial) phoneDialCodeRef.current = dial
+    setFieldDirty('phone')()
+  }
+
+  const handleConfirmPhoneChange = (value, countryData) => {
+    const prevDial = phoneDialCodeRef.current
+    const dial = String(
+      (countryData && 'dialCode' in countryData && countryData.dialCode) || '',
+    )
+    setCustomerPhoneConfirm(value || '')
+    if (dial && dial !== prevDial) {
+      setCustomerPhone((prev) => rehomePhoneDigits(prev, prevDial, dial))
+    }
+    if (dial) phoneDialCodeRef.current = dial
+    setFieldDirty('phoneConfirm')()
+  }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const errors = {
@@ -164,10 +220,6 @@ export default function CheckoutPage({
   )
 
   useEffect(() => {
-    setCustomerPhoneConfirm('')
-  }, [customerPhone])
-
-  useEffect(() => {
     if (!customerPhone.trim()) {
       setCustomerPhone('39')
     }
@@ -183,6 +235,7 @@ export default function CheckoutPage({
         JSON.stringify({
           name: customerName,
           phone: customerPhone,
+          phoneConfirm: customerPhoneConfirm,
           email: customerEmail,
           notes: notes,
           customSchedule,
@@ -194,7 +247,7 @@ export default function CheckoutPage({
     } catch {
       /* ignore */
     }
-  }, [customerName, customerPhone, customerEmail, notes, customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id])
+  }, [customerName, customerPhone, customerPhoneConfirm, customerEmail, notes, customSchedule, selectedSlotEnd, restaurant?.id, deliveryLocation?.id])
 
   const handleVerifyCoupon = async () => {
     const code = promo.trim()
@@ -592,10 +645,10 @@ export default function CheckoutPage({
         paymentStatus: 'UNPAID',
         customer: {
           name: customerName.trim(),
-          phone: customerPhone.trim(),
+          phone: formatPhoneForOrder(customerPhone, phoneDialCodeRef.current),
           email: customerEmail.trim(),
         },
-        notes: notes.trim() || null,
+        notes: notes.trim().slice(0, MAX_NOTES_LENGTH) || null,
         products: cart.filter(item => !item.isOffer).map((item) => ({
           productId: item.id,
           quantity: item.qty,
@@ -1099,9 +1152,11 @@ export default function CheckoutPage({
                     preferredCountries={['it', 'gr']}
                     countryCodeEditable={false}
                     value={customerPhone}
-                    onChange={(value) => {
-                      setCustomerPhone(value || '')
-                      setFieldDirty('phone')()
+                    onChange={handlePrimaryPhoneChange}
+                    onMount={(_v, data) => {
+                      if (data && 'dialCode' in data && data.dialCode != null) {
+                        phoneDialCodeRef.current = String(data.dialCode)
+                      }
                     }}
                     onBlur={setFieldTouched('phone')}
                     inputProps={{
@@ -1137,10 +1192,7 @@ export default function CheckoutPage({
                     preferredCountries={['it', 'gr']}
                     countryCodeEditable={false}
                     value={customerPhoneConfirm}
-                    onChange={(value) => {
-                      setCustomerPhoneConfirm(value || '')
-                      setFieldDirty('phoneConfirm')()
-                    }}
+                    onChange={handleConfirmPhoneChange}
                     onBlur={setFieldTouched('phoneConfirm')}
                     inputProps={{
                       name: 'checkout_phone_reenter',
@@ -1192,13 +1244,24 @@ export default function CheckoutPage({
             {/* Delivery Notes */}
             <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
               <div className="text-sm sm:text-base font-semibold mb-3">{t('checkout.deliveryNotes')}</div>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t('checkout.deliveryNotesPlaceholder')}
-                className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                rows="2"
-              />
+              <div className="relative">
+                <textarea
+                  value={notes}
+                  onChange={(e) => { setNotes(e.target.value); setFieldDirty('notes')() }}
+                  maxLength={MAX_NOTES_LENGTH}
+                  placeholder={t('checkout.deliveryNotesPlaceholder')}
+                  className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 pr-12 pb-7 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                  rows="2"
+                  aria-describedby="checkout-notes-char-limit"
+                />
+                <div
+                  id="checkout-notes-char-limit"
+                  className="pointer-events-none absolute bottom-1.5 right-2.5 text-xs text-slate-400 tabular-nums"
+                  aria-live="polite"
+                >
+                  {t('checkout.notesCharCount', { current: notes.length, max: MAX_NOTES_LENGTH })}
+                </div>
+              </div>
             </div>
 
             {/* Payment Method */}

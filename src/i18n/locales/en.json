@@ -92,6 +92,7 @@
     "errorEmailInvalid": "Please enter a valid email address (e.g. name@example.com).",
     "deliveryNotes": "Delivery Notes (Optional)",
     "deliveryNotesPlaceholder": "e.g., Leave at the door, Ring the bell, etc.",
+    "notesCharCount": "{{current}} / {{max}}",
     "paymentMethod": "Payment method",
     "cash": "Cash on delivery",
     "card": "Card on delivery",

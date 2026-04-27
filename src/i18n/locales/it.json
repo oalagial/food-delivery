@@ -92,6 +92,7 @@
     "errorEmailInvalid": "Inserisci un indirizzo email valido (es. nome@esempio.com).",
     "deliveryNotes": "Note per la consegna (facoltativo)",
     "deliveryNotesPlaceholder": "es. Lasciare alla porta, Suonare il campanello, ecc.",
+    "notesCharCount": "{{current}} / {{max}}",
     "paymentMethod": "Metodo di pagamento",
     "cash": "Contanti alla consegna",
     "card": "Carta alla consegna",
