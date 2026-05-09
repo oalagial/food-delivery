@@ -119,7 +119,6 @@ export default function CheckoutPage({
   const [coupon, setCoupon] = useState(null) // { code, type, value, restaurantId } when valid
   const [couponError, setCouponError] = useState(null)
   const [couponLoading, setCouponLoading] = useState(false)
-  const [agree, setAgree] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState(storedCheckoutForm.name)
   const [customerPhone, setCustomerPhone] = useState(storedCheckoutForm.phone)
@@ -348,7 +347,6 @@ export default function CheckoutPage({
   const orderConfirmEnabled =
     hasOrderItems &&
     formValid &&
-    agree &&
     paymentMethod &&
     availablePaymentMethods.length > 0 &&
     !isSubmitting &&
@@ -366,7 +364,6 @@ export default function CheckoutPage({
     if (!hasOrderItems) list.push(t('checkout.blockerEmptyCart'))
     if (availablePaymentMethods.length === 0) list.push(t('checkout.noPaymentMethods'))
     else if (!paymentMethod) list.push(t('checkout.errorPaymentMethod'))
-    if (!agree) list.push(t('checkout.blockerConfirmLocation'))
     if (!formValid) {
       if (errors.name) list.push(errors.name)
       if (errors.phone) list.push(errors.phone)
@@ -399,7 +396,6 @@ export default function CheckoutPage({
     hasOrderItems,
     availablePaymentMethods.length,
     paymentMethod,
-    agree,
     formValid,
     errors.name,
     errors.phone,
@@ -826,8 +822,6 @@ export default function CheckoutPage({
   }
 
   const handleContinue = async () => {
-    if (!agree) return
-
     if (!hasOrderItems) {
       showAlert('error', t('checkout.validationError'), t('checkout.cartEmpty'), 5000)
       return
@@ -1423,19 +1417,6 @@ export default function CheckoutPage({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-start gap-2 sm:items-center sm:justify-between sm:gap-3">
-                <label className="flex min-w-0 flex-1 items-start gap-3 text-sm sm:text-base text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={agree}
-                    onChange={(e) => setAgree(e.target.checked)}
-                    className="mt-0.5 h-6 w-6 min-h-[1.5rem] min-w-[1.5rem] shrink-0 cursor-pointer rounded-md border-2 border-slate-300 text-orange-500 focus:ring-2 focus:ring-orange-400 focus:ring-offset-0 sm:h-7 sm:w-7 sm:min-h-[1.75rem] sm:min-w-[1.75rem] accent-orange-500"
-                  />
-                  <span className="leading-snug pt-0.5">
-                    {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
-                  </span>
-                </label>
-              </div>
             </div>
           </div>
         </div>
