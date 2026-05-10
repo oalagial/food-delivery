@@ -1148,49 +1148,52 @@ function AppContent() {
   if (selectedRestaurant) {
     return (
       <>
-        <div className="w-full min-h-screen bg-white flex flex-col">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
-            <div className="flex items-center gap-3">
+        <main className="w-full min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+            <div className="w-full max-w-4xl px-2 sm:px-4 relative">
               <button
                 type="button"
                 onClick={handleBackFromLocationPicker}
-                className="text-2xl leading-none active:opacity-70 transition-opacity"
+                className="absolute left-0 top-0 z-10 flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 text-xl leading-none text-slate-800 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-white active:opacity-90 sm:left-1"
                 aria-label={t('common.goBack')}
               >
                 ←
               </button>
-              <div className="flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-center">{t('app.chooseDeliveryLocation')}</h2>
-                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">{t('app.pickDeliveryLocationSubtitle')}</p>
-              </div>
-              <div className="w-8"></div>
+              <header className="mb-6 sm:mb-8 text-center pt-1 sm:pt-0">
+                <div className="inline-block mb-3 sm:mb-4">
+                  <img src={logo} alt="Logo" className="w-48 h-48" />
+                </div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">
+                  {t('app.chooseDeliveryLocation')}
+                </h1>
+                <p className="text-sm sm:text-base text-slate-600">{t('app.startOrdering')} 🚀</p>
+              </header>
+
+              {locationsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin mb-3">
+                    <span className="text-4xl">⏳</span>
+                  </div>
+                  <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
+                </div>
+              ) : locationOptions.length > 0 ? (
+                <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center">
+                  {locationOptions.map((loc) => (
+                    <DeliveryPointCard
+                      key={loc.id}
+                      point={deliveryPointFromLocationRow(loc, selectedRestaurant)}
+                      onSelect={() => applyLocationAndOpenStore(loc, selectedRestaurant)}
+                    />
+                  ))}
+                </section>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-sm sm:text-base text-slate-600">{t('app.noLocations')}</p>
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex-1 p-4 sm:p-6">
-            {locationsLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="animate-spin mb-3">
-                  <span className="text-4xl">⏳</span>
-                </div>
-                <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
-              </div>
-            ) : locationOptions.length > 0 ? (
-              <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
-                {locationOptions.map((loc) => (
-                  <DeliveryPointCard
-                    key={loc.id}
-                    point={deliveryPointFromLocationRow(loc, selectedRestaurant)}
-                    onSelect={() => applyLocationAndOpenStore(loc, selectedRestaurant)}
-                  />
-                ))}
-              </section>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-sm sm:text-base text-slate-600">{t('app.noLocations')}</p>
-              </div>
-            )}
-          </div>
-        </div>
+        </main>
       </>
     )
   }
