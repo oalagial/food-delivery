@@ -22,6 +22,34 @@
     "location": "Location",
     "dismiss": "Dismiss"
   },
+  "legal": {
+    "backHome": "Back to ordering",
+    "privacyTitle": "Privacy Policy",
+    "cookiesTitle": "Cookie Policy",
+    "termsTitle": "Terms & Conditions",
+    "privacyLink": "Privacy Policy",
+    "cookiesLink": "Cookie Policy",
+    "termsLink": "Terms & Conditions",
+    "cookieSettings": "Cookie settings",
+    "footerNavLabel": "Legal and privacy"
+  },
+  "cookies": {
+    "bannerTitle": "Cookies and your privacy",
+    "bannerBody": "We use technical cookies necessary for the operation of the service and, with your consent, analytics and marketing cookies to improve your experience and show personalized content. You can accept all cookies, reject non-essential ones, or manage your preferences.",
+    "acceptAll": "Accept all",
+    "reject": "Reject",
+    "customize": "Customize",
+    "prefsTitle": "Cookie preferences",
+    "prefsIntro": "Enable or disable optional categories. Technical cookies are always on because the site cannot work without them.",
+    "catTechnical": "Technical (strictly necessary)",
+    "catTechnicalDesc": "Required for security, cart, checkout, language, and core site functionality.",
+    "catAnalytics": "Analytics",
+    "catAnalyticsDesc": "Helps us understand how the service is used (e.g. aggregated statistics). No scripts load until you allow this category.",
+    "catMarketing": "Marketing",
+    "catMarketingDesc": "Used to measure campaigns and show relevant content where applicable. No scripts load until you allow this category.",
+    "alwaysOn": "Always on",
+    "savePreferences": "Save preferences"
+  },
   "app": {
     "loadingError": "Loading Error",
     "failedToLoadLocations": "Failed to load delivery locations. Please check your connection and try again.",
@@ -141,7 +169,14 @@
     "blockerSubmitting": "Please wait — processing your order…",
     "blockerEmptyCart": "Add at least one item to your cart.",
     "blockerConfirmLocation": "Tick the box to confirm your delivery location.",
-    "blockerInsufficientStock": "Adjust quantities in your cart — some items are out of stock."
+    "blockerInsufficientStock": "Adjust quantities in your cart — some items are out of stock.",
+    "blockerLegalAcceptance": "Confirm that you have read and accept the Privacy Policy and Terms and Conditions.",
+    "legalSectionTitle": "Legal & privacy",
+    "legalAcceptCheckbox": "I have read and accept the <privacy>Privacy Policy</privacy> and <terms>Terms and Conditions</terms>.",
+    "marketingOptionalTitle": "Marketing (optional)",
+    "marketingEmailOptIn": "I agree to receive promotional emails",
+    "marketingWhatsAppOptIn": "I agree to receive promotional messages via WhatsApp",
+    "errorLegalAcceptance": "Please accept the Privacy Policy and Terms and Conditions to continue."
   },
   "store": {
     "goBack": "Go back",

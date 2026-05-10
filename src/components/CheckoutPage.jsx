@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import PhoneInputModule from 'react-phone-input-2'
 import 'react-phone-input-2/lib/style.css'
 import { formatPrice } from '../utils/price'
@@ -140,6 +140,9 @@ export default function CheckoutPage({
   const [paymentMethod, setPaymentMethod] = useState(null) // null | 'CASH' | 'CARD' | 'ONLINE'
   const [touched, setTouched] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false, paymentMethod: false })
   const [dirty, setDirty] = useState({ name: false, phone: false, phoneConfirm: false, email: false, notes: false })
+  const [acceptPrivacyAndTerms, setAcceptPrivacyAndTerms] = useState(false)
+  const [marketingEmailConsent, setMarketingEmailConsent] = useState(false)
+  const [marketingWhatsAppConsent, setMarketingWhatsAppConsent] = useState(false)
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [checkoutLocations, setCheckoutLocations] = useState([])
   const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
@@ -351,7 +354,8 @@ export default function CheckoutPage({
     availablePaymentMethods.length > 0 &&
     !isSubmitting &&
     deliveryReady &&
-    !insufficientStock
+    !insufficientStock &&
+    acceptPrivacyAndTerms
 
   const orderConfirmBlockers = useMemo(() => {
     if (orderConfirmEnabled) return []
@@ -388,6 +392,7 @@ export default function CheckoutPage({
         list.push(t('checkout.couldNotGetTime'))
       }
     }
+    if (!acceptPrivacyAndTerms) list.push(t('checkout.blockerLegalAcceptance'))
     return list
   }, [
     orderConfirmEnabled,
@@ -409,6 +414,7 @@ export default function CheckoutPage({
     timeslotsPayload,
     quickLoading,
     quickError,
+    acceptPrivacyAndTerms,
     t,
   ])
 
@@ -581,6 +587,18 @@ export default function CheckoutPage({
       .join(' • ')
   }
 
+  const buildOrderCompliance = () => {
+    const now = new Date().toISOString()
+    return {
+      privacyAndTermsAccepted: true,
+      privacyAndTermsAcceptedAt: now,
+      marketingEmailConsent: Boolean(marketingEmailConsent),
+      marketingEmailConsentAt: marketingEmailConsent ? now : null,
+      marketingWhatsAppConsent: Boolean(marketingWhatsAppConsent),
+      marketingWhatsAppConsentAt: marketingWhatsAppConsent ? now : null,
+    }
+  }
+
   const submitOrder = async () => {
     try {
       if (paymentMethod === 'ONLINE') {
@@ -590,7 +608,10 @@ export default function CheckoutPage({
         const payRes = await fetch(`${API_BASE}/payments/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: amountCents }),
+          body: JSON.stringify({
+            amount: amountCents,
+            orderCompliance: buildOrderCompliance(),
+          }),
         })
         const payData = await payRes.json()
         if (!payRes.ok) {
@@ -654,6 +675,7 @@ export default function CheckoutPage({
         offers: offers,
         ...(coupon?.code ? { couponCode: coupon.code } : {}),
         ...(selectedSlotEnd ? { preferredDeliveryTime: selectedSlotEnd } : {}),
+        orderCompliance: buildOrderCompliance(),
       }
 
       const response = await orderService.create(orderData)
@@ -853,6 +875,10 @@ export default function CheckoutPage({
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(emailTrimmed)) {
       showAlert('error', t('checkout.validationError'), t('checkout.errorEmailInvalid'), 5000)
+      return
+    }
+    if (!acceptPrivacyAndTerms) {
+      showAlert('error', t('checkout.validationError'), t('checkout.errorLegalAcceptance'), 5000)
       return
     }
     if (!paymentMethod || !availablePaymentMethods.includes(paymentMethod)) {
@@ -1289,6 +1315,61 @@ export default function CheckoutPage({
               {touched.paymentMethod && !paymentMethod && availablePaymentMethods.length > 0 && (
                 <p className="text-xs text-red-600 mt-2">{t('checkout.errorPaymentMethod')}</p>
               )}
+            </div>
+
+            {/* Legal acceptance (mandatory) & marketing opt-ins (optional) */}
+            <div className="mb-4 sm:mb-5 border-b border-slate-200 pb-4 sm:pb-5">
+              <div className="text-sm sm:text-base font-semibold mb-3 text-slate-900">{t('checkout.legalSectionTitle')}</div>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/90 p-3 sm:p-4">
+                <input
+                  type="checkbox"
+                  checked={acceptPrivacyAndTerms}
+                  onChange={(e) => setAcceptPrivacyAndTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400 text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-xs sm:text-sm leading-relaxed text-slate-800">
+                  <Trans
+                    i18nKey="checkout.legalAcceptCheckbox"
+                    components={{
+                      privacy: (
+                        <a
+                          href="/privacy-policy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-orange-600 underline underline-offset-2 hover:text-orange-700"
+                        />
+                      ),
+                      terms: (
+                        <a
+                          href="/terms-and-conditions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-orange-600 underline underline-offset-2 hover:text-orange-700"
+                        />
+                      ),
+                    }}
+                  />
+                </span>
+              </label>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('checkout.marketingOptionalTitle')}</p>
+              <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-lg px-0.5 py-1">
+                <input
+                  type="checkbox"
+                  checked={marketingEmailConsent}
+                  onChange={(e) => setMarketingEmailConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400 text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-xs sm:text-sm text-slate-700">{t('checkout.marketingEmailOptIn')}</span>
+              </label>
+              <label className="mt-1 flex cursor-pointer items-start gap-3 rounded-lg px-0.5 py-1">
+                <input
+                  type="checkbox"
+                  checked={marketingWhatsAppConsent}
+                  onChange={(e) => setMarketingWhatsAppConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400 text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-xs sm:text-sm text-slate-700">{t('checkout.marketingWhatsAppOptIn')}</span>
+              </label>
             </div>
 
             {/* Cart Items */}

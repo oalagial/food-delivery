@@ -7,7 +7,10 @@ import CheckoutPage from './components/CheckoutPage'
 import OrderStatusPage from './components/OrderStatusPage'
 import PaymentSuccessPage from './components/PaymentSuccessPage'
 import PaymentCancelPage from './components/PaymentCancelPage'
+import { PrivacyPolicyPage, CookiePolicyPage, TermsAndConditionsPage } from './components/LegalPages'
+import { BottomLegalShell, CookiePreferencesModal } from './components/CookieConsentUI'
 import AlertDialog from './components/AlertDialog'
+import { CookieConsentProvider } from './context/CookieConsentContext'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
 import { FloatingLanguageContext } from './context/FloatingLanguageContext'
@@ -1100,7 +1103,7 @@ function AppContent() {
             type="button"
             onClick={() => setCartOpen(true)}
             aria-label={t('app.openCart')}
-            className={`group fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:bg-slate-800 hover:shadow-xl lg:bottom-8 lg:right-8 lg:h-[3.75rem] lg:w-[3.75rem] ${
+            className={`group fixed bottom-5 right-4 z-[90] flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:bg-slate-800 hover:shadow-xl lg:bottom-8 lg:right-8 lg:h-[3.75rem] lg:w-[3.75rem] ${
               cartBump ? 'ring-2 ring-slate-400/40 ring-offset-2 ring-offset-white scale-[1.03]' : ''
             }`}
           >
@@ -1243,7 +1246,9 @@ function AppContent() {
 export default function App() {
   return (
     <AlertProvider>
-      <AppWithAlert />
+      <CookieConsentProvider>
+        <AppWithAlert />
+      </CookieConsentProvider>
     </AlertProvider>
   )
 }
@@ -1251,6 +1256,7 @@ export default function App() {
 function AppWithAlert() {
   const { alert, closeAlert } = useAlert()
   const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
+  const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
   const orderStatusMatch = pathname.match(/^\/orders\/status\/([^/]+)$/)
   const orderToken = orderStatusMatch ? orderStatusMatch[1] : null
   const [hideFloatingLanguageSwitcher, setHideFloatingLanguageSwitcher] = useState(false)
@@ -1262,6 +1268,29 @@ function AppWithAlert() {
   const alertDialog = (
     <AlertDialog type={alert.type} title={alert.title} message={alert.message} isOpen={alert.isOpen} onClose={closeAlert} autoCloseDuration={alert.duration} />
   )
+
+  const legalChrome = (page) => (
+    <>
+      <div className="fixed top-4 right-4 z-[100]" aria-hidden="false">
+        <LanguageSwitcher />
+      </div>
+      {alertDialog}
+      <div className="pb-40">{page}</div>
+      <BottomLegalShell />
+      <CookiePreferencesModal />
+    </>
+  )
+
+  if (path === '/privacy-policy') {
+    return legalChrome(<PrivacyPolicyPage />)
+  }
+  if (path === '/cookie-policy') {
+    return legalChrome(<CookiePolicyPage />)
+  }
+  if (path === '/terms-and-conditions') {
+    return legalChrome(<TermsAndConditionsPage />)
+  }
+
   if (pathname === '/payment/success') {
     return (
       <>
@@ -1269,7 +1298,11 @@ function AppWithAlert() {
           <LanguageSwitcher />
         </div>
         {alertDialog}
-        <PaymentSuccessPage />
+        <div className="pb-40">
+          <PaymentSuccessPage />
+        </div>
+        <BottomLegalShell />
+        <CookiePreferencesModal />
       </>
     )
   }
@@ -1280,20 +1313,28 @@ function AppWithAlert() {
           <LanguageSwitcher />
         </div>
         {alertDialog}
-        <PaymentCancelPage />
+        <div className="pb-40">
+          <PaymentCancelPage />
+        </div>
+        <BottomLegalShell />
+        <CookiePreferencesModal />
       </>
     )
   }
 
   return (
-    <FloatingLanguageContext.Provider value={floatingLanguageCtx}>
-      {!hideFloatingLanguageSwitcher && (
-        <div className="fixed top-4 right-4 z-[100]">
-          <LanguageSwitcher />
-        </div>
-      )}
-      {alertDialog}
-      {orderToken ? <OrderStatusPage token={orderToken} /> : <AppContent />}
-    </FloatingLanguageContext.Provider>
+    <>
+      <FloatingLanguageContext.Provider value={floatingLanguageCtx}>
+        {!hideFloatingLanguageSwitcher && (
+          <div className="fixed top-4 right-4 z-[100]">
+            <LanguageSwitcher />
+          </div>
+        )}
+        {alertDialog}
+        <div className="pb-40">{orderToken ? <OrderStatusPage token={orderToken} /> : <AppContent />}</div>
+      </FloatingLanguageContext.Provider>
+      <BottomLegalShell />
+      <CookiePreferencesModal />
+    </>
   )
 }

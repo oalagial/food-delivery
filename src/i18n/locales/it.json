@@ -22,6 +22,34 @@
     "location": "Luogo",
     "dismiss": "Chiudi"
   },
+  "legal": {
+    "backHome": "Torna all'ordine",
+    "privacyTitle": "Informativa sulla privacy",
+    "cookiesTitle": "Politica sui cookie",
+    "termsTitle": "Termini e condizioni",
+    "privacyLink": "Privacy",
+    "cookiesLink": "Cookie",
+    "termsLink": "Termini",
+    "cookieSettings": "Impostazioni cookie",
+    "footerNavLabel": "Legale e privacy"
+  },
+  "cookies": {
+    "bannerTitle": "Cookie e privacy",
+    "bannerBody": "Utilizziamo cookie tecnici necessari al funzionamento del servizio e, con il tuo consenso, cookie di analisi e marketing per migliorare l'esperienza e mostrare contenuti personalizzati. Puoi accettare tutti i cookie, rifiutare quelli non essenziali o gestire le preferenze.",
+    "acceptAll": "Accetta tutti",
+    "reject": "Rifiuta",
+    "customize": "Personalizza",
+    "prefsTitle": "Preferenze cookie",
+    "prefsIntro": "Attiva o disattiva le categorie facoltative. I cookie tecnici restano sempre attivi perché il sito non può funzionare senza di essi.",
+    "catTechnical": "Tecnici (strettamente necessari)",
+    "catTechnicalDesc": "Necessari per sicurezza, carrello, checkout, lingua e funzioni di base.",
+    "catAnalytics": "Analitici",
+    "catAnalyticsDesc": "Ci aiutano a capire come viene usato il servizio. Nessuno script viene caricato senza consenso.",
+    "catMarketing": "Marketing",
+    "catMarketingDesc": "Per misurare le campagne e contenuti pertinenti. Nessuno script viene caricato senza consenso.",
+    "alwaysOn": "Sempre attivi",
+    "savePreferences": "Salva preferenze"
+  },
   "app": {
     "loadingError": "Errore di caricamento",
     "failedToLoadLocations": "Impossibile caricare i punti di consegna. Controlla la connessione e riprova.",
@@ -141,7 +169,14 @@
     "blockerSubmitting": "Attendere — elaborazione in corso…",
     "blockerEmptyCart": "Aggiungi almeno un articolo al carrello.",
     "blockerConfirmLocation": "Spunta la casella per confermare l'indirizzo di consegna.",
-    "blockerInsufficientStock": "Modifica le quantità nel carrello — alcuni prodotti non sono disponibili."
+    "blockerInsufficientStock": "Modifica le quantità nel carrello — alcuni prodotti non sono disponibili.",
+    "blockerLegalAcceptance": "Conferma di aver letto e accettato l'Informativa sulla privacy e i Termini e condizioni.",
+    "legalSectionTitle": "Legale e privacy",
+    "legalAcceptCheckbox": "Ho letto e accetto l'<privacy>Informativa sulla privacy</privacy> e i <terms>Termini e condizioni</terms>.",
+    "marketingOptionalTitle": "Marketing (facoltativo)",
+    "marketingEmailOptIn": "Accetto di ricevere email promozionali",
+    "marketingWhatsAppOptIn": "Accetto di ricevere messaggi promozionali via WhatsApp",
+    "errorLegalAcceptance": "Per continuare accetta Privacy e Termini e condizioni."
   },
   "store": {
     "goBack": "Indietro",
