@@ -25,20 +25,24 @@
   "app": {
     "loadingError": "Errore di caricamento",
     "failedToLoadLocations": "Impossibile caricare i punti di consegna. Controlla la connessione e riprova.",
+    "failedToLoadRestaurants": "Impossibile caricare i ristoranti. Controlla la connessione e riprova.",
     "loadingMenu": "Caricamento menu...",
     "errorLoadingMenu": "Errore nel caricamento del menu",
     "goBack": "Indietro",
     "chooseRestaurant": "Scegli un ristorante",
     "availableForLocation": "Disponibili per il punto di consegna selezionato",
-    "noRestaurants": "Nessun ristorante disponibile per questa zona.",
+    "noRestaurants": "Al momento non ci sono ristoranti disponibili.",
+    "chooseRestaurantSubtitle": "Scegli da dove vuoi ordinare",
     "chooseDeliveryLocation": "Scegli il punto di consegna",
+    "pickDeliveryLocationSubtitle": "Dove vuoi ricevere la consegna?",
     "startOrdering": "Ordina subito del buon cibo!",
     "loadingLocations": "Caricamento punti di consegna...",
+    "loadingRestaurants": "Caricamento ristoranti...",
     "noLocations": "Nessun punto di consegna disponibile. Riprova più tardi.",
     "openCart": "Apri carrello",
     "cart": "Carrello",
     "invalidQrLinkTitle": "Link non valido",
-    "invalidQrLinkMessage": "Questo link al menu non è valido o non è più disponibile. Scegli un punto di consegna per continuare."
+    "invalidQrLinkMessage": "Questo link al menu non è valido o non è più disponibile. Scegli un ristorante per continuare."
   },
   "cart": {
     "title": "Carrello",

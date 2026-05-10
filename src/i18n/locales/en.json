@@ -25,20 +25,24 @@
   "app": {
     "loadingError": "Loading Error",
     "failedToLoadLocations": "Failed to load delivery locations. Please check your connection and try again.",
+    "failedToLoadRestaurants": "Failed to load restaurants. Please check your connection and try again.",
     "loadingMenu": "Loading menu...",
     "errorLoadingMenu": "Error loading menu",
     "goBack": "Go Back",
     "chooseRestaurant": "Choose a Restaurant",
     "availableForLocation": "Available for your selected delivery location",
-    "noRestaurants": "No restaurants available for this location.",
+    "noRestaurants": "No restaurants available right now.",
+    "chooseRestaurantSubtitle": "Pick where you want to order from",
     "chooseDeliveryLocation": "Choose Your Delivery Location",
+    "pickDeliveryLocationSubtitle": "Where should we deliver your order?",
     "startOrdering": "Start ordering delicious food now!",
     "loadingLocations": "Loading delivery locations...",
+    "loadingRestaurants": "Loading restaurants...",
     "noLocations": "No delivery locations available. Please try again later.",
     "openCart": "Open cart",
     "cart": "Cart",
     "invalidQrLinkTitle": "Invalid link",
-    "invalidQrLinkMessage": "This menu link is not valid or is no longer available. Choose a delivery location to continue."
+    "invalidQrLinkMessage": "This menu link is not valid or is no longer available. Choose a restaurant to continue."
   },
   "cart": {
     "title": "Cart",

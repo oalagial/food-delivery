@@ -11,7 +11,7 @@ import AlertDialog from './components/AlertDialog'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import { AlertProvider, useAlert } from './context/AlertContext'
 import { FloatingLanguageContext } from './context/FloatingLanguageContext'
-import { restaurantService, orderService, deliveryLocationService } from './services'
+import { restaurantService, orderService } from './services'
 import { initializeAuth } from './services/authInit'
 import logo from './assets/logo.png'
 
@@ -57,16 +57,35 @@ function syncUrlToSelection(point, restaurant) {
   )
 }
 
+function normalizeCheckoutLocationRows(rows) {
+  return (rows || [])
+    .map((r) => ({
+      id: r.locationId ?? r.id,
+      name: typeof r.name === 'string' ? r.name : '',
+      token: r.token,
+    }))
+    .filter((r) => r.id != null)
+}
+
+function deliveryPointFromLocationRow(loc, restaurant) {
+  return {
+    id: loc.id,
+    name: loc.name,
+    token: loc.token,
+    deliveredBy: [restaurant],
+    image: restaurant?.image,
+  }
+}
+
 function AppContent() {
   const { t } = useTranslation()
   const { alert, closeAlert, showAlert } = useAlert()
-  const [points, setPoints] = useState([])
+  const [catalogRestaurants, setCatalogRestaurants] = useState([])
   const [loading, setLoading] = useState(true)
-  const [authInitialized, setAuthInitialized] = useState(false)
 
   const [selectedPoint, setSelectedPoint] = useState(null)
-  const [restaurants, setRestaurants] = useState([])
-  const [restaurantLoading, setRestaurantLoading] = useState(false)
+  const [locationOptions, setLocationOptions] = useState([])
+  const [locationsLoading, setLocationsLoading] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
 
   const STORAGE_KEYS = {
@@ -74,24 +93,21 @@ function AppContent() {
     restaurant: 'delivery_restaurant_id',
     cartRestaurant: 'cart_restaurant_id',
   }
-  const hasRestoredSession = useRef(false)
+  const initialSessionDoneRef = useRef(false)
 
-  // Initialize auth and fetch delivery locations on mount
+  // Initialize auth and fetch restaurants catalog on mount
   useEffect(() => {
     const initAndFetch = async () => {
       try {
         setLoading(true)
-        // Initialize authentication
-        const authResult = await initializeAuth()
-        setAuthInitialized(authResult.authenticated)
-        // Fetch delivery locations
-        const data = await deliveryLocationService.getAll()
-        // If paginated, use data.data, else use data
-        setPoints(Array.isArray(data) ? data : data.data || [])
+        await initializeAuth()
+        const list = await restaurantService.getAll()
+        setCatalogRestaurants(Array.isArray(list) ? list : [])
       } catch (error) {
-        console.error('Failed to fetch delivery locations:', error)
-        const errorMessage = error.response?.data?.message || t('app.failedToLoadLocations')
+        console.error('Failed to fetch restaurants:', error)
+        const errorMessage = error.response?.data?.message || t('app.failedToLoadRestaurants')
         showAlert('error', t('app.loadingError'), errorMessage, 5000)
+        setCatalogRestaurants([])
       } finally {
         setLoading(false)
       }
@@ -233,6 +249,7 @@ function AppContent() {
 
   const [fetchedMenu, setFetchedMenu] = useState(null)
   const [menuLoading, setMenuLoading] = useState(false)
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null)
 
   const fetchRestaurantMenu = useCallback(async (restaurantId) => {
     setMenuLoading(true)
@@ -250,60 +267,77 @@ function AppContent() {
     }
   }, [])
 
-  function handleSelect(point) {
-    setSelectedPoint(point)
-    setActiveCategory(null)
-    const keepCart =
-      cart.length > 0 &&
-      cartRestaurantId != null &&
-      pointDeliversRestaurantId(point, cartRestaurantId)
-    if (!keepCart) {
-      setCart([])
-      setCartRestaurantId(null)
-    }
-    try {
-      localStorage.setItem(STORAGE_KEYS.location, String(point.id))
-    } catch {
-      /* ignore */
-    }
-    // deliveredBy is now an array of restaurants
-    if (Array.isArray(point.deliveredBy)) {
-      if (point.deliveredBy.length === 1) {
-        // Only one restaurant, go directly to StorePage
-        setRestaurants([])
-        const rest = point.deliveredBy[0]
-        setSelectedRestaurant(rest)
-        try {
-          localStorage.setItem(STORAGE_KEYS.restaurant, String(rest.id))
-        } catch {
-          /* ignore */
+  const applyLocationAndOpenStore = useCallback(
+    (loc, rest) => {
+      const point = deliveryPointFromLocationRow(loc, rest)
+      setSelectedPoint(point)
+      setActiveCategory(null)
+      try {
+        localStorage.setItem(STORAGE_KEYS.location, String(loc.id))
+      } catch {
+        /* ignore */
+      }
+      fetchRestaurantMenu(rest.id)
+      syncUrlToSelection(point, rest)
+    },
+    [fetchRestaurantMenu]
+  )
+
+  const selectRestaurant = useCallback(
+    async (r) => {
+      if (!r?.id) return
+      const keepCart =
+        cart.length > 0 && cartRestaurantId != null && String(cartRestaurantId) === String(r.id)
+      if (!keepCart) {
+        setCart([])
+        setCartRestaurantId(null)
+      }
+      setSelectedRestaurant(r)
+      setSelectedPoint(null)
+      setFetchedMenu(null)
+      setActiveCategory(null)
+      try {
+        localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id))
+        localStorage.removeItem(STORAGE_KEYS.location)
+      } catch {
+        /* ignore */
+      }
+      syncUrlToSelection(null, r)
+
+      setLocationsLoading(true)
+      setLocationOptions([])
+      try {
+        const rows = await restaurantService.getCheckoutLocations(r.id)
+        const normalized = normalizeCheckoutLocationRows(rows)
+        setLocationOptions(normalized)
+        if (normalized.length === 0) {
+          showAlert('error', t('app.loadingError'), t('app.noLocations'), 5000)
+          setSelectedRestaurant(null)
+          try {
+            localStorage.removeItem(STORAGE_KEYS.restaurant)
+          } catch {
+            /* ignore */
+          }
+          syncUrlToSelection(null, null)
         }
-        fetchRestaurantMenu(rest.id)
-        syncUrlToSelection(point, rest)
-      } else {
-        // Multiple restaurants, show selection
-        setRestaurants(point.deliveredBy)
+        // Always show location list (including a single location) so the user confirms the choice
+      } catch (error) {
+        console.error('Failed to load locations for restaurant:', error)
+        showAlert('error', t('app.loadingError'), t('app.failedToLoadLocations'), 5000)
         setSelectedRestaurant(null)
+        setLocationOptions([])
         try {
           localStorage.removeItem(STORAGE_KEYS.restaurant)
         } catch {
           /* ignore */
         }
-        syncUrlToSelection(point, null)
+        syncUrlToSelection(null, null)
+      } finally {
+        setLocationsLoading(false)
       }
-    } else {
-      // Fallback: no deliveredBy or not array
-      setRestaurants([])
-      setSelectedRestaurant(null)
-      try {
-        localStorage.removeItem(STORAGE_KEYS.restaurant)
-      } catch {
-        /* ignore */
-      }
-      syncUrlToSelection(point, null)
-    }
-  }
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null)
+    },
+    [cart.length, cartRestaurantId, showAlert, t]
+  )
 
   useEffect(() => {
     selectedRestaurantIdRef.current = selectedRestaurant?.id ?? null
@@ -319,97 +353,130 @@ function AppContent() {
     }
   }, [cart, selectedRestaurant?.id, cartRestaurantId])
 
-  // Initial URL (?loc=&res=) or restore location + restaurant from localStorage
+  // Initial URL (?loc=&res=), localStorage session restore, or default to sole restaurant
   useEffect(() => {
-    if (loading || points.length === 0 || hasRestoredSession.current) return
+    if (loading) return
+    if (initialSessionDoneRef.current) return
+    initialSessionDoneRef.current = true
 
-    const { loc: locToken, res: resToken } = readLocResParamsFromUrl()
-
-    if (locToken && resToken) {
-      const point = points.find((p) => String(p.token ?? '') === String(locToken))
-      const rest =
-        point && Array.isArray(point.deliveredBy)
-          ? point.deliveredBy.find((r) => String(r.token ?? '') === String(resToken))
-          : null
-
-      hasRestoredSession.current = true
-
-      if (point && rest && pointDeliversRestaurantId(point, rest.id)) {
-        setSelectedPoint(point)
-        setActiveCategory(null)
-        if (cart.length > 0) {
-          const sameRestaurant =
-            cartRestaurantId == null || String(cartRestaurantId) === String(rest.id)
-          const keepCart = sameRestaurant && pointDeliversRestaurantId(point, rest.id)
-          if (!keepCart) {
-            setCart([])
-            setCartRestaurantId(null)
-          } else if (cartRestaurantId == null) {
-            setCartRestaurantId(rest.id)
-          }
+    const applyCartRulesForRestore = (point, rest) => {
+      if (cart.length > 0) {
+        const sameRestaurant =
+          cartRestaurantId == null || String(cartRestaurantId) === String(rest.id)
+        const keepCart = sameRestaurant && pointDeliversRestaurantId(point, rest.id)
+        if (!keepCart) {
+          setCart([])
+          setCartRestaurantId(null)
+        } else if (cartRestaurantId == null) {
+          setCartRestaurantId(rest.id)
         }
-        try {
-          localStorage.setItem(STORAGE_KEYS.location, String(point.id))
-          localStorage.setItem(STORAGE_KEYS.restaurant, String(rest.id))
-        } catch {
-          /* ignore */
-        }
-        if (point.deliveredBy.length === 1) {
-          setRestaurants([])
-        } else {
-          setRestaurants(point.deliveredBy)
-        }
-        setSelectedRestaurant(rest)
-        fetchRestaurantMenu(rest.id)
-        syncUrlToSelection(point, rest)
-        return
       }
-
-      syncDeepLinkParamsToUrl(null, null)
-      showAlert('error', t('app.invalidQrLinkTitle'), t('app.invalidQrLinkMessage'), 5000)
-      return
     }
 
-    const locId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.location) : null
-    if (!locId) return
-    const point = points.find((p) => String(p.id) === String(locId))
-    if (!point) {
+    ;(async () => {
       try {
-        localStorage.removeItem(STORAGE_KEYS.location)
-        localStorage.removeItem(STORAGE_KEYS.restaurant)
-      } catch {
-        /* ignore */
-      }
-      return
-    }
-    hasRestoredSession.current = true
-    setSelectedPoint(point)
-    if (Array.isArray(point.deliveredBy) && point.deliveredBy.length > 0) {
-      if (point.deliveredBy.length === 1) {
-        const rest = point.deliveredBy[0]
-        setRestaurants([])
-        setSelectedRestaurant(rest)
-        fetchRestaurantMenu(rest.id)
-        syncUrlToSelection(point, rest)
-      } else {
-        setRestaurants(point.deliveredBy)
-        const restId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.restaurant) : null
-        const rest = restId ? point.deliveredBy.find((r) => String(r.id) === String(restId)) : null
-        if (rest) {
+        const { loc: locToken, res: resToken } = readLocResParamsFromUrl()
+
+        if (locToken && resToken) {
+          const rest = catalogRestaurants.find((r) => String(r.token ?? '') === String(resToken))
+          if (!rest) {
+            syncDeepLinkParamsToUrl(null, null)
+            showAlert('error', t('app.invalidQrLinkTitle'), t('app.invalidQrLinkMessage'), 5000)
+            if (catalogRestaurants.length === 1) await selectRestaurant(catalogRestaurants[0])
+            return
+          }
+          const rows = await restaurantService.getCheckoutLocations(rest.id)
+          const normalized = normalizeCheckoutLocationRows(rows)
+          const locRow =
+            normalized.find((l) => String(l.token ?? '') === String(locToken)) ||
+            normalized.find((l) => String(l.id) === String(locToken))
+          if (!locRow) {
+            syncDeepLinkParamsToUrl(null, null)
+            showAlert('error', t('app.invalidQrLinkTitle'), t('app.invalidQrLinkMessage'), 5000)
+            if (catalogRestaurants.length === 1) await selectRestaurant(catalogRestaurants[0])
+            return
+          }
+          const point = deliveryPointFromLocationRow(locRow, rest)
+          applyCartRulesForRestore(point, rest)
+          try {
+            localStorage.setItem(STORAGE_KEYS.location, String(locRow.id))
+            localStorage.setItem(STORAGE_KEYS.restaurant, String(rest.id))
+          } catch {
+            /* ignore */
+          }
           setSelectedRestaurant(rest)
+          setLocationOptions(normalized)
+          setSelectedPoint(point)
+          setActiveCategory(null)
           fetchRestaurantMenu(rest.id)
           syncUrlToSelection(point, rest)
-        } else {
-          setSelectedRestaurant(null)
-          syncUrlToSelection(point, null)
+          return
         }
+
+        const locId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.location) : null
+        const restId = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.restaurant) : null
+
+        if (locId && restId) {
+          const rest = catalogRestaurants.find((r) => String(r.id) === String(restId))
+          if (!rest) {
+            try {
+              localStorage.removeItem(STORAGE_KEYS.location)
+              localStorage.removeItem(STORAGE_KEYS.restaurant)
+            } catch {
+              /* ignore */
+            }
+            if (catalogRestaurants.length === 1) await selectRestaurant(catalogRestaurants[0])
+            return
+          }
+          const rows = await restaurantService.getCheckoutLocations(rest.id)
+          const normalized = normalizeCheckoutLocationRows(rows)
+          const locRow = normalized.find((l) => String(l.id) === String(locId))
+          if (!locRow) {
+            try {
+              localStorage.removeItem(STORAGE_KEYS.location)
+              localStorage.removeItem(STORAGE_KEYS.restaurant)
+            } catch {
+              /* ignore */
+            }
+            if (catalogRestaurants.length === 1) await selectRestaurant(catalogRestaurants[0])
+            return
+          }
+          const point = deliveryPointFromLocationRow(locRow, rest)
+          applyCartRulesForRestore(point, rest)
+          setSelectedRestaurant(rest)
+          setLocationOptions(normalized)
+          setSelectedPoint(point)
+          setActiveCategory(null)
+          fetchRestaurantMenu(rest.id)
+          syncUrlToSelection(point, rest)
+          return
+        }
+
+        if (locId && !restId) {
+          try {
+            localStorage.removeItem(STORAGE_KEYS.location)
+          } catch {
+            /* ignore */
+          }
+        }
+
+        if (catalogRestaurants.length === 1) {
+          await selectRestaurant(catalogRestaurants[0])
+        }
+      } catch (e) {
+        console.error('Initial session restore failed:', e)
       }
-    } else {
-      setRestaurants([])
-      setSelectedRestaurant(null)
-      syncUrlToSelection(point, null)
-    }
-  }, [loading, points, cart, cartRestaurantId, fetchRestaurantMenu, showAlert, t])
+    })()
+  }, [
+    loading,
+    catalogRestaurants,
+    cart.length,
+    cartRestaurantId,
+    fetchRestaurantMenu,
+    selectRestaurant,
+    showAlert,
+    t,
+  ])
 
   const menuApiRestaurant = fetchedMenu?.data?.[0]
   const checkoutRestaurant = useMemo(() => {
@@ -425,7 +492,7 @@ function AppContent() {
 
   function handleBack() {
     setSelectedPoint(null)
-    setRestaurants([])
+    setLocationOptions([])
     setSelectedRestaurant(null)
     setFetchedMenu(null)
     setActiveCategory(null)
@@ -780,33 +847,49 @@ function AppContent() {
   }
 
   function handleChangeDeliveryLocationFromCheckout(loc) {
-    const fromPoints = points.find((pt) => String(pt.id) === String(loc.id))
-    setSelectedPoint((prev) => {
-      if (fromPoints) return fromPoints
-      if (prev) return { ...prev, id: loc.id, name: loc.name }
-      return { id: loc.id, name: loc.name }
-    })
+    const locRow = locationOptions.find((pt) => String(pt.id) === String(loc.id))
+    const base = locRow
+      ? { id: locRow.id, name: locRow.name, token: locRow.token }
+      : { id: loc.id, name: loc.name, token: loc.token }
+    const newPoint =
+      selectedRestaurant != null
+        ? deliveryPointFromLocationRow(base, selectedRestaurant)
+        : selectedPoint != null
+          ? { ...selectedPoint, id: base.id, name: base.name, token: base.token }
+          : { id: base.id, name: base.name, token: base.token }
+    setSelectedPoint(newPoint)
     try {
       localStorage.setItem(STORAGE_KEYS.location, String(loc.id))
     } catch {
       /* ignore */
     }
-    const pt = fromPoints
     const keepRes =
       selectedRestaurant != null &&
-      pt &&
-      pointDeliversRestaurantId(pt, selectedRestaurant.id)
+      newPoint &&
+      pointDeliversRestaurantId(newPoint, selectedRestaurant.id)
     syncDeepLinkParamsToUrl(
-      tokenSearchParamValue(pt?.token ?? loc.token),
+      tokenSearchParamValue(newPoint?.token ?? loc.token),
       keepRes ? tokenSearchParamValue(selectedRestaurant.token) : null
     )
   }
 
-  if (selectedPoint) {
-    if (selectedRestaurant) {
-      // 
-      // Show StorePage for the selected restaurant
-      return (
+  function handleBackFromLocationPicker() {
+    setSelectedRestaurant(null)
+    setSelectedPoint(null)
+    setLocationOptions([])
+    setFetchedMenu(null)
+    setActiveCategory(null)
+    try {
+      localStorage.removeItem(STORAGE_KEYS.restaurant)
+      localStorage.removeItem(STORAGE_KEYS.location)
+    } catch {
+      /* ignore */
+    }
+    syncUrlToSelection(null, null)
+  }
+
+  if (selectedRestaurant && selectedPoint) {
+    return (
         <>
           {menuLoading ? (
             <div className="w-full h-screen bg-slate-50 flex items-center justify-center">
@@ -824,13 +907,17 @@ function AppContent() {
                 <p className="text-base text-slate-600 mb-4">{fetchedMenu.error}</p>
                 <button
                   onClick={() => {
-                    // If there are multiple restaurants, go back to restaurant selection
-                    // Otherwise, go back to location selection
-                    if (restaurants.length > 0) {
-                      setSelectedRestaurant(null)
+                    if (catalogRestaurants.length > 1) {
+                      handleBackFromLocationPicker()
+                    } else if (locationOptions.length > 0) {
+                      setSelectedPoint(null)
                       setFetchedMenu(null)
-                      try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
-                      syncUrlToSelection(selectedPoint, null)
+                      try {
+                        localStorage.removeItem(STORAGE_KEYS.location)
+                      } catch {
+                        /* ignore */
+                      }
+                      syncUrlToSelection(null, selectedRestaurant)
                     } else {
                       handleBack()
                     }
@@ -988,13 +1075,17 @@ function AppContent() {
                   activeCategory={activeCategory}
                   setActiveCategory={setActiveCategory}
                   onBack={() => {
-                    // If there are multiple restaurants, go back to restaurant selection
-                    // Otherwise, go back to location selection
-                    if (restaurants.length > 0) {
-                      setSelectedRestaurant(null)
+                    if (catalogRestaurants.length > 1) {
+                      handleBackFromLocationPicker()
+                    } else if (locationOptions.length > 0) {
+                      setSelectedPoint(null)
                       setFetchedMenu(null)
-                      try { localStorage.removeItem(STORAGE_KEYS.restaurant) } catch { /* ignore */ }
-                      syncUrlToSelection(selectedPoint, null)
+                      try {
+                        localStorage.removeItem(STORAGE_KEYS.location)
+                      } catch {
+                        /* ignore */
+                      }
+                      syncUrlToSelection(null, selectedRestaurant)
                     } else {
                       handleBack()
                     }
@@ -1051,59 +1142,51 @@ function AppContent() {
             />
           )}
         </>
-      )
-    }
-    // Show restaurant selection if multiple
+    )
+  }
+
+  if (selectedRestaurant) {
     return (
       <>
         <div className="w-full min-h-screen bg-white flex flex-col">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
             <div className="flex items-center gap-3">
               <button
-                onClick={handleBack}
+                type="button"
+                onClick={handleBackFromLocationPicker}
                 className="text-2xl leading-none active:opacity-70 transition-opacity"
                 aria-label={t('common.goBack')}
               >
                 ←
               </button>
               <div className="flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-center">{t('app.chooseRestaurant')}</h2>
-                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">{t('app.availableForLocation')}</p>
+                <h2 className="text-lg sm:text-xl font-bold text-center">{t('app.chooseDeliveryLocation')}</h2>
+                <p className="text-xs sm:text-sm text-center text-blue-100 mt-1">{t('app.pickDeliveryLocationSubtitle')}</p>
               </div>
               <div className="w-8"></div>
             </div>
           </div>
           <div className="flex-1 p-4 sm:p-6">
-            {restaurants.length > 0 ? (
+            {locationsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin mb-3">
+                  <span className="text-4xl">⏳</span>
+                </div>
+                <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
+              </div>
+            ) : locationOptions.length > 0 ? (
               <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center px-2 sm:px-4 max-w-4xl mx-auto">
-                {restaurants.map((r) => (
+                {locationOptions.map((loc) => (
                   <DeliveryPointCard
-                    key={r.id}
-                    point={r}
-                    onSelect={() => {
-                      if (
-                        cart.length > 0 &&
-                        cartRestaurantId != null &&
-                        String(r.id) !== String(cartRestaurantId)
-                      ) {
-                        setCart([])
-                        setCartRestaurantId(null)
-                      }
-                      setSelectedRestaurant(r)
-                      try {
-                        localStorage.setItem(STORAGE_KEYS.restaurant, String(r.id))
-                      } catch {
-                        /* ignore */
-                      }
-                      fetchRestaurantMenu(r.id)
-                      syncUrlToSelection(selectedPoint, r)
-                    }}
+                    key={loc.id}
+                    point={deliveryPointFromLocationRow(loc, selectedRestaurant)}
+                    onSelect={() => applyLocationAndOpenStore(loc, selectedRestaurant)}
                   />
                 ))}
               </section>
             ) : (
               <div className="text-center py-12">
-                <p className="text-sm sm:text-base text-slate-600">{t('app.noRestaurants')}</p>
+                <p className="text-sm sm:text-base text-slate-600">{t('app.noLocations')}</p>
               </div>
             )}
           </div>
@@ -1122,9 +1205,9 @@ function AppContent() {
                 <img src={logo} alt="Logo" className="w-48 h-48" />
               </div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2 sm:mb-3">
-                {t('app.chooseDeliveryLocation')}
+                {t('app.chooseRestaurant')}
               </h1>
-              <p className="text-sm sm:text-base text-slate-600">{t('app.startOrdering')} 🚀</p>
+              <p className="text-sm sm:text-base text-slate-600">{t('app.chooseRestaurantSubtitle')}</p>
             </header>
 
             {loading ? (
@@ -1132,17 +1215,17 @@ function AppContent() {
                 <div className="animate-spin mb-3">
                   <span className="text-4xl">⏳</span>
                 </div>
-                <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingLocations')}</span>
+                <span className="text-sm sm:text-base text-slate-600 font-medium">{t('app.loadingRestaurants')}</span>
               </div>
-            ) : points.length > 0 ? (
+            ) : catalogRestaurants.length > 0 ? (
               <section className="grid grid-cols-1 items-stretch sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 justify-items-center">
-                {points.map((p) => (
-                  <DeliveryPointCard key={p.id} point={p} onSelect={handleSelect} />
+                {catalogRestaurants.map((r) => (
+                  <DeliveryPointCard key={r.id} point={r} onSelect={(p) => selectRestaurant(p)} />
                 ))}
               </section>
             ) : (
               <div className="text-center py-12">
-                <p className="text-sm sm:text-base text-slate-600">{t('app.noLocations')}</p>
+                <p className="text-sm sm:text-base text-slate-600">{t('app.noRestaurants')}</p>
               </div>
             )}
           </div>
