@@ -685,6 +685,12 @@ export default function CheckoutPage({
       ) {
         // fetched fresh slot and opened modal
       } else if (
+        typeof data?.message === 'string' &&
+        /earlier than the minimum preparation/i.test(data.message) &&
+        (await handleSlotFullFallback())
+      ) {
+        // stale ASAP / slot vs kitchen prep — fresh estimate or timeslots + same modal as slot-full
+      } else if (
         promptForUpdatedTime({
           slot: extractSuggestedTimeslot(data),
           useCustomSchedule: customSchedule,
