@@ -83,6 +83,8 @@
     "emailRequired": "Email *",
     "enterName": "Enter your name",
     "enterPhone": "Your WhatsApp number",
+    "phoneCountrySearch": "Search country or code",
+    "phoneCountrySearchEmpty": "No countries found",
     "enterEmail": "Enter your email",
     "errorName": "Please enter your name.",
     "errorPhone": "Please enter your phone number.",

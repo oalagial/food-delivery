@@ -57,6 +57,118 @@ function rehomePhoneDigits(phoneDigits, oldDial, newDial) {
   return b
 }
 
+function getNationalPhoneDigits(phoneDigits, dialCode) {
+  const digits = String(phoneDigits ?? '').replace(/\D/g, '')
+  const dial = String(dialCode ?? '').replace(/\D/g, '')
+  if (!digits) return ''
+  if (dial && digits.startsWith(dial)) return digits.slice(dial.length)
+  return digits
+}
+
+function SplitPhoneInput({
+  value,
+  onChange,
+  onMount,
+  onBlur,
+  hasError,
+  placeholder,
+  dialCode,
+  inputProps,
+}) {
+  const { t } = useTranslation()
+  const nationalDigits = getNationalPhoneDigits(value, dialCode)
+  const borderClass = hasError
+    ? 'border-red-500 focus:ring-red-500'
+    : 'border-slate-300 focus:ring-orange-500'
+
+  const handleNationalChange = (e) => {
+    const national = e.target.value.replace(/\D/g, '')
+    const dial = String(dialCode ?? '').replace(/\D/g, '')
+    const full = dial + national
+    onChange(full, { dialCode: dial }, e, full)
+  }
+
+  const {
+    onPaste: inputOnPaste,
+    onCopy: inputOnCopy,
+    onCut: inputOnCut,
+    ...numberInputProps
+  } = inputProps || {}
+  const prefixRef = useRef(null)
+
+  const openCountryDropdown = () => {
+    prefixRef.current?.querySelector('.selected-flag')?.click()
+  }
+
+  const handlePrefixClick = (e) => {
+    if (e.target.closest('.country-list')) return
+    const flagBtn = prefixRef.current?.querySelector('.selected-flag')
+    if (!flagBtn || flagBtn.contains(e.target)) return
+    openCountryDropdown()
+  }
+
+  const handlePrefixKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openCountryDropdown()
+    }
+  }
+
+  return (
+    <div className={`checkout-split-phone${hasError ? ' checkout-split-phone--error' : ''}`}>
+      <div
+        ref={prefixRef}
+        role="button"
+        tabIndex={0}
+        onClick={handlePrefixClick}
+        onKeyDown={handlePrefixKeyDown}
+        className={`checkout-split-phone__prefix border rounded-lg ${borderClass}`}
+      >
+        <div className="checkout-split-phone__country-picker">
+          <PhoneInput
+            country="it"
+            preferredCountries={['it', 'gr']}
+            countryCodeEditable={false}
+            disableCountryCode
+            enableSearch
+            searchPlaceholder={t('checkout.phoneCountrySearch')}
+            searchNotFound={t('checkout.phoneCountrySearchEmpty')}
+            specialLabel=""
+            value={value}
+            onChange={onChange}
+            onMount={onMount}
+            inputProps={{
+              tabIndex: -1,
+              'aria-hidden': true,
+            }}
+            containerClass="checkout-split-phone__country"
+            searchClass="checkout-split-phone__search"
+            buttonStyle={{
+              border: 'none',
+              background: 'transparent',
+              width: 'auto',
+              height: '40px',
+            }}
+          />
+        </div>
+        <span className="checkout-split-phone__dial">+{dialCode || '39'}</span>
+      </div>
+      <input
+        type="tel"
+        value={nationalDigits}
+        onChange={handleNationalChange}
+        onBlur={onBlur}
+        onPaste={inputOnPaste}
+        onCopy={inputOnCopy}
+        onCut={inputOnCut}
+        placeholder={placeholder}
+        className={`checkout-split-phone__number border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${borderClass}`}
+        {...numberInputProps}
+      />
+    </div>
+  )
+}
+
 /** For API: "country code␠national" (digits only, then one space). */
 function formatPhoneForOrder(digits, dialCode) {
   const d = String(digits ?? '').replace(/\D/g, '')
@@ -146,6 +258,7 @@ export default function CheckoutPage({
   const [checkoutLocationsLoading, setCheckoutLocationsLoading] = useState(false)
   const [checkoutLocationsError, setCheckoutLocationsError] = useState(null)
   const lastVerifiedSlotKeyRef = useRef(null)
+  const [phoneDialCode, setPhoneDialCode] = useState('39')
   const phoneDialCodeRef = useRef('39')
   const { showAlert } = useAlert()
 
@@ -180,7 +293,10 @@ export default function CheckoutPage({
     } else {
       setCustomerPhoneConfirm('')
     }
-    if (dial) phoneDialCodeRef.current = dial
+    if (dial) {
+      phoneDialCodeRef.current = dial
+      setPhoneDialCode(dial)
+    }
     setFieldDirty('phone')()
   }
 
@@ -193,7 +309,10 @@ export default function CheckoutPage({
     if (dial && dial !== prevDial) {
       setCustomerPhone((prev) => rehomePhoneDigits(prev, prevDial, dial))
     }
-    if (dial) phoneDialCodeRef.current = dial
+    if (dial) {
+      phoneDialCodeRef.current = dial
+      setPhoneDialCode(dial)
+    }
     setFieldDirty('phoneConfirm')()
   }
 
@@ -1153,37 +1272,24 @@ export default function CheckoutPage({
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.phoneRequired')}</label>
-                  <PhoneInput
-                    country="it"
-                    preferredCountries={['it', 'gr']}
-                    countryCodeEditable={false}
+                  <SplitPhoneInput
                     value={customerPhone}
+                    dialCode={phoneDialCode}
                     onChange={handlePrimaryPhoneChange}
                     onMount={(_v, data) => {
                       if (data && 'dialCode' in data && data.dialCode != null) {
-                        phoneDialCodeRef.current = String(data.dialCode)
+                        const dial = String(data.dialCode)
+                        phoneDialCodeRef.current = dial
+                        setPhoneDialCode(dial)
                       }
                     }}
                     onBlur={setFieldTouched('phone')}
+                    hasError={showError('phone')}
                     inputProps={{
                       name: 'customerPhone',
                       autoComplete: 'tel',
                       required: true,
                     }}
-                    containerStyle={{ width: '100%' }}
-                    inputStyle={{
-                      width: '100%',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      minHeight: '42px',
-                      borderColor: showError('phone') ? '#ef4444' : '#cbd5e1',
-                    }}
-                    buttonStyle={{
-                      borderTopLeftRadius: '0.5rem',
-                      borderBottomLeftRadius: '0.5rem',
-                      borderColor: showError('phone') ? '#ef4444' : '#cbd5e1',
-                    }}
-                    inputClass={showError('phone') ? 'focus:!ring-red-500' : 'focus:!ring-orange-500'}
                     placeholder={t('checkout.enterPhone')}
                   />
                   {showError('phone') && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
@@ -1193,13 +1299,12 @@ export default function CheckoutPage({
                   onDrop={(e) => e.preventDefault()}
                 >
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 text-slate-700">{t('checkout.phoneConfirmRequired')}</label>
-                  <PhoneInput
-                    country="it"
-                    preferredCountries={['it', 'gr']}
-                    countryCodeEditable={false}
+                  <SplitPhoneInput
                     value={customerPhoneConfirm}
+                    dialCode={phoneDialCode}
                     onChange={handleConfirmPhoneChange}
                     onBlur={setFieldTouched('phoneConfirm')}
+                    hasError={showError('phoneConfirm')}
                     inputProps={{
                       name: 'checkout_phone_reenter',
                       id: 'checkout-phone-confirm',
@@ -1213,20 +1318,6 @@ export default function CheckoutPage({
                       onCopy: (e) => e.preventDefault(),
                       onCut: (e) => e.preventDefault(),
                     }}
-                    containerStyle={{ width: '100%' }}
-                    inputStyle={{
-                      width: '100%',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      minHeight: '42px',
-                      borderColor: showError('phoneConfirm') ? '#ef4444' : '#cbd5e1',
-                    }}
-                    buttonStyle={{
-                      borderTopLeftRadius: '0.5rem',
-                      borderBottomLeftRadius: '0.5rem',
-                      borderColor: showError('phoneConfirm') ? '#ef4444' : '#cbd5e1',
-                    }}
-                    inputClass={showError('phoneConfirm') ? 'focus:!ring-red-500' : 'focus:!ring-orange-500'}
                     placeholder={t('checkout.enterPhoneConfirm')}
                   />
                   {showError('phoneConfirm') && <p className="text-xs text-red-600 mt-1">{errors.phoneConfirm}</p>}
