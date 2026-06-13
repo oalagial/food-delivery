@@ -103,9 +103,15 @@ function AppContent() {
     const initAndFetch = async () => {
       try {
         setLoading(true)
-        await initializeAuth()
-        const list = await restaurantService.getAll()
-        setCatalogRestaurants(Array.isArray(list) ? list : [])
+        // Initialize authentication
+        const authResult = await initializeAuth()
+        setAuthInitialized(authResult.authenticated)
+        // Fetch delivery locations
+        const data = await deliveryLocationService.getAll()
+        // If paginated, use data.data, else use data
+        const list = Array.isArray(data) ? data : data.data || []
+        list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.name ?? '').localeCompare(String(b.name ?? '')))
+        setPoints(list)
       } catch (error) {
         console.error('Failed to fetch restaurants:', error)
         const errorMessage = error.response?.data?.message || t('app.failedToLoadRestaurants')

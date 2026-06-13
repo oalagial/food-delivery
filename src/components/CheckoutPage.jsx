@@ -1112,8 +1112,10 @@ export default function CheckoutPage({
         .map((r) => ({
           id: r.locationId ?? r.id,
           name: typeof r.name === 'string' ? r.name : '',
+          order: Number(r.order) || 0,
         }))
         .filter((r) => r.id != null)
+        .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
       setCheckoutLocations(normalized)
     } catch {
       setCheckoutLocationsError(t('checkout.locationsLoadError'))

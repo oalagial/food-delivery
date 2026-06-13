@@ -13,7 +13,7 @@ export const restaurantService = {
     return response.data?.data || []
   },
 
-  /** Checkout: delivery locations for a restaurant ({ locationId, name }[]) */
+  /** Checkout: delivery locations for a restaurant ({ locationId, name, order }[]) */
   getCheckoutLocations: async (restaurantId) => {
     const response = await apiClient.get(`/public/restaurants/${restaurantId}/locations`)
     const raw = response.data
