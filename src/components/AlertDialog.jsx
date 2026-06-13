@@ -18,7 +18,7 @@ export default function AlertDialog({ type = 'success', title, message, isOpen, 
   const iconColor = type === 'success' ? 'text-green-600' : 'text-red-600'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className={`relative ${bgColor} border ${borderColor} rounded-lg shadow-lg max-w-md lg:max-w-lg w-full p-8 lg:p-10 animate-fade-in`}>
         <div className="flex items-start gap-5">
