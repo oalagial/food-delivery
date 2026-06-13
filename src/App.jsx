@@ -87,7 +87,9 @@ function AppContent() {
         // Fetch delivery locations
         const data = await deliveryLocationService.getAll()
         // If paginated, use data.data, else use data
-        setPoints(Array.isArray(data) ? data : data.data || [])
+        const list = Array.isArray(data) ? data : data.data || []
+        list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.name ?? '').localeCompare(String(b.name ?? '')))
+        setPoints(list)
       } catch (error) {
         console.error('Failed to fetch delivery locations:', error)
         const errorMessage = error.response?.data?.message || t('app.failedToLoadLocations')
