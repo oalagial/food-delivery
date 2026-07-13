@@ -40,14 +40,25 @@ export default function StorePage({
   const tabsRowRef = useRef(null)
   const heroImageRef = useRef(null)
   const scrollTargetRef = useRef(null) // όταν πατήθηκε pill, αγνοούμε scroll μέχρι να σταματήσει
-  /** Ύψος sticky γραμμής κατηγοριών (για scroll-spy & scrollToCategory) */
+  /** Fallback height for sticky category row (used before first layout). */
   const STICKY_TABS_OFFSET = 52
-  /** Έξτρα offset όταν η μπάρα πίσω/γλώσσα είναι fixed — ταιριάζει με ύψος toolbar (pt + h-9 + pb / sm:h-10) */
-  const DOCKED_TOOLBAR_OFFSET = 52
-  const [toolbarDocked, setToolbarDocked] = useState(false)
   const [visibleCategory, setVisibleCategory] = useState(offers.length > 0 ? 'Offers' : categories[0])
   const isLocationInactive = deliveryLocation?.isActive === false
   const removeProductIngredients = point?.config?.removeProductIngredients === true
+
+  // Prevent nested scrollbars (lock page scroll; only the store list scrolls).
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlOverflow = html.style.overflow
+    const prevBodyOverflow = body.style.overflow
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prevHtmlOverflow
+      body.style.overflow = prevBodyOverflow
+    }
+  }, [])
 
   const heroBackgroundUrl = useMemo(() => {
     return resolveRestaurantMediaUrl(point?.image, restaurantImage)
@@ -63,7 +74,6 @@ export default function StorePage({
   }, [point?.id, restaurantLogoUrl])
 
   useEffect(() => {
-    setToolbarDocked(false)
   }, [point?.id])
 
   const floatingLang = useFloatingLanguageControl()
@@ -228,14 +238,12 @@ export default function StorePage({
     root.scrollTo({ left: Math.max(0, Math.min(targetLeft, maxLeft)), behavior: 'smooth' })
   }, [visibleCategory])
 
-  const computeToolbarDocked = (scrollTop) => {
-    const heroEl = heroImageRef.current
-    if (!heroEl) return false
-    const threshold = Math.max(0, heroEl.offsetHeight - 40)
-    return scrollTop > threshold
+  const stickyStackOffset = () => {
+    const tabsH = tabsRowRef.current?.offsetHeight ?? STICKY_TABS_OFFSET
+    // Aim to align section headers right under the sticky row.
+    // Slightly undercut the height so we don't stop "too early" (leaving the section lower on screen).
+    return Math.max(0, tabsH - 4)
   }
-
-  const stickyStackOffset = (docked) => STICKY_TABS_OFFSET + (docked ? DOCKED_TOOLBAR_OFFSET : 0)
 
   // Detect which category is in view as user scrolls
   const handleProductsScroll = () => {
@@ -243,8 +251,6 @@ export default function StorePage({
     if (!container) return
 
     const scrollTop = container.scrollTop
-    const docked = computeToolbarDocked(scrollTop)
-    setToolbarDocked((prev) => (prev !== docked ? docked : prev))
 
     if (scrollTargetRef.current) return
 
@@ -253,7 +259,7 @@ export default function StorePage({
       ...categories,
     ]
     let currentVisible = orderedKeys[0]
-    const spyPad = stickyStackOffset(docked) + 2
+    const spyPad = stickyStackOffset() + 2
     for (const key of orderedKeys) {
       const ref = categoryRefs.current[key]
       if (!ref) continue
@@ -301,9 +307,9 @@ export default function StorePage({
           return
         }
         const rawTop = sectionTopInScrollContainer(el)
-        const undockedTarget = Math.max(0, rawTop - stickyStackOffset(false))
-        const willBeDocked = computeToolbarDocked(undockedTarget)
-        const targetScrollTop = Math.max(0, rawTop - stickyStackOffset(willBeDocked))
+        // Sections live inside wrappers with padding-top (pt-4). Subtract a bit extra so the header
+        // snaps right under the sticky category pills without leaving a visible gap.
+        const targetScrollTop = Math.max(0, rawTop - stickyStackOffset() - 16)
         c.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
       })
     })
@@ -404,10 +410,7 @@ export default function StorePage({
         {/* Sticky κατηγορίες — κάτω από fixed μπάρα όταν έχει κουμπώσει */}
         <div
           ref={tabsRowRef}
-          className={`sticky z-30 flex items-center gap-2 overflow-x-auto border-b border-app-border bg-app-surface px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-app-surface/95 supports-[backdrop-filter]:backdrop-blur-sm ${toolbarDocked
-            ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
-            : 'top-0'
-            }`}
+          className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b border-app-border bg-app-surface px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-app-surface/95 supports-[backdrop-filter]:backdrop-blur-sm"
         >
           {offers.length > 0 && (
             <button
