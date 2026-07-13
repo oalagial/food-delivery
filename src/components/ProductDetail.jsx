@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parsePrice, formatPrice } from '../utils/price'
 import { getProductLabelIcons } from '../utils/productLabels'
@@ -9,6 +9,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
   const labelIcons = getProductLabelIcons(product.labels || product._original?.labels)
   const allergyLines = getAllergyDisplayList(product.allergies || product._original?.allergies)
   const [qty, setQty] = useState(1)
+  const [descExpanded, setDescExpanded] = useState(false)
   const [selectedOptions, setSelectedOptions] = useState({})
   const [selectedExtras, setSelectedExtras] = useState({}) // { extraId: 0 or 1 }
   const [removedIngredientNames, setRemovedIngredientNames] = useState([]) // names to remove from this product
@@ -126,6 +127,17 @@ export default function ProductDetail({ product, removeProductIngredients = fals
     setTimeout(() => onClose(), 180)
   }
 
+  const ingredientsList = useMemo(() => {
+    const raw = product.ingredients || product._original?.ingredients
+    if (!raw) return []
+    if (Array.isArray(raw)) return raw.map((i) => (i != null ? String(i).trim() : '')).filter(Boolean)
+    if (typeof raw === 'string') return raw.split(',').map((i) => i.trim()).filter(Boolean)
+    return []
+  }, [product.ingredients, product._original?.ingredients])
+
+  const descText = String(product?.desc || '').trim()
+  const shouldShowMore = descText.length > 20
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-app-surface">
       <div
@@ -141,8 +153,8 @@ export default function ProductDetail({ product, removeProductIngredients = fals
         aria-labelledby={`dialog-${product.id}-title`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Photo - full width, X πάνω αριστερά */}
-        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-app-surface2">
+        {/* Photo */}
+        <div className="relative flex-shrink-0 w-full h-[44vh] min-h-[240px] max-h-[380px] bg-app-surface2">
           <img
             src={product.image}
             alt={product.name}
@@ -170,138 +182,146 @@ export default function ProductDetail({ product, removeProductIngredients = fals
           </div>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
-          <div className="p-4">
-            
-            <h2 id={`dialog-${product.id}-title`} className="text-xl font-bold mb-2 text-app-text">
-              {product.name}
-            </h2>
-            
-            {/* Price Display */}
-            <div className="mb-3">
-              {product.priceAfterDiscount ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold line-through text-app-muted/70">
-                    {product.originalPrice}
-                  </span>
-                  <span className="text-xl font-bold text-brand-600">
-                    {product.priceAfterDiscount}
-                  </span>
-                </div>
-              ) : (
-                <div className="text-xl font-bold text-brand-600">
-                  {product.price}
-                </div>
-              )}
+        {/* Sheet */}
+        <div className="-mt-6 flex-1 min-h-0">
+          <div className="relative h-full rounded-t-[28px] bg-app-surface shadow-[0_-18px_50px_-30px_rgba(15,23,42,0.45)]">
+            <div className="flex justify-center pt-3" aria-hidden>
+              <div className="h-1 w-12 rounded-full bg-app-border" />
             </div>
-            
-            {product.desc && (
-              <p className="text-sm text-app-muted mb-4 leading-relaxed">
-                {product.desc}
-              </p>
-            )}
 
-            {labelIcons.length > 0 && (
-              <div className="mb-4 flex items-center gap-2 flex-wrap" aria-label="Product labels">
-                {labelIcons.map((icon) =>
-                  icon.src ? (
-                    <img
-                      key={icon.key}
-                      src={icon.src}
-                      alt={icon.alt}
-                      title={icon.alt}
-                      className="w-8 h-8"
-                      loading="lazy"
-                    />
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-4 pb-[max(9.5rem,calc(env(safe-area-inset-bottom,0px)+9.5rem))] pt-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 id={`dialog-${product.id}-title`} className="text-[17px] font-semibold leading-snug tracking-tight text-app-text">
+                    {product.name}
+                  </h2>
+                  {product._original?.category ? (
+                    <p className="mt-0.5 text-xs text-app-muted">{String(product._original.category)}</p>
+                  ) : null}
+                </div>
+
+                <div className="shrink-0 text-right">
+                  {product.priceAfterDiscount ? (
+                    <div className="flex flex-col items-end leading-none">
+                      <span className="text-xs font-semibold line-through text-app-muted/70">{product.originalPrice}</span>
+                      <span className="mt-1 text-[17px] font-semibold text-brand-600">{product.priceAfterDiscount}</span>
+                    </div>
                   ) : (
-                    <span
-                      key={icon.key}
-                      title={icon.alt}
-                      className="inline-flex max-w-[10rem] items-center rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-900"
-                    >
-                      {icon.alt}
-                    </span>
-                  )
-                )}
-              </div>
-            )}
-
-            {isOutOfStock && (
-              <p className="text-sm font-semibold text-brand-700/80 mb-4">{t('product.outOfStock')}</p>
-            )}
-            {!isOutOfStock && maxQty != null && qty >= maxQty && (
-              <p className="text-sm text-app-muted mb-4">
-                {t('product.maxAvailable', { n: maxQty })}
-              </p>
-            )}
-
-            {/* Ingredients — removal only when restaurant config allows */}
-            {(() => {
-              const raw = product.ingredients || product._original?.ingredients
-              if (!raw) return null
-              const ingredientsList = Array.isArray(raw)
-                ? raw.map((i) => (i != null ? String(i).trim() : '')).filter(Boolean)
-                : typeof raw === 'string'
-                  ? raw.split(',').map((i) => i.trim()).filter(Boolean)
-                  : []
-              if (ingredientsList.length === 0) return null
-              return (
-                <div className="mb-4">
-                  <div className="font-semibold text-sm mb-2 text-app-text">{t('product.ingredients')}</div>
-                  {removeProductIngredients ? (
-                    <>
-                      <p className="text-xs text-app-muted mb-2">{t('product.removeIngredientsHint')}</p>
-                      <ul className="space-y-1.5">
-                        {ingredientsList.map((ingredient, index) => {
-                          const isRemoved = removedIngredientNames.includes(ingredient)
-                          const isIncluded = !isRemoved
-                          return (
-                            <li key={index} className="flex items-center gap-2">
-                              <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                                <input
-                                  type="checkbox"
-                                  checked={isIncluded}
-                                  onChange={() => {
-                                    setRemovedIngredientNames((prev) =>
-                                      isRemoved
-                                        ? prev.filter((n) => n !== ingredient)
-                                        : [...prev, ingredient]
-                                    )
-                                  }}
-                                  className="w-4 h-4 rounded border-app-border text-brand-600 focus:ring-brand-400"
-                                />
-                                <span className={`text-sm ${isRemoved ? 'text-app-muted/70 line-through' : 'text-app-text/80'}`}>
-                                  {ingredient}
-                                </span>
-                              </label>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </>
-                  ) : (
-                    <ul className="list-disc pl-5 text-sm text-app-text/80 space-y-0.5">
-                      {ingredientsList.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
-                      ))}
-                    </ul>
+                    <div className="text-[17px] font-semibold text-brand-600">{product.price}</div>
                   )}
                 </div>
-              )
-            })()}
-
-            {/* Allergens */}
-            {allergyLines.length > 0 && (
-              <div className="mb-4">
-                <div className="font-semibold text-sm mb-2 text-app-text">{t('product.allergens')}</div>
-                <ul className="list-disc pl-5 text-xs text-app-muted space-y-0.5">
-                  {allergyLines.map((line, index) => (
-                    <li key={index}>{line}</li>
-                  ))}
-                </ul>
               </div>
-            )}
+
+              {labelIcons.length > 0 ? (
+                <div className="mt-3 rounded-2xl bg-app-surface2 px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-2" aria-label="Product labels">
+                    {labelIcons.slice(0, 6).map((icon) =>
+                      icon.src ? (
+                        <span key={icon.key} className="inline-flex items-center gap-2 rounded-full bg-app-surface px-3 py-2 text-xs font-semibold text-app-text/80 shadow-sm ring-1 ring-app-border">
+                          <img src={icon.src} alt={icon.alt} className="h-5 w-5" loading="lazy" />
+                          <span className="truncate max-w-[10rem]">{icon.alt}</span>
+                        </span>
+                      ) : (
+                        <span
+                          key={icon.key}
+                          className="inline-flex items-center rounded-full bg-app-surface px-3 py-2 text-xs font-semibold text-app-text/80 shadow-sm ring-1 ring-app-border"
+                          title={icon.alt}
+                        >
+                          {icon.alt}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Description */}
+              {product.desc ? (
+                <div className="mt-4">
+                  <div className="text-sm font-semibold text-app-text/90">Description</div>
+                  <p
+                    className="mt-2 text-sm leading-relaxed text-app-muted"
+                    style={
+                      descExpanded
+                        ? undefined
+                        : {
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }
+                    }
+                  >
+                    {descText}
+                  </p>
+                  {shouldShowMore ? (
+                    <button
+                      type="button"
+                      onClick={() => setDescExpanded((v) => !v)}
+                      className="mt-1 text-sm font-semibold text-brand-600 hover:text-brand-700"
+                    >
+                      {descExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* Ingredients */}
+              {ingredientsList.length > 0 && removeProductIngredients ? (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-app-text/90">
+                    <svg className="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21s10 0 10-10S12 3 12 3 3 8 3 14s4 7 4 7z" />
+                    </svg>
+                    <span>{t('product.ingredients')}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-app-muted">{t('product.removeIngredientsHint')}</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {ingredientsList.map((ingredient, index) => {
+                      const isRemoved = removedIngredientNames.includes(ingredient)
+                      const isIncluded = !isRemoved
+                      return (
+                        <li key={index} className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                            <input
+                              type="checkbox"
+                              checked={isIncluded}
+                              onChange={() => {
+                                setRemovedIngredientNames((prev) =>
+                                  isRemoved ? prev.filter((n) => n !== ingredient) : [...prev, ingredient]
+                                )
+                              }}
+                              className="w-4 h-4 rounded border-app-border text-brand-600 focus:ring-brand-400"
+                            />
+                            <span className={`text-sm ${isRemoved ? 'text-app-muted/70 line-through' : 'text-app-text/80'}`}>
+                              {ingredient}
+                            </span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* Allergens */}
+              {allergyLines.length > 0 ? (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-app-text/90">
+                    <svg className="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.29 3.86l-7.4 12.8A1.5 1.5 0 004.19 19h15.62a1.5 1.5 0 001.3-2.24l-7.4-12.9a1.5 1.5 0 00-2.62 0z" />
+                    </svg>
+                    <span>{t('product.allergens')}</span>
+                  </div>
+                  <ul className="mt-2 list-disc pl-5 text-xs text-app-muted space-y-0.5">
+                    {allergyLines.map((line, index) => (
+                      <li key={index}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
             {/* Extras - κουμπί που ανοίγει modal */}
             {extrasGroup && extrasGroup.choices.length > 0 && (
@@ -367,6 +387,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                 )}
               </div>
             ))}
+            </div>
           </div>
         </div>
 
