@@ -136,6 +136,13 @@ function AppContent() {
     }
   }, [cart, cartRestaurantId])
 
+  // Allow StorePage bottom menu to open cart
+  useEffect(() => {
+    const onOpen = () => setCartOpen(true)
+    window.addEventListener('ui:open-cart', onOpen)
+    return () => window.removeEventListener('ui:open-cart', onOpen)
+  }, [])
+
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [cartBump, setCartBump] = useState(false)
@@ -982,6 +989,8 @@ function AppContent() {
                 <StorePage
                   point={checkoutRestaurant}
                   deliveryLocation={selectedPoint}
+                  deliveryLocations={points}
+                  onChangeDeliveryLocation={handleChangeDeliveryLocationFromCheckout}
                   menu={menuByCategory}
                   categories={categoriesArr}
                   offers={offers}
@@ -1005,26 +1014,7 @@ function AppContent() {
             })()
           )}
 
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
-            aria-label={t('app.openCart')}
-            className={`group fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 transition-all duration-200 hover:bg-slate-800 hover:shadow-xl lg:bottom-8 lg:right-8 lg:h-[3.75rem] lg:w-[3.75rem] ${
-              cartBump ? 'ring-2 ring-slate-400/40 ring-offset-2 ring-offset-white scale-[1.03]' : ''
-            }`}
-          >
-            <svg className="h-6 w-6 lg:h-7 lg:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
-            </svg>
-            <span className="sr-only">{t('app.cart')}</span>
-            {cart.length > 0 ? (
-              <span className="absolute -right-1 -top-1 flex max-w-[5.5rem] items-center gap-1 rounded-lg bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-900 shadow-md ring-1 ring-slate-200/80">
-                <span className="truncate">€{cartTotal().toFixed(2)}</span>
-                <span className="text-slate-400">·</span>
-                <span>{cartCount()}</span>
-              </span>
-            ) : null}
-          </button>
+          {/* Cart opens from StorePage bottom menu */}
 
           <CartPanel
             open={cartOpen}

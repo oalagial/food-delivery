@@ -18,10 +18,23 @@ function resolveRestaurantMediaUrl(raw, fallback) {
   return `${base}/images/${s}`
 }
 
-export default function StorePage({ point, deliveryLocation, menu, categories, offers = [], activeCategory, setActiveCategory, onBack, addToCart }) {
+export default function StorePage({
+  point,
+  deliveryLocation,
+  deliveryLocations = [],
+  onChangeDeliveryLocation,
+  menu,
+  categories,
+  offers = [],
+  activeCategory,
+  setActiveCategory,
+  onBack,
+  addToCart,
+}) {
   const { t } = useTranslation()
   const [selectedProductDetail, setSelectedProductDetail] = useState(null)
   const [selectedOfferDetail, setSelectedOfferDetail] = useState(null)
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false)
   const categoryRefs = useRef({})
   const productsContainerRef = useRef(null)
   const tabsRowRef = useRef(null)
@@ -60,6 +73,16 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
     setFloatingLanguageHidden(true)
     return () => setFloatingLanguageHidden(false)
   }, [setFloatingLanguageHidden])
+
+  // Close location sheet on Escape
+  useEffect(() => {
+    if (!locationSheetOpen) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLocationSheetOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [locationSheetOpen])
 
   const [generalCoupons, setGeneralCoupons] = useState([])
 
@@ -306,53 +329,29 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
       <div
         ref={productsContainerRef}
         onScroll={handleProductsScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-app-bg [-webkit-overflow-scrolling:touch]"
       >
-        {/* Hero: φωτο + πίσω/γλώσσα από πάνω· με scroll κάτω η μπάρα γίνεται fixed */}
-        <div className="relative w-full bg-white">
+        {/* Header / hero */}
+        <div className="relative w-full bg-app-surface">
           <div
-            ref={heroImageRef}
-            className="relative min-h-[138px] h-[min(23vh,182px)] max-h-[200px] w-full overflow-hidden shadow-[0_4px_24px_rgba(15,23,42,0.08)] sm:min-h-[152px] sm:h-[min(22vh,198px)] sm:max-h-[220px]"
-            style={{
-              borderBottomLeftRadius: '50% 2%',
-              borderBottomRightRadius: '50% 2%',
-            }}
+            className="px-3 pt-3"
           >
             <div
-              className="absolute inset-0 scale-105 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
-              aria-hidden="true"
-            />
-            <div
-              className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-black/5"
-              aria-hidden="true"
-            />
-          </div>
-
-          <div
-            className={`left-0 right-0 z-40 flex items-center justify-between gap-3 px-3 transition-[background-color,box-shadow,border-color] duration-200 ${toolbarDocked
-              ? 'fixed top-0 border-b border-slate-200 bg-white pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] shadow-sm [isolation:isolate]'
-              : 'absolute top-0 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'
-              }`}
-          >
-            <button
-              type="button"
-              onClick={onBack}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-1 transition-colors sm:h-10 sm:w-10 sm:text-lg ${toolbarDocked
-                ? 'bg-slate-100 text-slate-800 ring-slate-200/80 active:bg-slate-200'
-                : 'bg-white/95 text-slate-800 ring-slate-200/80 active:bg-white'
-                }`}
-              aria-label={t('store.goBack')}
+              ref={heroImageRef}
+              className="relative h-44 w-full overflow-hidden rounded-[24px] shadow-[0_10px_30px_-12px_rgba(15,23,42,0.35)] sm:h-52"
             >
-              ←
-            </button>
-            <div className={toolbarDocked ? '' : 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]'}>
-              <LanguageSwitcher />
+              <div
+                className="absolute inset-0 scale-105 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
+                aria-hidden="true"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/5" aria-hidden="true" />
             </div>
           </div>
+          {/* No top controls (serious). Controls live in bottom menu. */}
 
           <div className="relative z-20 mx-auto flex max-w-lg flex-col items-center px-4 pb-3 pt-0">
-            <div className="relative z-30 -mt-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100/90 bg-white shadow-[0_10px_40px_-4px_rgba(15,23,42,0.18)] sm:-mt-11 sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-[1.125rem]">
+            <div className="relative z-30 -mt-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-[0_10px_40px_-4px_rgba(15,23,42,0.18)] sm:-mt-11 sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-[1.125rem]">
               <img
                 src={logoLoadFailed ? logo : restaurantLogoUrl}
                 alt=""
@@ -362,43 +361,39 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 onError={() => setLogoLoadFailed(true)}
               />
             </div>
-            <h1 className="mt-3 max-w-[min(100%,18rem)] text-center text-base font-semibold leading-tight tracking-tight text-slate-900 sm:mt-3.5 sm:max-w-[22rem] sm:text-lg">
+            <h1 className="mt-3 max-w-[min(100%,18rem)] text-center text-base font-semibold leading-tight tracking-tight text-app-text sm:mt-3.5 sm:max-w-[22rem] sm:text-lg">
               {point?.name}
             </h1>
             {deliveryLocation?.name ? (
-              <p className="mt-1.5 max-w-[min(100%,22rem)] text-center text-[11px] leading-snug text-slate-500 sm:text-xs">
-                <span className="text-slate-400">{t('checkout.deliveryTo')}</span>{' '}
-                <span className="font-medium text-slate-600">{deliveryLocation.name}</span>
+              <p className="mt-1.5 max-w-[min(100%,22rem)] text-center text-[11px] leading-snug text-app-muted sm:text-xs">
+                <span className="text-app-muted/80">{t('checkout.deliveryTo')}</span>{' '}
+                <span className="font-medium text-app-text/80">{deliveryLocation.name}</span>
               </p>
             ) : null}
-            <div className="mt-2 w-full max-w-sm space-y-1 text-center text-xs leading-relaxed text-slate-500 sm:text-sm">
+            <div className="mt-2 w-full max-w-sm space-y-1 text-center text-xs leading-relaxed text-app-muted sm:text-sm">
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 {ratingText != null && (
                   <>
-                    <span className="inline-flex items-center gap-0.5 font-medium text-slate-600">
-                      <span aria-hidden>😊</span>
+                    <span className="inline-flex items-center gap-0.5 font-medium text-app-text/80">
                       {ratingText}
                     </span>
-                    <span className="text-slate-300" aria-hidden>
+                    <span className="text-app-border" aria-hidden>
                       ·
                     </span>
                   </>
                 )}
-                <span className="font-semibold text-slate-700">{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
+                <span className="font-semibold text-app-text/90">{isLocationInactive ? t('store.deliveryUnavailable') : openLabel}</span>
               </p>
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
                 <span className="inline-flex items-center gap-1">
-                  <span aria-hidden className="opacity-90">
-                    🚴
-                  </span>
-                  <span className="font-semibold text-slate-700">{t('store.deliveryFee', { fee: deliveryFee })}</span>
+                  <span className="font-semibold text-app-text/90">{t('store.deliveryFee', { fee: deliveryFee })}</span>
                 </span>
                 {showFreeDeliveryHint ? (
                   <>
-                    <span className="text-slate-300" aria-hidden>
+                    <span className="text-app-border" aria-hidden>
                       ·
                     </span>
-                    <span className="font-semibold text-slate-700">{t('store.freeDeliveryOver', { amount: freeDeliveryFromDisplay })}</span>
+                    <span className="font-semibold text-app-text/90">{t('store.freeDeliveryOver', { amount: freeDeliveryFromDisplay })}</span>
                   </>
                 ) : null}
               </p>
@@ -409,7 +404,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
         {/* Sticky κατηγορίες — κάτω από fixed μπάρα όταν έχει κουμπώσει */}
         <div
           ref={tabsRowRef}
-          className={`sticky z-30 flex gap-5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-white/95 supports-[backdrop-filter]:backdrop-blur-sm ${toolbarDocked
+          className={`sticky z-30 flex items-center gap-2 overflow-x-auto border-b border-app-border bg-app-surface px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-app-surface/95 supports-[backdrop-filter]:backdrop-blur-sm ${toolbarDocked
             ? '-mt-px top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+2.75rem)] sm:top-[calc(max(0.5rem,env(safe-area-inset-top,0px))+3rem)]'
             : 'top-0'
             }`}
@@ -419,9 +414,9 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
               type="button"
               data-store-category="Offers"
               onClick={() => scrollToCategory('Offers')}
-              className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === 'Offers'
-                ? 'text-orange-600 border-orange-500'
-                : 'text-slate-600 border-transparent hover:text-slate-900'
+              className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${visibleCategory === 'Offers'
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'bg-app-surface2 text-app-text/80 hover:bg-app-surface2/70'
                 }`}
             >
               {t('store.offers')}
@@ -433,9 +428,9 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
               key={c}
               data-store-category={c}
               onClick={() => scrollToCategory(c)}
-              className={`pb-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors border-b-2 -mb-px ${visibleCategory === c
-                ? 'text-orange-600 border-orange-500'
-                : 'text-slate-600 border-transparent hover:text-slate-900'
+              className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${visibleCategory === c
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'bg-app-surface2 text-app-text/80 hover:bg-app-surface2/70'
                 }`}
             >
               {c}
@@ -443,7 +438,7 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
           ))}
         </div>
 
-        <div className="pb-20">
+        <div className="pb-28">
           <GeneralCouponsStrip coupons={generalCoupons} />
 
           {/* Offers Section */}
@@ -459,11 +454,12 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                 }}
                 data-store-section="Offers"
                 id="section-Offers"
-                className="mb-3 pb-2 border-b-2 border-orange-400"
+                className="mb-3 pb-2 border-b-2 border-brand-500"
               >
-                <h2 className="text-base font-bold text-slate-800">{t('store.specialOffers')}</h2>
+                <h2 className="text-base font-bold text-app-text">{t('store.specialOffers')}</h2>
               </div>
-              {offers.map((offer, index) => (
+              <div className="space-y-3">
+              {offers.map((offer) => (
                 <div
                   key={offer.id}
                   onClick={() => setSelectedOfferDetail(offer)}
@@ -472,57 +468,40 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
                   }}
-                  className="flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 cursor-pointer active:bg-amber-50 rounded-lg px-2 -mx-2"
+                  className="group relative flex gap-3 rounded-2xl border border-app-border bg-app-surface p-3 shadow-sm transition-all active:scale-[0.995] active:bg-brand-50 cursor-pointer"
                 >
-                  {offer.image && (
-                    <div className="flex-shrink-0">
-                      <img
-                        src={offer.image}
-                        alt={offer.name}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg"
-                      />
-                    </div>
+                  {offer.image ? (
+                    <img src={offer.image} alt={offer.name} className="h-20 w-20 flex-shrink-0 rounded-xl object-cover" />
+                  ) : (
+                    <div className="h-20 w-20 flex-shrink-0 rounded-xl bg-app-surface2" aria-hidden />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1 min-w-0">
-                        <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-medium mb-1">
-                          {t('common.offer')}
-                        </span>
-                        <h3 className="text-sm font-bold text-slate-800 leading-tight break-words">
-                          {offer.name}
-                        </h3>
-                      </div>
-                      <button
-                        disabled={cannotAddToCart}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (!cannotAddToCart) {
-                            setSelectedOfferDetail(offer)
-                          }
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        className={`flex-shrink-0 w-8 h-8 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${cannotAddToCart
-                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
-                          }`}
-                        aria-label={cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="text-sm font-semibold text-amber-900 mb-1">
-                      € {parseFloat(offer.price || 0).toFixed(2)}
-                    </div>
-                    {offer.description && (
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-snug">
-                        {offer.description}
-                      </p>
-                    )}
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold text-brand-900">
+                      {t('common.offer')}
+                    </span>
+                    <div className="mt-1 truncate text-sm font-bold text-app-text">{offer.name}</div>
+                    <div className="mt-1 text-sm font-semibold text-app-text">€ {parseFloat(offer.price || 0).toFixed(2)}</div>
+                    {offer.description ? (
+                      <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-app-muted">{offer.description}</p>
+                    ) : null}
                   </div>
+                  <button
+                    disabled={cannotAddToCart}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!cannotAddToCart) setSelectedOfferDetail(offer)
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold shadow-lg transition-all ${
+                      cannotAddToCart ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-brand-500 text-white active:scale-95 active:bg-brand-600'
+                    }`}
+                  >
+                    +
+                  </button>
                 </div>
               ))}
+              </div>
             </div>
           )}
 
@@ -540,12 +519,13 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                   }}
                   data-store-section={category}
                   id={`section-${category}`}
-                  className="mb-3 pb-2 border-b-2 border-orange-400"
+                  className="mb-3 pb-2 border-b-2 border-brand-500"
                 >
-                  <h2 className="text-base font-bold text-slate-800">{category}</h2>
+                  <h2 className="text-base font-bold text-app-text">{category}</h2>
                 </div>
               )}
-              {menu[category] && menu[category].map((item, index) => {
+              <div className="space-y-3">
+              {menu[category] && menu[category].map((item) => {
                 const original = item._original || {}
                 const labelIcons = getProductLabelIcons(item.labels || original.labels)
                 const isInactive = original.isAvailable === false || original.isActive === false
@@ -564,107 +544,178 @@ export default function StorePage({ point, deliveryLocation, menu, categories, o
                       if (cannotSelect) return
                       if (e.key === 'Enter' || e.key === ' ') setSelectedProductDetail(item)
                     }}
-                    className={`flex gap-3 pb-4 mb-4 border-b border-slate-200 last:border-0 last:mb-0 rounded-lg px-2 -mx-2 ${cannotSelect ? 'opacity-60' : ''
-                      } ${cannotSelect ? 'cursor-not-allowed' : 'cursor-pointer active:bg-amber-50'}`}
+                    className={`group relative flex gap-3 rounded-2xl border border-app-border bg-app-surface p-3 shadow-sm transition-all ${
+                      cannotSelect ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer active:bg-brand-50 active:scale-[0.995]'
+                    }`}
                   >
-                    <div className="flex-shrink-0">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg ${cannotSelect ? 'grayscale' : ''
-                          }`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-bold text-slate-800 leading-tight break-words mb-1">
-                            {item.name}
-                          </h3>
-                          {labelIcons.length > 0 && (
-                            <div className="flex items-center gap-1 mb-1.5 flex-wrap">
-                              {labelIcons.map((icon) =>
-                                icon.src ? (
-                                  <img
-                                    key={icon.key}
-                                    src={icon.src}
-                                    alt={icon.alt}
-                                    title={icon.alt}
-                                    className="w-6 h-6"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <span
-                                    key={icon.key}
-                                    title={icon.alt}
-                                    className="inline-flex max-w-[9rem] items-center rounded border border-orange-200 bg-orange-50 px-1 py-0.5 text-[10px] font-medium leading-tight text-orange-900"
-                                  >
-                                    {icon.alt}
-                                  </span>
-                                )
-                              )}
-                            </div>
-                          )}
-                          {isInactive && (
-                            <span className="inline-block text-xs font-semibold text-red-500 uppercase tracking-wide">
-                              {t('store.notAvailable')}
-                            </span>
-                          )}
-                          {!isInactive && isOutOfStock && (
-                            <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide">
-                              {t('store.outOfStock')}
-                            </span>
-                          )}
-                          {!isInactive && !isOutOfStock && (item.hasDiscount || item.priceAfterDiscount) && (
-                            <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide">
-                              {t('common.offer')}
-                            </span>
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className={`h-20 w-20 flex-shrink-0 rounded-xl object-cover ${cannotSelect ? 'grayscale' : ''}`}
+                      loading="lazy"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-app-text">{item.name}</div>
+                      {labelIcons.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {labelIcons.slice(0, 3).map((icon) =>
+                            icon.src ? (
+                              <img key={icon.key} src={icon.src} alt={icon.alt} title={icon.alt} className="h-5 w-5" loading="lazy" />
+                            ) : (
+                              <span
+                                key={icon.key}
+                                title={icon.alt}
+                                className="inline-flex max-w-[9rem] items-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold leading-tight text-brand-900"
+                              >
+                                {icon.alt}
+                              </span>
+                            )
                           )}
                         </div>
-                        <button
-                          type="button"
-                          disabled={cannotSelect || cannotAddToCart}
-                          onClick={() => {
-                            if (!cannotSelect && !cannotAddToCart) {
-                              setSelectedProductDetail(item)
-                            }
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          className={`flex-shrink-0 w-8 h-8 rounded-full font-bold text-lg shadow-md transition-all flex items-center justify-center ${cannotSelect || cannotAddToCart
-                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-orange-400 text-white active:scale-95 active:bg-orange-500'
-                            }`}
-                          aria-label={cannotSelect ? (isOutOfStock ? t('store.outOfStock') : t('store.productNotAvailable')) : cannotAddToCart ? (isLocationInactive ? t('store.locationClosed') : t('store.restaurantClosed')) : t('store.addToCart')}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className={`text-sm font-semibold mb-1 flex items-center gap-2 ${cannotSelect ? 'text-slate-500' : 'text-amber-900'
-                        }`}>
+                      ) : null}
+                      <div className="mt-1 text-sm font-semibold text-app-text">
                         {item.priceAfterDiscount ? (
                           <>
-                            <span className="line-through text-slate-400">{item.originalPrice}</span>
+                            <span className="mr-2 text-app-muted/70 line-through">{item.originalPrice}</span>
                             <span>{item.priceAfterDiscount}</span>
                           </>
                         ) : (
                           <span>{item.price}</span>
                         )}
                       </div>
-                      {item.desc && (
-                        <p className={`text-xs line-clamp-2 leading-snug ${cannotSelect ? 'text-slate-500' : 'text-slate-600'
-                          }`}>
-                          {item.desc}
-                        </p>
-                      )}
+                      {item.desc ? (
+                        <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-app-muted">{item.desc}</p>
+                      ) : null}
+                      {isInactive ? (
+                        <span className="mt-1.5 inline-block text-[10px] font-bold uppercase tracking-wide text-red-500">{t('store.notAvailable')}</span>
+                      ) : isOutOfStock ? (
+                        <span className="mt-1.5 inline-block text-[10px] font-bold uppercase tracking-wide text-brand-700/80">{t('store.outOfStock')}</span>
+                      ) : null}
                     </div>
+                    <button
+                      type="button"
+                      disabled={cannotSelect || cannotAddToCart}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!cannotSelect && !cannotAddToCart) setSelectedProductDetail(item)
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold shadow-lg transition-all ${
+                        cannotSelect || cannotAddToCart ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-brand-500 text-white active:scale-95 active:bg-brand-600'
+                      }`}
+                    >
+                      +
+                    </button>
                   </div>
                 )
               })}
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Bottom menu */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-app-border bg-app-surface/95 backdrop-blur supports-[backdrop-filter]:bg-app-surface/80">
+        <div className="mx-auto flex max-w-lg items-stretch justify-between px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-app-muted transition-colors hover:text-app-text/80 active:bg-app-surface2"
+            aria-label="Locations"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+            </svg>
+            <span>Locations</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                window.dispatchEvent(new CustomEvent('ui:open-cart'))
+              } catch {
+                /* ignore */
+              }
+            }}
+            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-app-muted transition-colors hover:text-app-text/80 active:bg-app-surface2"
+            aria-label="Cart"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h15l-1.2 12H7.2L6 7z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7a3 3 0 016 0" />
+            </svg>
+            <span>Cart</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLocationSheetOpen(true)}
+            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-app-muted transition-colors hover:text-app-text/80 active:bg-app-surface2"
+            aria-label="Change location"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 21l-7-8a7 7 0 1114 0l-7 8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 13a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+            <span>Location</span>
+          </button>
+
+          <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-app-muted">
+            <LanguageSwitcher />
+            <span className="leading-none">Language</span>
+          </div>
+        </div>
+      </nav>
+
+      {/* Location bottom sheet */}
+      {locationSheetOpen && onChangeDeliveryLocation && Array.isArray(deliveryLocations) && deliveryLocations.length > 0 ? (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]"
+            onClick={() => setLocationSheetOpen(false)}
+            aria-hidden
+          />
+          <div className="fixed inset-x-0 bottom-0 z-[60] mx-auto w-full max-w-lg">
+            <div className="rounded-t-[1.5rem] border border-app-border bg-app-surface shadow-2xl">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="text-sm font-semibold text-app-text">Choose location</div>
+                <button
+                  type="button"
+                  onClick={() => setLocationSheetOpen(false)}
+                  className="rounded-lg px-2 py-1 text-sm font-semibold text-app-muted hover:bg-app-surface2 active:bg-brand-50"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="max-h-[55vh] overflow-y-auto px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {deliveryLocations.map((p) => {
+                  const active = String(p.id) === String(deliveryLocation?.id)
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        onChangeDeliveryLocation({ id: p.id, name: p.name, token: p.token })
+                        setLocationSheetOpen(false)
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                        active ? 'bg-brand-50 text-app-text' : 'bg-transparent text-app-text hover:bg-app-surface2 active:bg-brand-50'
+                      }`}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                      {active ? <span className="ml-3 text-brand-700">✓</span> : null}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       {/* Modals */}
       {selectedProductDetail && (
