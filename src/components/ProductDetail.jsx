@@ -183,14 +183,14 @@ export default function ProductDetail({ product, removeProductIngredients = fals
         </div>
 
         {/* Sheet */}
-        <div className="-mt-6 flex-1 min-h-0">
-          <div className="relative h-full rounded-t-[28px] bg-app-surface shadow-[0_-18px_50px_-30px_rgba(15,23,42,0.45)]">
-            <div className="flex justify-center pt-3" aria-hidden>
+        <div className="-mt-6 flex flex-1 flex-col min-h-0">
+          <div className="relative flex flex-1 flex-col min-h-0 overflow-hidden rounded-t-[28px] bg-app-surface shadow-[0_-18px_50px_-30px_rgba(15,23,42,0.45)]">
+            <div className="flex-shrink-0 flex justify-center pt-3" aria-hidden>
               <div className="h-1 w-12 rounded-full bg-app-border" />
             </div>
 
             {/* Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-4 pb-[max(9.5rem,calc(env(safe-area-inset-bottom,0px)+9.5rem))] pt-3">
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-4 pt-3 pb-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h2 id={`dialog-${product.id}-title`} className="text-[17px] font-semibold leading-snug tracking-tight text-app-text">
@@ -268,7 +268,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
               ) : null}
 
               {/* Ingredients */}
-              {ingredientsList.length > 0 && removeProductIngredients ? (
+              {ingredientsList.length > 0 ? (
                 <div className="mt-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-app-text/90">
                     <svg className="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -276,32 +276,42 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                     </svg>
                     <span>{t('product.ingredients')}</span>
                   </div>
-                  <p className="mt-2 text-xs text-app-muted">{t('product.removeIngredientsHint')}</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {ingredientsList.map((ingredient, index) => {
-                      const isRemoved = removedIngredientNames.includes(ingredient)
-                      const isIncluded = !isRemoved
-                      return (
-                        <li key={index} className="flex items-center gap-2">
-                          <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                            <input
-                              type="checkbox"
-                              checked={isIncluded}
-                              onChange={() => {
-                                setRemovedIngredientNames((prev) =>
-                                  isRemoved ? prev.filter((n) => n !== ingredient) : [...prev, ingredient]
-                                )
-                              }}
-                              className="w-4 h-4 rounded border-app-border text-brand-600 focus:ring-brand-400"
-                            />
-                            <span className={`text-sm ${isRemoved ? 'text-app-muted/70 line-through' : 'text-app-text/80'}`}>
-                              {ingredient}
-                            </span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  {removeProductIngredients ? (
+                    <>
+                      <p className="mt-2 text-xs text-app-muted">{t('product.removeIngredientsHint')}</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {ingredientsList.map((ingredient, index) => {
+                          const isRemoved = removedIngredientNames.includes(ingredient)
+                          const isIncluded = !isRemoved
+                          return (
+                            <li key={index} className="flex items-center gap-2">
+                              <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isIncluded}
+                                  onChange={() => {
+                                    setRemovedIngredientNames((prev) =>
+                                      isRemoved ? prev.filter((n) => n !== ingredient) : [...prev, ingredient]
+                                    )
+                                  }}
+                                  className="w-4 h-4 rounded border-app-border text-brand-600 focus:ring-brand-400"
+                                />
+                                <span className={`text-sm ${isRemoved ? 'text-app-muted/70 line-through' : 'text-app-text/80'}`}>
+                                  {ingredient}
+                                </span>
+                              </label>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </>
+                  ) : (
+                    <ul className="mt-2 list-disc pl-5 text-sm text-app-text/80 space-y-0.5">
+                      {ingredientsList.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ) : null}
 
@@ -388,99 +398,99 @@ export default function ProductDetail({ product, removeProductIngredients = fals
               </div>
             ))}
             </div>
-          </div>
-        </div>
 
-        {/* Footer - αριστερά count, δεξιά Add */}
-        <div className="flex-shrink-0 bg-app-surface border-t border-app-border px-4 py-3">
-          {isLocationInactive && (
-            <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-lg">
-              <p className="text-sm text-brand-900 font-semibold text-center">
-                Location temporarily closed
-              </p>
-            </div>
-          )}
-          <div className="flex items-center gap-4">
-            {/* Quantity - αριστερά */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                disabled={isOutOfStock}
-                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
-              >
-                −
-              </button>
-              <span className="text-lg font-bold w-8 text-center tabular-nums">{qty}</span>
-              <button
-                type="button"
-                onClick={() => setQty((q) => (maxQty != null ? Math.min(maxQty, q + 1) : q + 1))}
-                disabled={isOutOfStock || (maxQty != null && qty >= maxQty)}
-                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock || (maxQty != null && qty >= maxQty) ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
-              >
-                +
-              </button>
-            </div>
-            {/* Add button - δεξιά */}
-            <button
-              disabled={!isValid || isLocationInactive || isOutOfStock}
-              onClick={() => {
-                if (!isValid || isLocationInactive || isOutOfStock) return
-                const options = {}
-                const extraIds = []
+            {/* Footer - qty + Add (fixed at bottom of sheet) */}
+            <div className="flex-shrink-0 border-t border-app-border bg-app-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+              {isLocationInactive && (
+                <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-lg">
+                  <p className="text-sm text-brand-900 font-semibold text-center">
+                    Location temporarily closed
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                {/* Quantity */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    disabled={isOutOfStock}
+                    className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
+                  >
+                    −
+                  </button>
+                  <span className="text-lg font-bold w-8 text-center tabular-nums">{qty}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => (maxQty != null ? Math.min(maxQty, q + 1) : q + 1))}
+                    disabled={isOutOfStock || (maxQty != null && qty >= maxQty)}
+                    className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock || (maxQty != null && qty >= maxQty) ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
+                  >
+                    +
+                  </button>
+                </div>
+                {/* Add button */}
+                <button
+                  disabled={!isValid || isLocationInactive || isOutOfStock}
+                  onClick={() => {
+                    if (!isValid || isLocationInactive || isOutOfStock) return
+                    const options = {}
+                    const extraIds = []
 
-                otherOptionGroups.forEach((g) => {
-                  const choiceId = selectedOptions[g.id]
-                  const choice = g.choices.find((c) => c.id === choiceId)
-                  if (choice) {
-                    options[g.id] = choice.label
-                  }
-                })
-
-                const extraNames = []
-                Object.entries(selectedExtras).forEach(([extraId, count]) => {
-                  if (count > 0) {
-                    const extraIdNum = parseInt(extraId)
-                    extraIds.push(extraIdNum)
-                    if (extrasGroup) {
-                      const choice = extrasGroup.choices.find(c => {
-                        const id = parseInt(c.id.replace('extra_', ''))
-                        return id === extraIdNum
-                      })
+                    otherOptionGroups.forEach((g) => {
+                      const choiceId = selectedOptions[g.id]
+                      const choice = g.choices.find((c) => c.id === choiceId)
                       if (choice) {
-                        extraNames.push(choice.label)
+                        options[g.id] = choice.label
                       }
-                    }
-                  }
-                })
+                    })
 
-                const effectiveQty = maxQty != null ? Math.min(qty, maxQty) : qty
-                const productIngredients = (product.ingredients || product._original?.ingredients)
-                  ? (Array.isArray(product.ingredients || product._original?.ingredients)
-                      ? (product.ingredients || product._original?.ingredients).map((i) => String(i).trim()).filter(Boolean)
-                      : String(product.ingredients || product._original?.ingredients).split(',').map((i) => i.trim()).filter(Boolean))
-                  : []
-                const validRemoved = removeProductIngredients
-                  ? (removedIngredientNames || []).filter((name) =>
-                      productIngredients.some((p) => p.toLowerCase() === name.toLowerCase())
-                    )
-                  : []
-                const item = {
-                  id: product.id,
-                  name: product.name,
-                  price: base + otherOptionsTotal + extrasTotal,
-                  qty: effectiveQty,
-                  options,
-                  extraIds,
-                  extraNames,
-                  removedIngredientNames: validRemoved.length > 0 ? validRemoved : undefined,
-                }
-                onAdd(item)
-              }}
-              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive && !isOutOfStock ? 'bg-brand-500 text-white active:bg-brand-600 active:scale-[0.98]' : 'bg-app-surface2 text-app-muted cursor-not-allowed'}`}
-            >
-              {t('product.add', { price: formatPrice(total) })}
-            </button>
+                    const extraNames = []
+                    Object.entries(selectedExtras).forEach(([extraId, count]) => {
+                      if (count > 0) {
+                        const extraIdNum = parseInt(extraId)
+                        extraIds.push(extraIdNum)
+                        if (extrasGroup) {
+                          const choice = extrasGroup.choices.find(c => {
+                            const id = parseInt(c.id.replace('extra_', ''))
+                            return id === extraIdNum
+                          })
+                          if (choice) {
+                            extraNames.push(choice.label)
+                          }
+                        }
+                      }
+                    })
+
+                    const effectiveQty = maxQty != null ? Math.min(qty, maxQty) : qty
+                    const productIngredients = (product.ingredients || product._original?.ingredients)
+                      ? (Array.isArray(product.ingredients || product._original?.ingredients)
+                          ? (product.ingredients || product._original?.ingredients).map((i) => String(i).trim()).filter(Boolean)
+                          : String(product.ingredients || product._original?.ingredients).split(',').map((i) => i.trim()).filter(Boolean))
+                      : []
+                    const validRemoved = removeProductIngredients
+                      ? (removedIngredientNames || []).filter((name) =>
+                          productIngredients.some((p) => p.toLowerCase() === name.toLowerCase())
+                        )
+                      : []
+                    const item = {
+                      id: product.id,
+                      name: product.name,
+                      price: base + otherOptionsTotal + extrasTotal,
+                      qty: effectiveQty,
+                      options,
+                      extraIds,
+                      extraNames,
+                      removedIngredientNames: validRemoved.length > 0 ? validRemoved : undefined,
+                    }
+                    onAdd(item)
+                  }}
+                  className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive && !isOutOfStock ? 'bg-brand-500 text-white active:bg-brand-600 active:scale-[0.98]' : 'bg-app-surface2 text-app-muted cursor-not-allowed'}`}
+                >
+                  {t('product.add', { price: formatPrice(total) })}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
