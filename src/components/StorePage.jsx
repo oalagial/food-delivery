@@ -23,6 +23,7 @@ export default function StorePage({
   deliveryLocation,
   deliveryLocations = [],
   onChangeDeliveryLocation,
+  cartCount = 0,
   menu,
   categories,
   offers = [],
@@ -407,38 +408,42 @@ export default function StorePage({
           </div>
         </div>
 
-        {/* Sticky κατηγορίες — κάτω από fixed μπάρα όταν έχει κουμπώσει */}
-        <div
-          ref={tabsRowRef}
-          className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b border-app-border bg-app-surface px-3 py-3 shadow-sm scrollbar-hide supports-[backdrop-filter]:bg-app-surface/95 supports-[backdrop-filter]:backdrop-blur-sm"
-        >
-          {offers.length > 0 && (
-            <button
-              type="button"
-              data-store-category="Offers"
-              onClick={() => scrollToCategory('Offers')}
-              className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${visibleCategory === 'Offers'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'bg-app-surface2 text-app-text/80 hover:bg-app-surface2/70'
+        {/* Sticky categories menu (always visible) */}
+        <div className="sticky top-0 z-30 bg-app-bg/60 px-3 pt-3 backdrop-blur supports-[backdrop-filter]:bg-app-bg/40">
+          <div
+            ref={tabsRowRef}
+            className="mx-auto flex max-w-lg items-center gap-2 overflow-x-auto rounded-2xl border border-app-border bg-app-surface/95 px-2 py-2 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)] scrollbar-hide supports-[backdrop-filter]:bg-app-surface/80 supports-[backdrop-filter]:backdrop-blur-sm"
+          >
+            {offers.length > 0 && (
+              <button
+                type="button"
+                data-store-category="Offers"
+                onClick={() => scrollToCategory('Offers')}
+                className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${
+                  visibleCategory === 'Offers'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-transparent text-app-text/80 hover:bg-app-surface2 active:bg-brand-50'
                 }`}
-            >
-              {t('store.offers')}
-            </button>
-          )}
-          {categories.map((c) => (
-            <button
-              type="button"
-              key={c}
-              data-store-category={c}
-              onClick={() => scrollToCategory(c)}
-              className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${visibleCategory === c
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'bg-app-surface2 text-app-text/80 hover:bg-app-surface2/70'
+              >
+                {t('store.offers')}
+              </button>
+            )}
+            {categories.map((c) => (
+              <button
+                type="button"
+                key={c}
+                data-store-category={c}
+                onClick={() => scrollToCategory(c)}
+                className={`flex h-9 items-center whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-colors sm:h-10 sm:text-sm ${
+                  visibleCategory === c
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-transparent text-app-text/80 hover:bg-app-surface2 active:bg-brand-50'
                 }`}
-            >
-              {c}
-            </button>
-          ))}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="pb-28">
@@ -457,9 +462,12 @@ export default function StorePage({
                 }}
                 data-store-section="Offers"
                 id="section-Offers"
-                className="mb-3 pb-2 border-b-2 border-brand-500"
+                className="mb-3 pb-3 border-b border-app-border"
               >
-                <h2 className="text-base font-bold text-app-text">{t('store.specialOffers')}</h2>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-brand-500" aria-hidden />
+                  <h2 className="text-base font-semibold tracking-tight text-app-text">{t('store.specialOffers')}</h2>
+                </div>
               </div>
               <div className="space-y-3">
               {offers.map((offer) => (
@@ -471,7 +479,7 @@ export default function StorePage({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') setSelectedOfferDetail(offer)
                   }}
-                  className="group relative flex gap-3 rounded-2xl border border-app-border bg-app-surface p-3 shadow-sm transition-all active:scale-[0.995] active:bg-brand-50 cursor-pointer"
+                  className="group relative flex gap-3 rounded-2xl border border-app-border bg-sky-50/60 p-3 shadow-sm transition-colors hover:bg-sky-50/80 active:bg-brand-50 cursor-pointer"
                 >
                   {offer.image ? (
                     <img src={offer.image} alt={offer.name} className="h-20 w-20 flex-shrink-0 rounded-xl object-cover" />
@@ -482,10 +490,12 @@ export default function StorePage({
                     <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold text-brand-900">
                       {t('common.offer')}
                     </span>
-                    <div className="mt-1 truncate text-sm font-bold text-app-text">{offer.name}</div>
+                    <div className="mt-1 pr-14 text-sm font-semibold leading-snug tracking-tight text-app-text line-clamp-2">
+                      {offer.name}
+                    </div>
                     <div className="mt-1 text-sm font-semibold text-app-text">€ {parseFloat(offer.price || 0).toFixed(2)}</div>
                     {offer.description ? (
-                      <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-app-muted">{offer.description}</p>
+                      <p className="mt-1 line-clamp-2 pr-14 text-xs leading-snug text-app-muted">{offer.description}</p>
                     ) : null}
                   </div>
                   <button
@@ -496,11 +506,15 @@ export default function StorePage({
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                     onTouchStart={(e) => e.stopPropagation()}
-                    className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold shadow-lg transition-all ${
-                      cannotAddToCart ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-brand-500 text-white active:scale-95 active:bg-brand-600'
+                    className={`absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-colors ${
+                      cannotAddToCart
+                        ? 'border-app-border bg-app-surface2 text-app-muted cursor-not-allowed'
+                        : 'border-brand-200 bg-app-surface text-brand-700 hover:bg-brand-50 active:bg-brand-100'
                     }`}
                   >
-                    +
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                    </svg>
                   </button>
                 </div>
               ))}
@@ -522,9 +536,12 @@ export default function StorePage({
                   }}
                   data-store-section={category}
                   id={`section-${category}`}
-                  className="mb-3 pb-2 border-b-2 border-brand-500"
+                  className="mb-3 pb-3 border-b border-app-border"
                 >
-                  <h2 className="text-base font-bold text-app-text">{category}</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-brand-500" aria-hidden />
+                    <h2 className="text-base font-semibold tracking-tight text-app-text">{category}</h2>
+                  </div>
                 </div>
               )}
               <div className="space-y-3">
@@ -534,6 +551,7 @@ export default function StorePage({
                 const isInactive = original.isAvailable === false || original.isActive === false
                 const isOutOfStock = item.stockQuantity != null && Number(item.stockQuantity) === 0
                 const cannotSelect = isInactive || isOutOfStock
+                const description = (item.desc || original.description || original.desc || '').trim()
 
                 return (
                   <div
@@ -547,20 +565,25 @@ export default function StorePage({
                       if (cannotSelect) return
                       if (e.key === 'Enter' || e.key === ' ') setSelectedProductDetail(item)
                     }}
-                    className={`group relative flex gap-3 rounded-2xl border border-app-border bg-app-surface p-3 shadow-sm transition-all ${
-                      cannotSelect ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer active:bg-brand-50 active:scale-[0.995]'
+                    className={`group relative flex gap-3 rounded-2xl border border-app-border bg-sky-50/60 p-3 shadow-sm transition-colors hover:bg-sky-50/80 ${
+                      cannotSelect ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer active:bg-brand-50'
                     }`}
                   >
                     <img
                       src={item.image}
                       alt={item.name}
-                      className={`h-20 w-20 flex-shrink-0 rounded-xl object-cover ${cannotSelect ? 'grayscale' : ''}`}
+                      className={`h-[76px] w-[76px] flex-shrink-0 rounded-xl object-cover ${cannotSelect ? 'grayscale' : ''}`}
                       loading="lazy"
                     />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-bold text-app-text">{item.name}</div>
+                    <div className="min-w-0 flex-1 pr-14">
+                      <div className="text-[13px] font-semibold leading-snug tracking-tight text-app-text line-clamp-2">
+                        {item.name}
+                      </div>
+                      {description ? (
+                        <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-app-muted">{description}</p>
+                      ) : null}
                       {labelIcons.length > 0 ? (
-                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
                           {labelIcons.slice(0, 3).map((icon) =>
                             icon.src ? (
                               <img key={icon.key} src={icon.src} alt={icon.alt} title={icon.alt} className="h-5 w-5" loading="lazy" />
@@ -576,7 +599,7 @@ export default function StorePage({
                           )}
                         </div>
                       ) : null}
-                      <div className="mt-1 text-sm font-semibold text-app-text">
+                      <div className="mt-2 text-sm font-semibold text-app-text">
                         {item.priceAfterDiscount ? (
                           <>
                             <span className="mr-2 text-app-muted/70 line-through">{item.originalPrice}</span>
@@ -586,9 +609,6 @@ export default function StorePage({
                           <span>{item.price}</span>
                         )}
                       </div>
-                      {item.desc ? (
-                        <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-app-muted">{item.desc}</p>
-                      ) : null}
                       {isInactive ? (
                         <span className="mt-1.5 inline-block text-[10px] font-bold uppercase tracking-wide text-red-500">{t('store.notAvailable')}</span>
                       ) : isOutOfStock ? (
@@ -604,11 +624,15 @@ export default function StorePage({
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
-                      className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold shadow-lg transition-all ${
-                        cannotSelect || cannotAddToCart ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-brand-500 text-white active:scale-95 active:bg-brand-600'
+                      className={`absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-colors ${
+                        cannotSelect || cannotAddToCart
+                          ? 'border-app-border bg-app-surface2 text-app-muted cursor-not-allowed'
+                          : 'border-brand-200 bg-app-surface text-brand-700 hover:bg-brand-50 active:bg-brand-100'
                       }`}
                     >
-                      +
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                      </svg>
                     </button>
                   </div>
                 )
@@ -647,10 +671,17 @@ export default function StorePage({
             className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] font-semibold text-app-muted transition-colors hover:text-app-text/80 active:bg-app-surface2"
             aria-label="Cart"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h15l-1.2 12H7.2L6 7z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7a3 3 0 016 0" />
-            </svg>
+            <span className="relative">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h15l-1.2 12H7.2L6 7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7a3 3 0 016 0" />
+              </svg>
+              {cartCount > 0 ? (
+                <span className="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              ) : null}
+            </span>
             <span>Cart</span>
           </button>
 

@@ -991,6 +991,7 @@ function AppContent() {
                   deliveryLocation={selectedPoint}
                   deliveryLocations={points}
                   onChangeDeliveryLocation={handleChangeDeliveryLocationFromCheckout}
+                  cartCount={cartCount()}
                   menu={menuByCategory}
                   categories={categoriesArr}
                   offers={offers}

@@ -127,14 +127,14 @@ export default function ProductDetail({ product, removeProductIngredients = fals
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-app-surface">
       <div
         className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
         onClick={handleClose}
         aria-hidden="true"
       />
       <div
-        className={`relative w-full h-full max-h-full flex flex-col bg-white overflow-hidden transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}
+        className={`relative w-full h-full max-h-full flex flex-col bg-app-surface overflow-hidden transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
@@ -142,7 +142,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
         onClick={(e) => e.stopPropagation()}
       >
         {/* Photo - full width, X πάνω αριστερά */}
-        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-slate-200">
+        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-app-surface2">
           <img
             src={product.image}
             alt={product.name}
@@ -158,12 +158,12 @@ export default function ProductDetail({ product, removeProductIngredients = fals
           </button>
           <div className="absolute top-4 right-4 flex items-center gap-2">
             {product.isNew && (
-              <span className="bg-white/90 text-slate-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+              <span className="bg-app-surface/90 text-app-text px-2.5 py-1 rounded-full text-xs font-semibold">
                 {t('common.new')}
               </span>
             )}
             {product.hasDiscount && (
-              <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+              <span className="bg-brand-100 text-brand-900 px-2.5 py-1 rounded-full text-xs font-semibold">
                 {t('common.offer')}
               </span>
             )}
@@ -174,7 +174,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
         <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
           <div className="p-4">
             
-            <h2 id={`dialog-${product.id}-title`} className="text-xl font-bold mb-2 text-slate-900">
+            <h2 id={`dialog-${product.id}-title`} className="text-xl font-bold mb-2 text-app-text">
               {product.name}
             </h2>
             
@@ -182,22 +182,22 @@ export default function ProductDetail({ product, removeProductIngredients = fals
             <div className="mb-3">
               {product.priceAfterDiscount ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold line-through text-slate-400">
+                  <span className="text-lg font-semibold line-through text-app-muted/70">
                     {product.originalPrice}
                   </span>
-                  <span className="text-xl font-bold text-orange-600">
+                  <span className="text-xl font-bold text-brand-600">
                     {product.priceAfterDiscount}
                   </span>
                 </div>
               ) : (
-                <div className="text-xl font-bold text-orange-600">
+                <div className="text-xl font-bold text-brand-600">
                   {product.price}
                 </div>
               )}
             </div>
             
             {product.desc && (
-              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+              <p className="text-sm text-app-muted mb-4 leading-relaxed">
                 {product.desc}
               </p>
             )}
@@ -218,7 +218,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                     <span
                       key={icon.key}
                       title={icon.alt}
-                      className="inline-flex max-w-[10rem] items-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1 text-xs font-medium text-orange-900"
+                      className="inline-flex max-w-[10rem] items-center rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-900"
                     >
                       {icon.alt}
                     </span>
@@ -228,10 +228,10 @@ export default function ProductDetail({ product, removeProductIngredients = fals
             )}
 
             {isOutOfStock && (
-              <p className="text-sm font-semibold text-amber-600 mb-4">{t('product.outOfStock')}</p>
+              <p className="text-sm font-semibold text-brand-700/80 mb-4">{t('product.outOfStock')}</p>
             )}
             {!isOutOfStock && maxQty != null && qty >= maxQty && (
-              <p className="text-sm text-slate-600 mb-4">
+              <p className="text-sm text-app-muted mb-4">
                 {t('product.maxAvailable', { n: maxQty })}
               </p>
             )}
@@ -248,10 +248,10 @@ export default function ProductDetail({ product, removeProductIngredients = fals
               if (ingredientsList.length === 0) return null
               return (
                 <div className="mb-4">
-                  <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.ingredients')}</div>
+                  <div className="font-semibold text-sm mb-2 text-app-text">{t('product.ingredients')}</div>
                   {removeProductIngredients ? (
                     <>
-                      <p className="text-xs text-slate-500 mb-2">{t('product.removeIngredientsHint')}</p>
+                      <p className="text-xs text-app-muted mb-2">{t('product.removeIngredientsHint')}</p>
                       <ul className="space-y-1.5">
                         {ingredientsList.map((ingredient, index) => {
                           const isRemoved = removedIngredientNames.includes(ingredient)
@@ -269,9 +269,9 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                                         : [...prev, ingredient]
                                     )
                                   }}
-                                  className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                                  className="w-4 h-4 rounded border-app-border text-brand-600 focus:ring-brand-400"
                                 />
-                                <span className={`text-sm ${isRemoved ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                <span className={`text-sm ${isRemoved ? 'text-app-muted/70 line-through' : 'text-app-text/80'}`}>
                                   {ingredient}
                                 </span>
                               </label>
@@ -281,7 +281,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                       </ul>
                     </>
                   ) : (
-                    <ul className="list-disc pl-5 text-sm text-slate-700 space-y-0.5">
+                    <ul className="list-disc pl-5 text-sm text-app-text/80 space-y-0.5">
                       {ingredientsList.map((ingredient, index) => (
                         <li key={index}>{ingredient}</li>
                       ))}
@@ -294,8 +294,8 @@ export default function ProductDetail({ product, removeProductIngredients = fals
             {/* Allergens */}
             {allergyLines.length > 0 && (
               <div className="mb-4">
-                <div className="font-semibold text-sm mb-2 text-slate-900">{t('product.allergens')}</div>
-                <ul className="list-disc pl-5 text-xs text-slate-600 space-y-0.5">
+                <div className="font-semibold text-sm mb-2 text-app-text">{t('product.allergens')}</div>
+                <ul className="list-disc pl-5 text-xs text-app-muted space-y-0.5">
                   {allergyLines.map((line, index) => (
                     <li key={index}>{line}</li>
                   ))}
@@ -306,11 +306,11 @@ export default function ProductDetail({ product, removeProductIngredients = fals
             {/* Extras - κουμπί που ανοίγει modal */}
             {extrasGroup && extrasGroup.choices.length > 0 && (
               <div className="mb-4">
-                <div className="font-semibold text-sm mb-1 text-slate-900">{extrasGroup.title || 'Extras'}</div>
+                <div className="font-semibold text-sm mb-1 text-app-text">{extrasGroup.title || 'Extras'}</div>
                 <button
                   type="button"
                   onClick={openExtrasModal}
-                  className="w-full py-2.5 px-3 rounded-full text-sm font-medium border border-slate-300 bg-slate-100 text-slate-700 active:bg-slate-200 transition-colors text-left"
+                  className="w-full py-2.5 px-3 rounded-full text-sm font-medium border border-app-border bg-app-surface2 text-app-text/80 active:bg-brand-50 transition-colors text-left"
                 >
                   {Object.keys(selectedExtras).filter((id) => selectedExtras[id]).length > 0
                     ? extrasGroup.choices
@@ -320,13 +320,13 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                     : 'Optional choice'}
                 </button>
                 {Object.keys(selectedExtras).filter((id) => selectedExtras[id]).length > 0 && (
-                  <div className="mt-2 text-xs text-slate-600">
+                  <div className="mt-2 text-xs text-app-muted">
                     {extrasGroup.choices
                       .filter((c) => selectedExtras[parseInt(c.id.replace('extra_', ''))])
                       .map((c) => c.label)
                       .join(', ')}
                     {extrasTotal > 0 && (
-                      <span className="font-medium text-slate-700"> +{formatPrice(extrasTotal)}</span>
+                      <span className="font-medium text-app-text/80"> +{formatPrice(extrasTotal)}</span>
                     )}
                   </div>
                 )}
@@ -336,14 +336,14 @@ export default function ProductDetail({ product, removeProductIngredients = fals
             {/* Other option groups */}
             {otherOptionGroups.map((g) => (
               <div className="mb-4" key={g.id}>
-                <div className="font-semibold text-sm mb-2 text-slate-900">
+                <div className="font-semibold text-sm mb-2 text-app-text">
                   {g.title}
                   {g.required && <span className="text-red-500 ml-1">*</span>}
                 </div>
                 <div className="space-y-2">
                   {g.choices.map((choice) => (
                     <label 
-                      className="flex items-center p-2.5 border border-slate-200 rounded-lg cursor-pointer active:bg-slate-50 transition-colors" 
+                      className="flex items-center p-2.5 border border-app-border rounded-lg cursor-pointer active:bg-brand-50 transition-colors" 
                       key={choice.id}
                     >
                       <input
@@ -353,7 +353,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                         checked={selectedOptions[g.id] === choice.id}
                         onChange={() => setSelectedOptions((p) => ({ ...p, [g.id]: choice.id }))}
                       />
-                      <span className="ml-3 text-sm text-slate-900">
+                      <span className="ml-3 text-sm text-app-text">
                         {choice.label}
                         {choice.price ? ` (+${formatPrice(choice.price)})` : ''}
                       </span>
@@ -371,11 +371,11 @@ export default function ProductDetail({ product, removeProductIngredients = fals
         </div>
 
         {/* Footer - αριστερά count, δεξιά Add */}
-        <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+        <div className="flex-shrink-0 bg-app-surface border-t border-app-border px-4 py-3">
           {isLocationInactive && (
-            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800 font-semibold text-center">
-                ⚠️ Location Temporarily Closed - Cannot add items to cart
+            <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-lg">
+              <p className="text-sm text-brand-900 font-semibold text-center">
+                Location temporarily closed
               </p>
             </div>
           )}
@@ -386,7 +386,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 disabled={isOutOfStock}
-                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-200 text-slate-700 active:bg-slate-300'}`}
+                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
               >
                 −
               </button>
@@ -395,7 +395,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                 type="button"
                 onClick={() => setQty((q) => (maxQty != null ? Math.min(maxQty, q + 1) : q + 1))}
                 disabled={isOutOfStock || (maxQty != null && qty >= maxQty)}
-                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock || (maxQty != null && qty >= maxQty) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-200 text-slate-700 active:bg-slate-300'}`}
+                className={`w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center ${isOutOfStock || (maxQty != null && qty >= maxQty) ? 'bg-app-surface2 text-app-muted cursor-not-allowed' : 'bg-app-surface2 text-app-text/80 active:bg-brand-50'}`}
               >
                 +
               </button>
@@ -456,7 +456,7 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                 }
                 onAdd(item)
               }}
-              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive && !isOutOfStock ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive && !isOutOfStock ? 'bg-brand-500 text-white active:bg-brand-600 active:scale-[0.98]' : 'bg-app-surface2 text-app-muted cursor-not-allowed'}`}
             >
               {t('product.add', { price: formatPrice(total) })}
             </button>
@@ -472,19 +472,19 @@ export default function ProductDetail({ product, removeProductIngredients = fals
               onClick={closeExtrasModal}
             />
             <div
-              className="fixed left-0 right-0 bottom-0 z-[70] bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col"
+              className="fixed left-0 right-0 bottom-0 z-[70] bg-app-surface rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-labelledby="extras-modal-title"
             >
-              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200">
-              <h2 id="extras-modal-title" className="text-base font-semibold text-slate-700">
+              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-app-border">
+              <h2 id="extras-modal-title" className="text-base font-semibold text-app-text/80">
                 {extrasGroup?.title || t('common.extras')}
               </h2>
                 <button
                   type="button"
                   onClick={closeExtrasModal}
-                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+                  className="w-8 h-8 flex items-center justify-center text-app-muted hover:bg-app-surface2 rounded-full transition-colors"
                   aria-label={t('common.close')}
                 >
                   ×
@@ -497,18 +497,18 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                   return (
                     <label
                       key={choice.id}
-                      className="flex items-center gap-3 px-4 py-3 active:bg-slate-50 cursor-pointer"
+                      className="flex items-center gap-3 px-4 py-3 active:bg-brand-50 cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleDraftExtra(extraId)}
-                        className="w-5 h-5 rounded border-slate-300 text-orange-500 focus:ring-orange-400"
+                        className="w-5 h-5 rounded border-app-border text-brand-600 focus:ring-brand-400"
                       />
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-slate-900">{choice.label}</span>
+                        <span className="text-sm font-medium text-app-text">{choice.label}</span>
                         {choice.price != null && choice.price > 0 && (
-                          <div className="text-xs text-slate-500 mt-0.5">
+                          <div className="text-xs text-app-muted mt-0.5">
                             {formatPrice(choice.price)}
                           </div>
                         )}
@@ -517,18 +517,18 @@ export default function ProductDetail({ product, removeProductIngredients = fals
                   )
                 })}
               </div>
-              <div className="flex-shrink-0 flex gap-3 px-4 py-3 border-t border-slate-200 bg-white">
+              <div className="flex-shrink-0 flex gap-3 px-4 py-3 border-t border-app-border bg-app-surface">
                 <button
                   type="button"
                   onClick={closeExtrasModal}
-                  className="flex-1 py-3 rounded-lg font-semibold text-sm bg-slate-200 text-slate-700 active:bg-slate-300 transition-colors"
+                  className="flex-1 py-3 rounded-lg font-semibold text-sm bg-app-surface2 text-app-text/80 active:bg-brand-50 transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={applyExtrasModal}
-                  className="flex-1 py-3 rounded-lg font-semibold text-sm bg-orange-500 text-white active:bg-orange-600 transition-colors"
+                  className="flex-1 py-3 rounded-lg font-semibold text-sm bg-brand-500 text-white active:bg-brand-600 transition-colors"
                 >
                   {t('common.apply')}
                 </button>

@@ -79,7 +79,7 @@ function SplitPhoneInput({
   const nationalDigits = getNationalPhoneDigits(value, dialCode)
   const borderClass = hasError
     ? 'border-red-500 focus:ring-red-500'
-    : 'border-slate-300 focus:ring-orange-500'
+    : 'border-app-border focus:ring-brand-500'
 
   const handleNationalChange = (e) => {
     const national = e.target.value.replace(/\D/g, '')
@@ -195,10 +195,31 @@ const PAYMENT_METHOD_LABEL_KEY = {
   ONLINE: 'checkout.online',
 }
 
-const PAYMENT_METHOD_EMOJI = {
-  CASH: '💵',
-  CARD: '💳',
-  ONLINE: '🌐',
+function PaymentMethodIcon({ method, className }) {
+  if (method === 'CASH') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 8.25h16.5a1.5 1.5 0 011.5 1.5v6a1.5 1.5 0 01-1.5 1.5H3.75a1.5 1.5 0 01-1.5-1.5v-6a1.5 1.5 0 011.5-1.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 12h.01M12 12a2.25 2.25 0 100 4.5A2.25 2.25 0 0012 12z" />
+      </svg>
+    )
+  }
+  if (method === 'CARD') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 7.5h16.5A1.5 1.5 0 0121.75 9v6a1.5 1.5 0 01-1.5 1.5H3.75A1.5 1.5 0 012.25 15V9a1.5 1.5 0 011.5-1.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 10.5h19.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 15h3" />
+      </svg>
+    )
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12h19.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c2.75 2.6 4.5 6.1 4.5 9.75s-1.75 7.15-4.5 9.75c-2.75-2.6-4.5-6.1-4.5-9.75s1.75-7.15 4.5-9.75z" />
+    </svg>
+  )
 }
 
 function paymentMethodsFromRestaurantConfig(restaurant) {
@@ -1143,19 +1164,19 @@ export default function CheckoutPage({
 
   const timeOptionCardClass = (selected) =>
     `w-full rounded-xl border-2 px-4 py-3 text-left transition-all flex gap-3 items-start touch-manipulation ${selected
-      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200/80'
-      : 'border-slate-200 bg-white hover:border-slate-300 active:bg-slate-50'
+      ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-200/80'
+      : 'border-app-border bg-app-surface hover:border-app-border/80 active:bg-app-surface2'
     }`
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-app-surface">
       <div className="absolute inset-0 bg-black/50" aria-hidden="true" onClick={onClose} />
       <div
-        className="relative w-full h-full max-h-full flex flex-col bg-white overflow-hidden"
+        className="relative w-full h-full max-h-full flex flex-col bg-app-surface overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with X top-left (like ProductDetail) */}
-        <div className="relative flex-shrink-0 w-full h-14 min-h-[56px] bg-slate-100 border-b border-slate-200">
+        <div className="relative flex-shrink-0 w-full h-14 min-h-[56px] bg-app-surface border-b border-app-border">
           <button
             type="button"
             onClick={onClose}
@@ -1165,7 +1186,7 @@ export default function CheckoutPage({
             ×
           </button>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <h1 className="text-lg font-bold text-slate-900">{t('checkout.yourOrder')}</h1>
+            <h1 className="text-lg font-bold text-app-text">{t('checkout.yourOrder')}</h1>
           </div>
         </div>
 
@@ -1174,7 +1195,7 @@ export default function CheckoutPage({
           <div className="p-3 sm:p-4 lg:p-6">
             {/* Restaurant */}
             <div className="text-center mb-4 sm:mb-5">
-              <div className="text-lg sm:text-xl font-bold text-orange-500">{restaurant?.name || t('common.restaurant')}</div>
+              <div className="text-lg sm:text-xl font-bold text-brand-600">{restaurant?.name || t('common.restaurant')}</div>
             </div>
 
             {/* When? — earliest slot vs schedule (modal: today’s slots only) */}
@@ -1192,7 +1213,7 @@ export default function CheckoutPage({
                   className={timeOptionCardClass(!customSchedule)}
                 >
                   <span
-                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${!customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${!customSchedule ? 'border-brand-500 bg-brand-500' : 'border-app-border bg-app-surface'
                       }`}
                     aria-hidden
                   >
@@ -1219,7 +1240,7 @@ export default function CheckoutPage({
                   className={timeOptionCardClass(customSchedule)}
                 >
                   <span
-                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${customSchedule ? 'border-orange-500 bg-orange-500' : 'border-slate-300 bg-white'
+                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${customSchedule ? 'border-brand-500 bg-brand-500' : 'border-app-border bg-app-surface'
                       }`}
                     aria-hidden
                   >
@@ -1245,7 +1266,7 @@ export default function CheckoutPage({
                   <button
                     type="button"
                     onClick={openCheckoutLocationPicker}
-                    className="flex-shrink-0 self-start rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-50 active:bg-orange-100 sm:text-sm sm:self-auto"
+                    className="flex-shrink-0 self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-text/80 transition-colors hover:bg-app-surface2 active:bg-brand-50 sm:text-sm sm:self-auto"
                   >
                     {t('checkout.changeLocation')}
                   </button>
@@ -1265,7 +1286,7 @@ export default function CheckoutPage({
                     onChange={(e) => { setCustomerName(e.target.value); setFieldDirty('name')() }}
                     onBlur={setFieldTouched('name')}
                     placeholder={t('checkout.enterName')}
-                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('name') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
+                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('name') ? 'border-red-500 focus:ring-red-500' : 'border-app-border focus:ring-brand-500'}`}
                     required
                   />
                   {showError('name') && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
@@ -1330,7 +1351,7 @@ export default function CheckoutPage({
                     onChange={(e) => { setCustomerEmail(e.target.value); setFieldDirty('email')() }}
                     onBlur={setFieldTouched('email')}
                     placeholder={t('checkout.enterEmail')}
-                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('email') ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
+                    className={`w-full border px-3 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:border-transparent ${showError('email') ? 'border-red-500 focus:ring-red-500' : 'border-app-border focus:ring-brand-500'}`}
                     required
                   />
                   {showError('email') && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
@@ -1347,7 +1368,7 @@ export default function CheckoutPage({
                   onChange={(e) => { setNotes(e.target.value); setFieldDirty('notes')() }}
                   maxLength={MAX_NOTES_LENGTH}
                   placeholder={t('checkout.deliveryNotesPlaceholder')}
-                  className="w-full border border-slate-300 px-3 py-2 sm:py-2.5 pr-12 pb-7 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                  className="w-full border border-app-border px-3 py-2 sm:py-2.5 pr-12 pb-7 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
                   rows="2"
                   aria-describedby="checkout-notes-char-limit"
                 />
@@ -1375,15 +1396,17 @@ export default function CheckoutPage({
                       aria-checked={paymentMethod === method}
                       key={method}
                       className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 sm:px-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === method
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          ? 'border-brand-400 bg-brand-50 text-brand-700'
+                          : 'border-app-border bg-app-surface text-app-muted hover:border-app-border/80'
                         }`}
                       onClick={() => {
                         setPaymentMethod(method)
                         setTouched((prev) => ({ ...prev, paymentMethod: true }))
                       }}
                     >
-                      <span className="text-lg">{PAYMENT_METHOD_EMOJI[method] || '💰'}</span>
+                      <span className="inline-flex h-5 w-5 items-center justify-center">
+                        <PaymentMethodIcon method={method} className="h-5 w-5" />
+                      </span>
                       <span className="font-medium text-xs sm:text-base">{t(PAYMENT_METHOD_LABEL_KEY[method] || 'checkout.paymentMethod')}</span>
                     </button>
                   ))}
@@ -1414,7 +1437,7 @@ export default function CheckoutPage({
                           </div>
                         )}
                         {(it.extraNames && it.extraNames.length > 0) && (
-                          <div className="text-xs sm:text-sm text-orange-600 mt-1">
+                          <div className="text-xs sm:text-sm text-brand-700 mt-1">
                             {t('common.extras')}: {it.extraNames.join(', ')}
                           </div>
                         )}
@@ -1489,13 +1512,13 @@ export default function CheckoutPage({
                       value={promo}
                       onChange={(e) => { setPromo(e.target.value); setCouponError(null) }}
                       placeholder={t('checkout.enterCode')}
-                      className={`flex-1 border px-3 py-2 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${couponError ? 'border-red-500' : 'border-slate-300'}`}
+                      className={`flex-1 border px-3 py-2 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent ${couponError ? 'border-red-500' : 'border-app-border'}`}
                     />
                     <button
                       type="button"
                       onClick={handleVerifyCoupon}
                       disabled={!promo.trim() || !customerEmail.trim() || couponLoading}
-                      className="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-orange-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-brand-500 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold active:bg-brand-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {couponLoading ? t('checkout.verifying') : t('common.verify')}
                     </button>
@@ -1526,7 +1549,7 @@ export default function CheckoutPage({
                     type="checkbox"
                     checked={agree}
                     onChange={(e) => setAgree(e.target.checked)}
-                    className="mt-0.5 h-6 w-6 min-h-[1.5rem] min-w-[1.5rem] shrink-0 cursor-pointer rounded-md border-2 border-slate-300 text-orange-500 focus:ring-2 focus:ring-orange-400 focus:ring-offset-0 sm:h-7 sm:w-7 sm:min-h-[1.75rem] sm:min-w-[1.75rem] accent-orange-500"
+                    className="mt-0.5 h-6 w-6 min-h-[1.5rem] min-w-[1.5rem] shrink-0 cursor-pointer rounded-md border-2 border-app-border text-brand-600 focus:ring-2 focus:ring-brand-400 focus:ring-offset-0 sm:h-7 sm:w-7 sm:min-h-[1.75rem] sm:min-w-[1.75rem] accent-brand-500"
                   />
                   <span className="leading-snug pt-0.5">
                     {t('checkout.confirmLocation')} <span className="font-semibold">{deliveryLocation?.name || ''}</span>
@@ -1541,13 +1564,13 @@ export default function CheckoutPage({
         <div className="sticky bottom-0 bg-white border-t border-slate-200 px-3 sm:px-4 py-3 flex-shrink-0">
           {/* {orderConfirmBlockers.length > 0 && (
             <div
-              className="mb-3 overflow-hidden rounded-2xl border border-orange-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/60 px-4 py-3.5 shadow-md shadow-orange-900/[0.06] ring-1 ring-orange-100/80 sm:px-5 sm:py-4"
+              className="mb-3 overflow-hidden rounded-2xl border border-brand-200/70 bg-gradient-to-br from-brand-50 via-app-surface to-brand-50/60 px-4 py-3.5 shadow-md shadow-black/[0.06] ring-1 ring-brand-100/80 sm:px-5 sm:py-4"
               role="status"
               aria-live="polite"
             >
               <div className="flex gap-3 sm:gap-4">
                 <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-orange-500 shadow-sm ring-1 ring-orange-100"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-app-surface text-brand-600 shadow-sm ring-1 ring-brand-100"
                   aria-hidden
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -1564,7 +1587,7 @@ export default function CheckoutPage({
                     {orderConfirmBlockers.map((msg, i) => (
                       <li key={`${i}-${msg}`} className="flex gap-2.5">
                         <span
-                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400"
+                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400"
                           aria-hidden
                         />
                         <span>{msg}</span>
@@ -1579,8 +1602,8 @@ export default function CheckoutPage({
             disabled={!orderConfirmEnabled}
             onClick={handleContinue}
             className={`w-full py-3 sm:py-3.5 text-sm sm:text-base font-semibold rounded-lg transition-all ${orderConfirmEnabled
-                ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                ? 'bg-brand-500 text-white active:bg-brand-600 active:scale-[0.98]'
+                : 'bg-app-surface2 text-app-muted cursor-not-allowed'
               }`}
           >
             {isSubmitting ? t('checkout.processing') : t('checkout.confirmOrder')}
@@ -1618,8 +1641,8 @@ export default function CheckoutPage({
                       type="button"
                       onClick={() => applyCheckoutLocation(loc)}
                       className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-medium transition-colors ${String(deliveryLocation?.id) === String(loc.id)
-                          ? 'border-orange-500 bg-orange-50 text-orange-800'
-                          : 'border-slate-200 text-slate-800 hover:border-orange-300 hover:bg-slate-50'
+                          ? 'border-brand-400 bg-brand-50 text-brand-900'
+                          : 'border-app-border text-app-text/80 hover:border-app-border/80 hover:bg-app-surface2'
                         }`}
                     >
                       {loc.name}
@@ -1682,7 +1705,7 @@ export default function CheckoutPage({
                           setSelectedSlotEnd(v)
                           setCustomSchedule(v !== quickSlot?.end)
                         }}
-                        className="min-h-[48px] w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-3 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
+                        className="min-h-[48px] w-full appearance-none rounded-lg border border-app-border bg-app-surface px-3 py-3 pr-10 text-base font-medium text-app-text focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent touch-manipulation sm:min-h-0 sm:text-sm"
                         style={{
                           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                           backgroundRepeat: 'no-repeat',
@@ -1711,7 +1734,7 @@ export default function CheckoutPage({
               <button
                 type="button"
                 onClick={() => setSchedulePickerOpen(false)}
-                className="min-h-[48px] w-full touch-manipulation rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white active:bg-orange-600"
+                className="min-h-[48px] w-full touch-manipulation rounded-lg bg-brand-500 py-3 text-sm font-semibold text-white active:bg-brand-600"
               >
                 {t('common.confirm')}
               </button>
@@ -1729,7 +1752,7 @@ export default function CheckoutPage({
                     setCustomSchedule(false)
                     setSchedulePickerOpen(false)
                   }}
-                  className="min-h-[48px] w-full touch-manipulation rounded-lg border border-orange-300 bg-white py-3 text-sm font-semibold text-orange-700 active:bg-orange-50 sm:flex-1 sm:py-2.5"
+                  className="min-h-[48px] w-full touch-manipulation rounded-lg border border-app-border bg-app-surface py-3 text-sm font-semibold text-app-text/80 active:bg-brand-50 sm:flex-1 sm:py-2.5"
                 >
                   {t('checkout.useSoonestDelivery')}
                 </button>
@@ -1765,7 +1788,7 @@ export default function CheckoutPage({
               <button
                 type="button"
                 onClick={handleAcceptTimeChange}
-                className="flex-1 rounded-lg bg-orange-500 py-2.5 font-semibold text-white active:bg-orange-600"
+                className="flex-1 rounded-lg bg-brand-500 py-2.5 font-semibold text-white active:bg-brand-600"
               >
                 {t('common.accept')}
               </button>
@@ -1802,7 +1825,7 @@ export default function CheckoutPage({
               </button>
               <button
                 onClick={handleAcceptInsufficientStock}
-                className="flex-1 py-2.5 rounded-lg font-semibold bg-orange-500 text-white active:bg-orange-600"
+                className="flex-1 py-2.5 rounded-lg font-semibold bg-brand-500 text-white active:bg-brand-600"
               >
                 {t('common.accept')}
               </button>

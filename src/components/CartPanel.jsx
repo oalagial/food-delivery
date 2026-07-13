@@ -23,58 +23,58 @@ function CartLineItem({ it, lastAddedKey, updateQty, removeItem, t, offerSelecti
 
   return (
     <div
-      className={`group flex gap-4 py-4 first:pt-2 border-b border-slate-100 last:border-0 transition-colors ${
-        isNew ? 'bg-amber-50/60 -mx-1 px-1 rounded-xl ring-1 ring-amber-200/60' : ''
+      className={`group flex gap-4 py-4 first:pt-2 border-b border-app-border last:border-0 transition-colors ${
+        isNew ? 'bg-brand-50/60 -mx-1 px-1 rounded-xl ring-1 ring-brand-200/60' : ''
       }`}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[15px] font-medium leading-snug text-slate-900">{it.name}</p>
+          <p className="text-[15px] font-medium leading-snug text-app-text">{it.name}</p>
           {it.isOffer ? (
-            <span className="shrink-0 rounded-md border border-amber-200/80 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-900/80">
+            <span className="shrink-0 rounded-md border border-brand-200/80 bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-900/80">
               {t('common.offer')}
             </span>
           ) : null}
         </div>
         {it.isOffer && offerSelectionSummary(it) ? (
-          <p className="text-xs leading-relaxed text-slate-500">{offerSelectionSummary(it)}</p>
+          <p className="text-xs leading-relaxed text-app-muted">{offerSelectionSummary(it)}</p>
         ) : null}
         {it.extraNames && it.extraNames.length > 0 ? (
-          <p className="text-xs text-slate-600">
-            <span className="text-slate-400">{t('common.extras')}</span> {it.extraNames.join(', ')}
+          <p className="text-xs text-app-muted">
+            <span className="text-app-muted/70">{t('common.extras')}</span> {it.extraNames.join(', ')}
           </p>
         ) : null}
         {it.removedIngredientNames && it.removedIngredientNames.length > 0 ? (
-          <p className="text-xs text-slate-500">
-            <span className="text-slate-400">{t('cart.without')}</span> {it.removedIngredientNames.join(', ')}
+          <p className="text-xs text-app-muted">
+            <span className="text-app-muted/70">{t('cart.without')}</span> {it.removedIngredientNames.join(', ')}
           </p>
         ) : null}
         {it.options && Object.keys(it.options).length > 0 ? (
-          <p className="text-xs text-slate-500">{Object.values(it.options).filter(Boolean).join(' · ')}</p>
+          <p className="text-xs text-app-muted">{Object.values(it.options).filter(Boolean).join(' · ')}</p>
         ) : null}
-        <p className="pt-0.5 text-sm tabular-nums text-slate-600">
+        <p className="pt-0.5 text-sm tabular-nums text-app-muted">
           {formatPrice(it.price)}
-          <span className="text-slate-400"> × </span>
+          <span className="text-app-muted/70"> × </span>
           {it.qty}
         </p>
       </div>
 
       <div className="flex shrink-0 flex-col items-end justify-between gap-2">
-        <p className="text-sm font-semibold tabular-nums text-slate-900">{formatPrice(lineTotal)}</p>
-        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+        <p className="text-sm font-semibold tabular-nums text-app-text">{formatPrice(lineTotal)}</p>
+        <div className="flex items-center gap-0.5 rounded-lg border border-app-border bg-app-surface p-0.5 shadow-sm">
           <button
             type="button"
             onClick={() => updateQty(it.key, Math.max(1, it.qty - 1))}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface2 active:bg-brand-50"
             aria-label={t('cart.decreaseQty')}
           >
             <span className="text-lg leading-none">−</span>
           </button>
-          <span className="min-w-[1.75rem] text-center text-sm font-semibold tabular-nums text-slate-800">{it.qty}</span>
+          <span className="min-w-[1.75rem] text-center text-sm font-semibold tabular-nums text-app-text/80">{it.qty}</span>
           <button
             type="button"
             onClick={() => updateQty(it.key, it.qty + 1)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface2 active:bg-brand-50"
             aria-label={t('cart.increaseQty')}
           >
             <span className="text-lg leading-none">+</span>
@@ -83,7 +83,7 @@ function CartLineItem({ it, lastAddedKey, updateQty, removeItem, t, offerSelecti
         <button
           type="button"
           onClick={() => removeItem(it.key)}
-          className="text-xs font-medium text-slate-400 transition hover:text-slate-700"
+          className="text-xs font-medium text-app-muted/70 transition hover:text-app-text/80"
         >
           {t('common.remove')}
         </button>
@@ -118,10 +118,10 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
   const body =
     cart.length === 0 ? (
       <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-app-surface2 text-app-muted/70">
           <IconBag className="h-7 w-7" />
         </div>
-        <p className="max-w-[14rem] text-sm leading-relaxed text-slate-500">{t('cart.empty')}</p>
+        <p className="max-w-[14rem] text-sm leading-relaxed text-app-muted">{t('cart.empty')}</p>
       </div>
     ) : (
       <div>
@@ -140,10 +140,10 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
     )
 
   const footer = (
-    <div className="space-y-4 border-t border-slate-100 bg-slate-50/80 px-5 py-4 backdrop-blur-sm">
+    <div className="space-y-4 border-t border-app-border bg-app-surface2/80 px-5 py-4 backdrop-blur-sm">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-sm font-medium text-slate-500">{t('common.total')}</span>
-        <span className="text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{formatPrice(total)}</span>
+        <span className="text-sm font-medium text-app-muted">{t('common.total')}</span>
+        <span className="text-2xl font-semibold tabular-nums tracking-tight text-app-text">{formatPrice(total)}</span>
       </div>
       <button
         type="button"
@@ -153,8 +153,8 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
         }}
         className={`w-full rounded-xl py-3.5 text-[15px] font-semibold tracking-wide transition ${
           cart.length === 0
-            ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-            : 'bg-slate-900 text-white shadow-md shadow-slate-900/15 hover:bg-slate-800 active:bg-slate-950'
+            ? 'cursor-not-allowed bg-app-surface2 text-app-muted'
+            : 'bg-brand-500 text-white shadow-md shadow-brand-600/15 hover:bg-brand-600 active:bg-brand-700'
         }`}
       >
         {t('cart.checkout')}
@@ -166,14 +166,14 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
     <>
       {open ? (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/35 backdrop-blur-[2px] lg:bg-slate-900/20"
+          className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[2px] lg:bg-black/20"
           onClick={onClose}
           aria-hidden
         />
       ) : null}
 
       <aside
-        className={`fixed z-40 flex max-h-[88vh] w-full max-w-md flex-col bg-white shadow-2xl shadow-slate-900/10 transition-transform duration-300 ease-out lg:max-h-none lg:max-w-[420px] ${
+        className={`fixed z-40 flex max-h-[88vh] w-full max-w-md flex-col bg-app-surface shadow-2xl shadow-black/10 transition-transform duration-300 ease-out lg:max-h-none lg:max-w-[420px] ${
           open
             ? 'pointer-events-auto translate-y-0 lg:translate-x-0'
             : 'pointer-events-none translate-y-full lg:translate-y-0 lg:translate-x-full'
@@ -181,23 +181,23 @@ export default function CartPanel({ open, onClose, cart, updateQty, removeItem, 
         aria-hidden={!open}
       >
         <div className="flex shrink-0 justify-center pt-2 pb-0 lg:hidden" aria-hidden>
-          <span className="h-1 w-10 rounded-full bg-slate-200" />
+          <span className="h-1 w-10 rounded-full bg-app-border" />
         </div>
 
-        <header className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4">
+        <header className="flex shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
               <IconBag className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold tracking-tight text-slate-900">{t('cart.title')}</h2>
-              {itemLabel ? <p className="truncate text-xs text-slate-500">{itemLabel}</p> : null}
+              <h2 className="text-lg font-semibold tracking-tight text-app-text">{t('cart.title')}</h2>
+              {itemLabel ? <p className="truncate text-xs text-app-muted">{itemLabel}</p> : null}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-app-muted transition hover:bg-app-surface2 hover:text-app-text/80"
             aria-label={t('cart.closeCart')}
           >
             <IconClose className="h-5 w-5" />

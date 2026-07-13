@@ -82,14 +82,14 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-app-surface">
       <div
         className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}
         onClick={handleClose}
         aria-hidden="true"
       />
       <div
-        className={`relative w-full h-full max-h-full flex flex-col bg-white overflow-hidden transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}
+        className={`relative w-full h-full max-h-full flex flex-col bg-app-surface overflow-hidden transform transition-all duration-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}
         ref={modalRef}
         role="dialog"
         aria-modal="true"
@@ -97,7 +97,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
         onClick={(e) => e.stopPropagation()}
       >
         {/* Photo - full width, X top-left (like ProductDetail) */}
-        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-slate-200">
+        <div className="relative flex-shrink-0 w-full h-[40vh] min-h-[200px] max-h-[320px] bg-app-surface2">
           {offer.image ? (
             <img
               src={offer.image}
@@ -105,7 +105,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-400 text-lg font-semibold">
+            <div className="w-full h-full flex items-center justify-center text-app-muted text-lg font-semibold">
               Offer
             </div>
           )}
@@ -118,7 +118,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
             ×
           </button>
           <div className="absolute top-4 right-4">
-            <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold">
+            <span className="bg-brand-100 text-brand-900 px-2.5 py-1 rounded-full text-xs font-semibold">
               Offer
             </span>
           </div>
@@ -127,12 +127,12 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
           <div className="p-4">
-            <h2 id={`offer-${offer.id}-title`} className="text-xl font-bold mb-2 text-slate-900">
+            <h2 id={`offer-${offer.id}-title`} className="text-xl font-bold mb-2 text-app-text">
               {offer.name}
             </h2>
             
             {offer.description && (
-              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+              <p className="text-sm text-app-muted mb-4 leading-relaxed">
                 {offer.description}
               </p>
             )}
@@ -144,9 +144,9 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               
               return (
                 <div className="mb-5" key={group.id}>
-                  <div className="font-semibold text-sm mb-2 text-slate-900">
+                  <div className="font-semibold text-sm mb-2 text-app-text">
                     {group.name}
-                    <span className="text-xs font-normal text-slate-500 ml-1">
+                    <span className="text-xs font-normal text-app-muted ml-1">
                       ({group.minItems === group.maxItems ? t('offerDetail.selectMin', { min: group.minItems }) : t('offerDetail.selectRange', { min: group.minItems, max: group.maxItems })})
                     </span>
                     {selected.length < group.minItems && (
@@ -173,9 +173,9 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                           onClick={() => !isDisabled && toggleProduct(group.id, ogp.id)}
                           className={`flex items-center gap-3 p-2.5 border-2 rounded-lg transition-all ${
                             isSelected
-                              ? 'border-orange-500 bg-orange-50'
+                              ? 'border-brand-400 bg-brand-50'
                               : isDisabled
-                              ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                              ? 'border-app-border bg-app-surface2 opacity-60 cursor-not-allowed'
                               : 'border-slate-200 active:border-orange-300 active:bg-slate-50 cursor-pointer'
                           }`}
                         >
@@ -194,14 +194,14 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                             />
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-slate-900">{product.name}</div>
+                            <div className="font-medium text-sm text-app-text">{product.name}</div>
                             {product.description && (
-                              <div className="text-xs text-slate-600 line-clamp-1 mt-0.5">
+                              <div className="text-xs text-app-muted line-clamp-1 mt-0.5">
                                 {product.description}
                               </div>
                             )}
                             {isOutOfStock && (
-                              <span className="inline-block text-xs font-semibold text-amber-600 uppercase tracking-wide mt-1">
+                              <span className="inline-block text-xs font-semibold text-brand-700/80 uppercase tracking-wide mt-1">
                                 {t('product.outOfStock')}
                               </span>
                             )}
@@ -223,11 +223,11 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
         </div>
 
         {/* Footer - left: quantity, right: Add (like ProductDetail) */}
-        <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+        <div className="flex-shrink-0 bg-app-surface border-t border-app-border px-4 py-3">
           {isLocationInactive && (
-            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800 font-semibold text-center">
-                ⚠️ Location Temporarily Closed - Cannot add items to cart
+            <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-lg">
+              <p className="text-sm text-brand-900 font-semibold text-center">
+                Location temporarily closed
               </p>
             </div>
           )}
@@ -237,7 +237,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               <button
                 type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-slate-200 text-slate-700 active:bg-slate-300"
+                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-app-surface2 text-app-text/80 active:bg-brand-50"
               >
                 −
               </button>
@@ -245,7 +245,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
               <button
                 type="button"
                 onClick={() => setQty((q) => q + 1)}
-                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-slate-200 text-slate-700 active:bg-slate-300"
+                className="w-10 h-10 rounded-lg text-lg font-semibold transition-colors flex items-center justify-center bg-app-surface2 text-app-text/80 active:bg-brand-50"
               >
                 +
               </button>
@@ -286,7 +286,7 @@ export default function OfferDetail({ offer, isLocationInactive = false, onClose
                 }
                 onAdd(item)
               }}
-              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive ? 'bg-orange-500 text-white active:bg-orange-600 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+              className={`flex-1 py-3 rounded-lg font-semibold text-base transition-all ${isValid && !isLocationInactive ? 'bg-brand-500 text-white active:bg-brand-600 active:scale-[0.98]' : 'bg-app-surface2 text-app-muted cursor-not-allowed'}`}
             >
               {t('offerDetail.add', { price: formatPrice(total) })}
             </button>
